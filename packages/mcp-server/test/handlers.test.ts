@@ -783,3 +783,211 @@ describe("pages (spec §5.6)", () => {
     )
   })
 })
+
+describe("target resolution (#78)", () => {
+  type St = {
+    documents: { doc: { id: string }; front?: boolean }[]
+    target: { status: string; docId?: string; frameIds?: string[]; via?: string; reason?: string }
+  }
+  const view = (ref: string | null, at: number) => ({
+    window: "main",
+    ref,
+    kind: ref ? ("disk" as const) : ("room" as const),
+    active: true,
+    focused: true,
+    selection: [],
+    selectionBy: "person" as const,
+    page: null,
+    view: { x: 0, y: 0, w: 1440, h: 1024 },
+    selectionAt: 0,
+    viewAt: at,
+    attentionAt: at,
+  })
+  async function twoDocs(paths: [string, string]) {
+    const platform = createMemoryPlatform({ pid: 5000 })
+    const host = createMemoryDocumentHost({
+      platform,
+      autosaveMs: 0,
+      validate: validateInput,
+      clientPolicy: {
+        ...HEADLESS_POLICY,
+        level: "edit",
+        files: ["/w/**"],
+        grants: ["files.create"],
+      },
+    })
+    // The person's files: opened by another connection, never by the agent under test.
+    const person = host.runtime.connect({ client: "kimo", label: "Kimo", transport: "in-process" })
+    const ids: string[] = []
+    for (const path of paths) {
+      const r = expectOk(
+        (await person.call("kimo_create", { path, name: "Homepage", template: "web" })).result,
+      )
+      ids.push((r.data as { doc: { id: string } }).doc.id)
+    }
+    const agent = host.runtime.connect({
+      client: "claude-code",
+      label: "Claude Code",
+      transport: "socket",
+    })
+    const rev = (id: string) => {
+      const d = host.get(id)
+      if (!d.ok) throw new Error("closed")
+      return `${d.value.store.revision.epoch}:${d.value.store.revision.seq}`
+    }
+    return { host, person, agent, ids: ids as [string, string], rev }
+  }
+
+  test("two open files and no signal: pick fails TARGET_UNCLEAR with choices, nothing changes", async () => {
+    const { host, agent, ids, rev } = await twoDocs(["/w/a.kimo", "/w/b.kimo"])
+    const before = ids.map(rev)
+    const r = expectFail(
+      (await agent.call("kimo_get_state", { pick: "frame" })).result,
+      "TARGET_UNCLEAR",
+    )
+    const detail = r.errors[0]?.detail as unknown as {
+      reason: string
+      choices: { docId: string }[]
+    }
+    expect(detail.reason).toBe("no-elicitation")
+    expect(detail.choices.map((c) => c.docId).sort()).toEqual([...ids].sort())
+    // Plain kimo_get_state reports it and never asks.
+    const st = expectOk((await agent.call("kimo_get_state", {})).result) as { data: St }
+    expect(st.data.target.status).toBe("unclear")
+    expect(ids.map(rev)).toEqual(before)
+    await host.dispose()
+  })
+
+  test("two local files with the same name: the front tab decides, an unserved front tab never falls back", async () => {
+    const { host, agent, ids } = await twoDocs([
+      "/w/local/Homepage.kimo",
+      "/w/shared/Homepage.kimo",
+    ])
+    const [, shared] = ids
+    host.setViews([view("/w/shared/Homepage.kimo", 10)])
+    const st = expectOk((await agent.call("kimo_get_state", { pick: "file" })).result) as {
+      data: St
+    }
+    expect(st.data.target).toMatchObject({ status: "clear", docId: shared, via: "window" })
+    expect(st.data.documents.find((d) => d.front)?.doc.id).toBe(shared)
+    // The front tab shows a room the host does not serve: never the local file of that name.
+    const other = host.runtime.connect({ client: "codex", label: "Codex", transport: "socket" })
+    host.setViews([view(null, 20)])
+    const r = expectFail(
+      (await other.call("kimo_get_state", { pick: "file" })).result,
+      "TARGET_UNCLEAR",
+    )
+    expect((r.errors[0]?.detail as { reason?: string } | undefined)?.reason).toBe("not-visible")
+    await host.dispose()
+  })
+
+  test("a person selection inside an instance points at the instance's top-level frame", async () => {
+    const { host, person, agent, ids } = await twoDocs(["/w/a.kimo", "/w/b.kimo"])
+    const [a] = ids
+    const made = expectOk(
+      (
+        await person.call("kimo_apply_ops", {
+          docId: a,
+          ops: [
+            {
+              op: "insert",
+              key: "other",
+              parent: "root",
+              node: { type: "frame", name: "Other", x: 2000, y: 0, w: 400, h: 400 },
+            },
+            {
+              op: "insert",
+              key: "btn",
+              parent: "DesktopFrm1",
+              node: { type: "frame", name: "Button", w: 120, h: 40 },
+            },
+            {
+              op: "insert",
+              key: "label",
+              parent: "@btn",
+              node: { type: "text", name: "Label", content: "Go" },
+            },
+            { op: "make_component", ids: ["@btn"], key: "comp" },
+            { op: "instantiate", of: "@comp", key: "inst", parent: "@other", x: 20, y: 20 },
+          ],
+        })
+      ).result,
+    )
+    const k = Object.fromEntries((made.created ?? []).map((x) => [x.key, x.id]))
+    // The agent works on the hero; then the person selects the label inside the instance.
+    expectOk(
+      (
+        await agent.call("kimo_apply_ops", {
+          docId: a,
+          ops: [{ op: "update", id: "DesktopFrm1", set: { name: "Hero" } }],
+        })
+      ).result,
+    )
+    host.setViews([
+      {
+        ...view("/w/a.kimo", 10),
+        selection: [`${k.inst}/${k.label}`],
+        selectionAt: Date.now() + 60_000,
+      },
+    ])
+    const st = expectOk((await agent.call("kimo_get_state", { pick: "frame" })).result) as {
+      data: St
+    }
+    expect(st.data.target).toMatchObject({
+      status: "clear",
+      docId: a,
+      frameIds: [k.other],
+      via: "selection",
+    })
+    await host.dispose()
+  })
+
+  test("twin guard: a first write to the twin the person is not looking at waits for a pick", async () => {
+    const { host, agent, ids, rev } = await twoDocs([
+      "/w/local/Homepage.kimo",
+      "/w/shared/Homepage.kimo",
+    ])
+    const [local, shared] = ids
+    host.setViews([view("/w/shared/Homepage.kimo", 10)])
+    const before = rev(local)
+    const edit = {
+      docId: local,
+      ops: [{ op: "update", id: "DesktopFrm1", set: { name: "Hero" } }],
+    }
+    const r = expectFail((await agent.call("kimo_apply_ops", edit)).result, "TARGET_UNCLEAR")
+    expect((r.errors[0]?.detail as { reason?: string } | undefined)?.reason).toBe("twin")
+    expect(r.retryId).toBeUndefined()
+    expect(rev(local)).toBe(before)
+    // The advised pick (no docId) gives the front twin and never clears the guessed one.
+    const p = expectOk((await agent.call("kimo_get_state", { pick: "file" })).result)
+    expect((p.data as St).target).toMatchObject({ status: "clear", docId: shared, via: "window" })
+    expectFail((await agent.call("kimo_apply_ops", edit)).result, "TARGET_UNCLEAR")
+    expect(rev(local)).toBe(before)
+    // A request that names the local file: a pick with its docId lets the write through.
+    expectOk((await agent.call("kimo_get_state", { pick: "file", docId: local })).result)
+    expectOk((await agent.call("kimo_apply_ops", edit)).result)
+    expect(rev(local)).not.toBe(before)
+    await host.dispose()
+  })
+
+  test("a selection left in a window the person moved away from does not pick the file", async () => {
+    const { host, agent, ids } = await twoDocs(["/w/a.kimo", "/w/b.kimo"])
+    const [a] = ids
+    host.setViews([
+      // w2: b.kimo with a frame selected an hour ago, then the person focused w1 on a.kimo.
+      {
+        ...view("/w/b.kimo", 50),
+        window: "w2",
+        focused: false,
+        selection: ["DesktopFrm1"],
+        selectionAt: 50,
+      },
+      { ...view("/w/a.kimo", 100), window: "w1" },
+    ])
+    const st = expectOk((await agent.call("kimo_get_state", { pick: "file" })).result) as {
+      data: St
+    }
+    expect(st.data.target).toMatchObject({ status: "clear", docId: a, via: "window" })
+    await host.dispose()
+  })
+})

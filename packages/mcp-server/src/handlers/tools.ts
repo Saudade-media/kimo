@@ -37,6 +37,7 @@ import {
 } from "../envelope"
 import { readGuide as builtinGuide } from "../guides"
 import type { WireOp } from "../ops"
+import { APPROVAL_TIMEOUT_MS } from "../policy"
 import { toolByName } from "../registry"
 import {
   authorize,
@@ -46,6 +47,7 @@ import {
   type ToolContext,
   type ToolHandler,
   VIEW_ROOM_SUGGESTION,
+  type WindowView,
 } from "../runtime"
 import {
   SCRIPT_COMPILER,
@@ -58,6 +60,25 @@ import { defaultScriptRunner, type ScriptRunner } from "../script/runner"
 import type { Carry, WorldData } from "../script/session"
 import { ScriptStream } from "../script/stream"
 import { snapshotWorld } from "../script/world"
+import {
+  choicesFor,
+  type DocSignal,
+  type FrameSignal,
+  fileLabel,
+  frontView,
+  frontViewOf,
+  inView,
+  type LastTarget,
+  type PickChoice,
+  type PickStep,
+  pageOf,
+  resolveTarget,
+  SELECT_IN_KIMO,
+  type TargetNeed,
+  type TargetResult,
+  type TargetSignals,
+  type TargetVia,
+} from "../target"
 import type { ToolDef } from "../tools/define"
 import { CODE_EXPORT_TARGETS, M5_EXPORT_TARGETS } from "../tools/output"
 import { AGENT_MAX_NEW_LAYERS, STREAM_MAX_NEW_LAYERS } from "../tools/write"
@@ -157,6 +178,8 @@ export interface ToolHandlerOptions {
   readGuide?: (path: string) => string | null | undefined
   /** Connected agents (presence), for kimo_get_state. */
   agents?: () => AgentSummary[]
+  /** A connection's last target (#78: landed edit, open, resolved pick), for kimo_get_state. */
+  recent?: (origin: string) => LastTarget | undefined
   /** Editor windows open (0 headless). */
   windows?: () => number
   svgImport?: SvgImporter
@@ -209,7 +232,8 @@ function docLine(x: {
   return `${x.name} (${x.doc.id}, shared room${via}, ${x.shared.role === "view" ? "view only" : "can edit"})`
 }
 
-function nameOf(d: HostDocument): string {
+/** meta.name, else the file name without `.kimo` ("Shared file" for an unnamed room). */
+export function nameOf(d: { ref: { path: string }; store: DocStore }): string {
   const meta = d.store.toHeader().meta as Record<string, unknown> | undefined
   const name = typeof meta?.name === "string" ? meta.name : null
   // A room's path is `kimo-room:<room>`: like its tab, it is "Shared file" until named.
@@ -221,9 +245,9 @@ function numberOr(v: unknown, d: number): number {
   return typeof v === "number" && Number.isFinite(v) ? v : d
 }
 
-/** Top-level ancestor of a node (itself when top-level). */
-function topLevelOf(store: DocStore, id: string): string | null {
-  let cur: string | undefined = id
+/** Top-level ancestor of a node (itself when top-level); `inst/child` lies under `inst`. */
+export function topLevelOf(store: Pick<DocStore, "getNode">, id: string): string | null {
+  let cur: string | undefined = id.split("/")[0]
   const seen = new Set<string>()
   while (cur && !seen.has(cur)) {
     seen.add(cur)
@@ -476,14 +500,257 @@ export function createToolHandlerMap(
 
   // --- Session tools ---------------------------------------------------------------------------
 
-  const getState: ToolHandler = async (input, ctx): Out => {
-    let docs = ctx.host.list()
-    if (typeof input.docId === "string") {
-      const r = ctx.host.get(input.docId)
-      if (!r.ok) return fail(r.error)
-      docs = [r.value]
+  /** #78: one open document as the target resolver sees it (boxes only when a window shows it). */
+  async function docSignal(d: HostDocument, withBounds: boolean): Promise<DocSignal> {
+    const header = d.store.toHeader()
+    const pages = listPages({ pages: header.pages }).map((p) => ({ id: p.id, name: p.name }))
+    const first = pages[0]?.id ?? null
+    const top = d.store.children(null)
+    let layout: Awaited<ReturnType<SceneService["layout"]>> | null = null
+    if (withBounds && top.length) layout = await scene.layout(d.store).catch(() => null)
+    const frames: FrameSignal[] = []
+    for (const id of top) {
+      const n = d.store.getNode(id)
+      if (!n || n.visible === false) continue
+      // Notes, prompts, scripts and loose shapes never make a frame ambiguous.
+      if (n.type !== "frame" && n.type !== "group" && n.type !== "instance") continue
+      const page = typeof n.page === "string" && pages.some((p) => p.id === n.page) ? n.page : first
+      const w = layout?.nodes.get(id)?.world
+      frames.push({
+        id,
+        page,
+        ...(typeof n.name === "string" ? { name: n.name } : {}),
+        ...(w ? { bounds: { x: w.x, y: w.y, w: w.w, h: w.h } } : {}),
+      })
     }
+    return {
+      docId: d.ref.id,
+      name: nameOf(d),
+      path: d.ref.path,
+      shared: d.shared !== undefined || isRoomPath(d.ref.path),
+      pages,
+      frames,
+      top: (id) => topLevelOf(d.store, id),
+    }
+  }
+
+  async function targetSignals(ctx: ToolContext): Promise<TargetSignals> {
+    const views = ctx.host.views?.() ?? []
+    const shown = (d: HostDocument) => views.some((v) => v.active && v.docId === d.ref.id)
+    const docs = await Promise.all(ctx.host.list().map((d) => docSignal(d, shown(d))))
+    const last = options.recent?.(ctx.origin)
+    return { docs, views, ...(last ? { last } : {}) }
+  }
+
+  /** The picker state that rides through the client (sealed by the MCP server). */
+  interface PickState {
+    need: TargetNeed
+    step: PickStep
+    docId?: string
+    offered: string[]
+    /** When the picker was shown (host clock): a person selection since then answers it. */
+    askedAt: number
+  }
+
+  const canAsk = (ctx: ToolContext) => ctx.ask?.can === true && ctx.origin.startsWith("mcp:")
+  const windows = () => options.windows?.()
+
+  const unclearError = (
+    reason: string,
+    level: TargetNeed,
+    message: string,
+    suggestion: string,
+    choices: Omit<PickChoice, "value">[] = [],
+  ): ToolError => ({
+    code: "TARGET_UNCLEAR",
+    message,
+    suggestion,
+    detail: { kind: "target", reason, level, choices },
+  })
+  const cancelled = (reason: "dismissed" | "no-selection"): HandlerOutput =>
+    fail({
+      code: "CANCELLED",
+      message:
+        reason === "dismissed"
+          ? "The person closed the picker."
+          : "No frame was selected in Kimo within 2 minutes.",
+      suggestion: "Change nothing. Say so in one line and wait.",
+      detail: { kind: "cancelled", reason },
+    })
+
+  /** An unclear `pick`: a picker step when the client can show one, else TARGET_UNCLEAR. */
+  function unclearPick(
+    ctx: ToolContext,
+    s: TargetSignals,
+    r: Exclude<TargetResult, { status: "clear" }>,
+    need: TargetNeed,
+  ): HandlerOutput {
+    if (r.status === "none")
+      return fail(
+        unclearError(
+          "no-documents",
+          "file",
+          "No file is open in Kimo.",
+          "Open or create the file the request names, or ask which one.",
+        ),
+      )
+    if (r.reason === "not-visible")
+      return fail(
+        unclearError(
+          "not-visible",
+          r.level,
+          "The front Kimo tab shows a file MCP can't see.",
+          "Tell the person.",
+        ),
+      )
+    const step = choicesFor(s, r, need)
+    const noAsk = fail(
+      unclearError(
+        "no-elicitation",
+        r.level,
+        "This client can't show a picker.",
+        "Ask which one in one short chat message. Change nothing until they answer.",
+        step.choices.map(({ value: _v, ...c }) => c),
+      ),
+    )
+    if (!canAsk(ctx) || step.choices.length === 0) return noAsk
+    const offered: { value: string; label: string }[] = step.choices.map((c) => ({
+      value: c.value,
+      label: c.label,
+    }))
+    if ((windows() ?? 0) > 0)
+      offered.push({ value: SELECT_IN_KIMO, label: "I'll select it in Kimo" })
+    const who = ctx.identity.label
+    const doc = step.docId ? s.docs.find((d) => d.docId === step.docId) : undefined
+    const message =
+      step.step === "file"
+        ? `Which file should ${who} work on?`
+        : step.step === "frame" && doc
+          ? `Which frame in ${fileLabel(doc, s.docs)} should ${who} change?`
+          : `Which frame should ${who} change?`
+    const state: PickState = {
+      need,
+      step: step.step,
+      ...(step.docId ? { docId: step.docId } : {}),
+      offered: offered.map((o) => o.value),
+      askedAt: Date.now(),
+    }
+    return {
+      ...noAsk,
+      ask: { message, title: step.step === "file" ? "File" : "Frame", options: offered, state },
+    }
+  }
+
+  /** A re-entered `pick` round: the person's answer, re-checked against what was offered. */
+  async function answerPick(
+    ctx: ToolContext,
+    s: TargetSignals,
+    ask: NonNullable<ToolContext["ask"]>,
+  ): Promise<TargetResult | HandlerOutput> {
+    const st = ask.state as Partial<PickState> | null
+    const steps: unknown[] = ["file", "frame", "combined"]
+    if (
+      !st ||
+      typeof st !== "object" ||
+      (st.need !== "file" && st.need !== "frame") ||
+      !steps.includes(st.step) ||
+      !Array.isArray(st.offered)
+    )
+      return fail({ code: "INVALID_INPUT", message: "The picker answer has no valid state." })
+    const resp = ask.responses?.target as { action?: unknown; content?: unknown } | undefined
+    if (resp?.action !== "accept") return cancelled("dismissed")
+    const value = (resp.content as Record<string, unknown> | undefined)?.target
+    if (typeof value !== "string" || !st.offered.includes(value))
+      return fail({
+        code: "INVALID_INPUT",
+        message: "The answer is not one of the offered choices.",
+        suggestion: "Call kimo_get_state with pick again.",
+      })
+    const clear = (docId: string, frameIds: string[], via: TargetVia): TargetResult => ({
+      status: "clear",
+      docId,
+      frameIds: st.need === "file" ? [] : frameIds,
+      via,
+    })
+    const frameOf = (docId: string, frameId: string): HandlerOutput | null => {
+      const d = ctx.host.get(docId)
+      if (!d.ok) return fail(d.error)
+      if (topLevelOf(d.value.store, frameId) === frameId) return null
+      return fail({
+        code: "NODE_NOT_FOUND",
+        message: `The chosen frame ${frameId} no longer exists.`,
+        nodeId: frameId,
+        suggestion: "Call kimo_get_state with pick again.",
+      })
+    }
+    if (value === SELECT_IN_KIMO) {
+      const scope = st.step === "frame" && typeof st.docId === "string" ? st.docId : null
+      // A selection the person made after the question, before answering, counts.
+      const asked = typeof st.askedAt === "number" ? st.askedAt : Number.POSITIVE_INFINITY
+      let made: WindowView | undefined
+      for (const v of s.views) {
+        if (!v.active || v.docId === null || v.selectionBy !== "person") continue
+        if (v.selection.length === 0 || v.selectionAt < asked) continue
+        if (scope !== null && v.docId !== scope) continue
+        if (!ctx.host.get(v.docId).ok) continue
+        if (!made || v.selectionAt > made.selectionAt) made = v
+      }
+      const got = made?.docId
+        ? { docId: made.docId, ids: made.selection }
+        : ((await ctx.host.waitForSelection?.(scope, APPROVAL_TIMEOUT_MS, ask.signal)) ?? null)
+      if (!got) return cancelled("no-selection")
+      const d = ctx.host.get(got.docId)
+      if (!d.ok) return fail(d.error)
+      const tops = [
+        ...new Set(got.ids.map((id) => topLevelOf(d.value.store, id)).filter((x) => x !== null)),
+      ] as string[]
+      return clear(got.docId, tops, "selected-in-kimo")
+    }
+    if (st.step === "frame") {
+      const docId = typeof st.docId === "string" ? st.docId : ""
+      return frameOf(docId, value) ?? clear(docId, [value], "picked")
+    }
+    if (st.step === "combined") {
+      const i = value.indexOf("/")
+      const docId = i < 0 ? value : value.slice(0, i)
+      if (i < 0) {
+        const d = ctx.host.get(docId)
+        return d.ok ? clear(docId, [], "picked") : fail(d.error)
+      }
+      const frameId = value.slice(i + 1)
+      return frameOf(docId, frameId) ?? clear(docId, [frameId], "picked")
+    }
+    const d = ctx.host.get(value)
+    if (!d.ok) return fail(d.error)
+    if (st.need === "file") return clear(value, [], "picked")
+    // The file is chosen; the frame may still be clear from the signals, else ask for it.
+    const r = resolveTarget(s, "frame", value)
+    return r.status === "clear" ? r : unclearPick(ctx, s, r, "frame")
+  }
+
+  const VIA: Record<TargetVia, string> = {
+    given: "as named",
+    selection: "from the selection",
+    recent: "from your recent work",
+    window: "from the front tab",
+    view: "the frame in view",
+    only: "the only candidate",
+    empty: "an empty page",
+    picked: "picked by the person",
+    "selected-in-kimo": "selected in Kimo",
+  }
+
+  /** The full kimo_get_state answer, with `target`. */
+  async function stateResult(
+    ctx: ToolContext,
+    named: string | undefined,
+    s: TargetSignals,
+    t: TargetResult,
+    need: TargetNeed,
+  ): Out {
+    const docs = named ? ctx.host.list().filter((d) => d.ref.id === named) : ctx.host.list()
     const agents = options.agents?.() ?? []
+    const front = frontView(s.views)?.docId ?? null
     const documents = await Promise.all(
       docs.map(async (d) => {
         const header = d.store.toHeader()
@@ -491,6 +758,9 @@ export function createToolHandlerMap(
         const layout = top.length ? await scene.layout(d.store) : null
         const doc = { nodes: {} as Record<string, unknown> }
         for (const id of d.store.nodeIds()) doc.nodes[id] = d.store.getNode(id)
+        const sig = s.docs.find((x) => x.docId === d.ref.id)
+        const shownIn = s.views.filter((v) => v.active && v.docId === d.ref.id && v.view)
+        const first = sig?.pages[0]?.id ?? null
         return {
           doc: d.ref,
           revision: toToken(d.store.revision),
@@ -503,15 +773,24 @@ export function createToolHandlerMap(
                 },
               }
             : {}),
+          ...(front === d.ref.id ? { front: true } : {}),
           selection: ctx.host.selection(d.ref.id),
           topLevel: top.slice(0, 50).map((id) => {
             const n = d.store.getNode(id) as NodeData
-            const s: Record<string, unknown> = { id, type: n.type }
-            if (typeof n.name === "string") s.name = n.name
-            if (n.visible === false) s.visible = false
+            const out: Record<string, unknown> = { id, type: n.type }
+            if (typeof n.name === "string") out.name = n.name
+            if (n.visible === false) out.visible = false
             const w = layout?.nodes.get(id)?.world
-            if (w) s.bounds = { x: w.x, y: w.y, w: w.w, h: w.h }
-            return s
+            if (w) out.bounds = { x: w.x, y: w.y, w: w.w, h: w.h }
+            if (sig && shownIn.length) {
+              const page =
+                typeof n.page === "string" && sig.pages.some((p) => p.id === n.page)
+                  ? n.page
+                  : first
+              const f = { id, page, ...(w ? { bounds: { x: w.x, y: w.y, w: w.w, h: w.h } } : {}) }
+              out.inViewport = n.visible !== false && shownIn.some((v) => inView(sig, f, v))
+            }
+            return out
           }),
           topLevelCount: top.length,
           pages: (() => {
@@ -538,13 +817,47 @@ export function createToolHandlerMap(
         }
       }),
     )
+    let target: Record<string, unknown> = { status: t.status }
+    let line = ""
+    if (t.status === "clear") {
+      const sig = s.docs.find((x) => x.docId === t.docId)
+      const file = sig ? fileLabel(sig, s.docs) : t.docId
+      const names = t.frameIds.map((id) => {
+        const n = ctx.host.get(t.docId)
+        const name = n.ok ? n.value.store.getNode(id)?.name : undefined
+        return typeof name === "string" && name.trim() ? name : "Unnamed frame"
+      })
+      // The page a new top-level frame goes on: the one the person shows, else the first.
+      const shown = sig ? frontViewOf(s.views, t.docId) : undefined
+      const page = sig ? (shown ? pageOf(sig, shown) : (sig.pages[0]?.id ?? null)) : null
+      target = {
+        status: "clear",
+        docId: t.docId,
+        ...(need === "frame" ? { frameIds: t.frameIds } : {}),
+        ...(page !== null ? { page } : {}),
+        via: t.via,
+        label: names.length ? `${file}: ${names.join(", ")}` : file,
+      }
+      const quoted = names.map((x) => `"${x}"`).join(", ")
+      line = ` Target: ${quoted ? `${quoted} in ` : ""}${file}, ${VIA[t.via]}.`
+    } else if (t.status === "unclear") {
+      target = { status: "unclear", unclear: t.level, reason: t.reason }
+      const sig = t.level === "frame" ? s.docs.find((x) => x.docId === t.docIds[0]) : undefined
+      if (sig) {
+        // Only the frame is unclear: the file is known.
+        const file = fileLabel(sig, s.docs)
+        target = { ...target, docId: sig.docId, label: file }
+        line = ` File: ${file}. Frame unclear: unless the request names one, call kimo_get_state with pick.`
+      } else line = " File unclear: unless the request names one, call kimo_get_state with pick."
+    }
     const data = {
       app: {
         mode: ctx.host.kind,
         version: options.version ?? "0.0.0",
-        windows: options.windows?.() ?? 0,
+        windows: windows() ?? 0,
       },
       documents,
+      target,
       you: {
         origin: ctx.origin,
         level: ctx.policy.level,
@@ -557,10 +870,31 @@ export function createToolHandlerMap(
       success(
         data,
         n
-          ? `${n} open document${n === 1 ? "" : "s"}: ${documents.map(docLine).join(", ")}.`
+          ? `${n} open document${n === 1 ? "" : "s"}: ${documents.map(docLine).join(", ")}.${line}`
           : "No documents are open. Open a .kimo file with kimo_open or create one with kimo_create.",
       ),
     )
+  }
+
+  const getState: ToolHandler = async (input, ctx): Out => {
+    const named = typeof input.docId === "string" ? input.docId : undefined
+    if (named) {
+      const r = ctx.host.get(named)
+      if (!r.ok) return fail(r.error)
+    }
+    const pick = input.pick === "file" || input.pick === "frame" ? input.pick : undefined
+    const s = await targetSignals(ctx)
+    // A re-entered round (#78): the person answered the picker.
+    if (pick && ctx.ask && ctx.ask.state !== undefined) {
+      const answer = await answerPick(ctx, s, ctx.ask)
+      if ("result" in answer) return answer
+      return stateResult(ctx, named, s, answer, pick)
+    }
+    // Plain kimo_get_state reports the target and never asks.
+    const need: TargetNeed = pick ?? "frame"
+    const t = resolveTarget(s, need, named)
+    if (!pick || t.status === "clear") return stateResult(ctx, named, s, t, need)
+    return unclearPick(ctx, s, t, need)
   }
 
   const readDocs: ToolHandler = async (input): Out => {

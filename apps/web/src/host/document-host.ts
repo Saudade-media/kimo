@@ -35,6 +35,8 @@ import {
   type SceneService,
   type SceneServiceOptions,
   type SvgImporter,
+  type ViewReport,
+  WindowViews,
 } from "@kimo/mcp-server"
 import type {
   KimoPlatform,
@@ -224,7 +226,8 @@ export async function startDocumentHostService(
 
   // --- Viewers, session state, selection -------------------------------------------------------
   const viewers = new Map<string, Set<string>>()
-  const selections = new Map<string, Map<string, string[]>>()
+  /** #78: what each window's editor tab shows (kimo_get_state `selection` and `target`). */
+  const windowViews = new WindowViews()
   const stateSubs = new Map<string, () => void>()
   const lastSaved = new Map<FileDocumentSession, Revision>()
   const pushState = (s: FileDocumentSession, state: SessionState) => {
@@ -328,7 +331,7 @@ export async function startDocumentHostService(
   const rooms = createHostRooms({
     bridge,
     viewers,
-    onDetach: (ref, from) => selections.get(ref)?.delete(from),
+    onDetach: (ref, from) => windowViews.release(from, ref),
   })
   const backend: DocumentBackend = {
     kind: "desktop",
@@ -388,12 +391,17 @@ export async function startDocumentHostService(
         void bridge.emitTo(label, HOST_EVENTS.focus, { ref: path, ids, ...opts })
       return labels.length > 0
     },
-    selection(path) {
-      const m = selections.get(path)
-      if (!m) return []
-      const last = [...m.values()].at(-1)
-      return last ?? []
-    },
+    selection: (path) => windowViews.selection(path),
+    // A window's record names a host document only while that window holds it (a room before its
+    // attach, a file after its release): until then it shows a file MCP can't see.
+    views: () =>
+      windowViews
+        .list()
+        .map((v) =>
+          v.ref === null || viewers.get(v.ref)?.has(v.window) ? v : { ...v, ref: null },
+        ),
+    waitForSelection: (path, ms, signal) =>
+      windowViews.waitForSelection(path, ms, signal, (ref) => usable(manager.get(ref))),
   }
   const scene =
     options.scene && "render" in options.scene
@@ -435,6 +443,11 @@ export async function startDocumentHostService(
     ...(options.validate ? { validate: options.validate as never } : {}),
   })
   const relays = new Map<string, Relay>()
+  /** Connections a window's Agent tab matched as the MCP connection of its CLI session. */
+  const cliMatched = new WeakSet<McpConnection>()
+  /** #78: a CLI the Agent tab runs headless can't show a picker (its turn names the file). */
+  const cliBacked = (cwd: string | undefined, conn: McpConnection) =>
+    cliMatched.has(conn) || (!!cwd && /[\\/]\.kimo[\\/]cli-workspaces[\\/]/.test(cwd))
   const connectionInfos = (): McpConnectionInfo[] =>
     runtime.presence.list().map((p) => {
       const relay = [...relays.values()].find((r) => r.conn?.origin === p.origin)
@@ -544,7 +557,13 @@ export async function startDocumentHostService(
               },
             ),
           )
-          const srv = sdk.createConnectionServer(c, { version: options.version, host: "desktop" })
+          const srv = sdk.createConnectionServer(c, {
+            version: options.version,
+            host: "desktop",
+            // #78: the socket relay carries the picker, except to a CLI the Agent tab runs
+            // headless (its session workspace is the relay's cwd).
+            canAsk: () => !cliBacked(relay.cwd, c),
+          })
           server = srv
           await srv.connect(tr)
           t = tr
@@ -618,6 +637,8 @@ export async function startDocumentHostService(
         const server = sdk.createConnectionServer(conn, {
           version: options.version,
           host: "desktop",
+          // #78: relayed HTTP is not proven to carry requests mid-call: no picker yet.
+          canAsk: false,
         })
         const relay: Relay = {
           connectionId: `http:${conn.identity.session}`,
@@ -781,6 +802,7 @@ export async function startDocumentHostService(
     const hit =
       live.find((r) => r.cwd === workspace) ??
       live.find((r) => tail(r.cwd as string) === tail(workspace))
+    if (hit?.conn) cliMatched.add(hit.conn)
     return hit?.conn ?? null
   }
 
@@ -827,7 +849,7 @@ export async function startDocumentHostService(
       viewers.get(ref)?.delete(from)
       // The window's in-app agents end with it (pending prompts answer deny).
       if (![...viewers.values()].some((s) => s.has(from))) closeAgentsOf(from)
-      selections.get(ref)?.delete(from)
+      windowViews.release(from, ref)
       const s = manager.get(ref)
       const usedByAgent = runtime.presence.list().some((p) => {
         const id = host.docIdForPath(ref)
@@ -1021,18 +1043,20 @@ export async function startDocumentHostService(
       })
     }
   })
-  await listen<{ from: string; ref: string; selection: string[] }>(
-    HOST_EVENTS.windowState,
-    ({ from, ref, selection }) => {
-      let m = selections.get(ref)
-      if (!m) {
-        m = new Map()
-        selections.set(ref, m)
-      }
-      m.delete(from)
-      m.set(from, selection)
-    },
-  )
+  await listen<{ from: string } & Partial<ViewReport>>(HOST_EVENTS.windowState, (r) => {
+    const kinds: ViewReport["kind"][] = ["disk", "room", "library", "none"]
+    windowViews.report(r.from, {
+      ref: typeof r.ref === "string" ? r.ref : null,
+      kind: kinds.includes(r.kind as ViewReport["kind"]) ? (r.kind as ViewReport["kind"]) : "disk",
+      // An older window build sends only `{ref, selection}`: it shows that file.
+      active: r.active !== false,
+      focused: r.focused === true,
+      selection: Array.isArray(r.selection) ? r.selection.filter((x) => typeof x === "string") : [],
+      selectionBy: r.selectionBy === "agent" ? "agent" : "person",
+      page: typeof r.page === "string" ? r.page : null,
+      view: r.view && typeof r.view === "object" ? r.view : null,
+    })
+  })
 
   // Ready: windows re-attach after a host reload; Rust stops queueing MCP lines.
   await bridge.emit(HOST_EVENTS.ready, { version: options.version })

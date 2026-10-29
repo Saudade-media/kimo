@@ -2,6 +2,7 @@
  * Session tools: state, docs, open / close / create, save, history, focus (teardown 11.3).
  */
 import { DocRefSchema, RevisionSchema } from "../envelope"
+import { APPROVAL_TIMEOUT_MS } from "../policy"
 import { Arr, Bool, Enum, Int, Num, Obj, Open, Opt, Str } from "../schema"
 import {
   ALL_HOSTS,
@@ -59,8 +60,9 @@ const OpenDoc = Obj({
       },
     ),
   ),
+  front: Opt(Bool({ description: "True for the file in the editor tab the person used last." })),
   selection: Arr(Str({ description: "Node id." }), {
-    description: "Selected ids in the frontmost window showing it (empty headless).",
+    description: "The person's newest selection in a window showing it (empty headless).",
   }),
   topLevel: Arr(NodeSummary, {
     description: "Top-level nodes (first 50; use kimo_query for more).",
@@ -112,12 +114,61 @@ const OpenDoc = Obj({
   ),
 })
 
+const Target = Obj(
+  {
+    status: Enum(["clear", "unclear", "none"], {
+      description:
+        "clear: edit docId (and frameIds). unclear: pick first unless the request names it. none: no file open.",
+    }),
+    docId: Opt(Str({ description: "The file to edit (also when only the frame is unclear)." })),
+    frameIds: Opt(
+      Arr(Str({ description: "Top-level node id." }), {
+        description: "The frames to change; empty for an empty page (build the first frame).",
+      }),
+    ),
+    page: Opt(
+      Str({
+        description: "Page shown in Kimo for that file, else the first. Put new frames there.",
+      }),
+    ),
+    via: Opt(
+      Enum(
+        [
+          "given",
+          "selection",
+          "recent",
+          "window",
+          "view",
+          "only",
+          "empty",
+          "picked",
+          "selected-in-kimo",
+        ],
+        { description: "Why this target: the signal that decided it." },
+      ),
+    ),
+    unclear: Opt(Enum(["file", "frame"], { description: "The level still unclear." })),
+    reason: Opt(
+      Enum(["conflict", "no-signal", "not-visible"], { description: "Why it is unclear." }),
+    ),
+    label: Opt(Str({ description: "File and frame names, for your status line." })),
+  },
+  { description: "Which file and frame to edit (guide: tools)." },
+)
+
 export const kimoGetState = defineTool({
   name: "kimo_get_state",
   title: "Get Kimo state",
   description:
-    "Open documents (docId, path, revision), selection, top-level nodes, pages, components, variables summary and your permissions. docId: that document only.",
-  input: Obj({ docId: optDocId }),
+    "Open documents (docId, path, revision), selection, top-level nodes, pages, components, variables summary and your permissions. docId: that document only. pick: before a first edit the request does not pin down.",
+  input: Obj({
+    docId: optDocId,
+    pick: Opt(
+      Enum(["file", "frame"], {
+        description: "Resolve the file or frame to edit. Asks the person only when unclear.",
+      }),
+    ),
+  }),
   data: Obj({
     app: Obj(
       {
@@ -128,6 +179,7 @@ export const kimoGetState = defineTool({
       { description: "Host." },
     ),
     documents: Arr(OpenDoc, { description: "Open documents (one when docId was given)." }),
+    target: Opt(Target),
     you: Obj(
       {
         origin: Str({ description: "Your origin (mcp:<client>.<session>); your undo stack." }),
@@ -142,7 +194,8 @@ export const kimoGetState = defineTool({
   scope: "read",
   doc: "optional",
   mutating: false,
-  timeoutMs: DEFAULT_TIMEOUT_MS,
+  // A pick may wait for the person (the picker, or a selection in Kimo).
+  timeoutMs: APPROVAL_TIMEOUT_MS + 30_000,
   availability: ALL_HOSTS,
   status: "m5",
 })

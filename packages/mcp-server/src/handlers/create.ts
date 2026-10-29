@@ -38,6 +38,8 @@ function kindOf(tool: string, input: Record<string, unknown>): ActivityKind {
 function withActivity(tool: string, h: ToolHandler): ToolHandler {
   return async (input, ctx): Promise<HandlerOutput> => {
     const out = await h(input, ctx)
+    // A round that asks the person (#78 picker) is not an outcome yet: no activity row.
+    if (out.ask) return out
     const r = out.result
     try {
       const base = {

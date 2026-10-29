@@ -5,13 +5,21 @@
     {
       "name": "kimo_get_state",
       "title": "Get Kimo state",
-      "description": "Open documents (docId, path, revision), selection, top-level nodes, pages, components, variables summary and your permissions. docId: that document only.",
+      "description": "Open documents (docId, path, revision), selection, top-level nodes, pages, components, variables summary and your permissions. docId: that document only. pick: before a first edit the request does not pin down.",
       "inputSchema": {
         "type": "object",
         "properties": {
           "docId": {
             "type": "string",
             "description": "Document id (d_…) from the turn context, kimo_get_state or kimo_open."
+          },
+          "pick": {
+            "type": "string",
+            "enum": [
+              "file",
+              "frame"
+            ],
+            "description": "Resolve the file or frame to edit. Asks the person only when unclear."
           }
         },
         "additionalProperties": false
@@ -200,6 +208,8 @@
                     "PROTOCOL_MISMATCH",
                     "UNSUPPORTED",
                     "RATE_LIMITED",
+                    "TARGET_UNCLEAR",
+                    "CANCELLED",
                     "INTERNAL"
                   ],
                   "description": "Stable error code (see kimo://docs/errors)."
@@ -236,7 +246,7 @@
                     }
                   },
                   "additionalProperties": true,
-                  "description": "Code-specific detail: REVISION_CONFLICT {current, changed[]} or {kind: human-edit, ids[], by}; AREA_BUSY {kind: area, holder, holderLabel?, ids[], touched[], since}; DOCUMENT_NOT_OPEN {currentDocId?}; DOCUMENT_LOCKED {holder}; SCHEMA_VIOLATION {issue}; BATCH_TOO_LARGE {limit, newLayers}."
+                  "description": "Code-specific detail: REVISION_CONFLICT {current, changed[]} or {kind: human-edit, ids[], by}; AREA_BUSY {kind: area, holder, holderLabel?, ids[], touched[], since}; DOCUMENT_NOT_OPEN {currentDocId?}; DOCUMENT_LOCKED {holder}; SCHEMA_VIOLATION {issue}; BATCH_TOO_LARGE {limit, newLayers}; TARGET_UNCLEAR {reason, level?, choices[]}; CANCELLED {reason}."
                 }
               },
               "additionalProperties": false
@@ -402,13 +412,17 @@
                       "additionalProperties": false,
                       "description": "A room joined from a share link (kimo-room:<room>). Edits sync live; it has no file."
                     },
+                    "front": {
+                      "type": "boolean",
+                      "description": "True for the file in the editor tab the person used last."
+                    },
                     "selection": {
                       "type": "array",
                       "items": {
                         "type": "string",
                         "description": "Node id."
                       },
-                      "description": "Selected ids in the frontmost window showing it (empty headless)."
+                      "description": "The person's newest selection in a window showing it (empty headless)."
                     },
                     "topLevel": {
                       "type": "array",
@@ -600,6 +614,77 @@
                   "additionalProperties": false
                 },
                 "description": "Open documents (one when docId was given)."
+              },
+              "target": {
+                "type": "object",
+                "required": [
+                  "status"
+                ],
+                "properties": {
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "clear",
+                      "unclear",
+                      "none"
+                    ],
+                    "description": "clear: edit docId (and frameIds). unclear: pick first unless the request names it. none: no file open."
+                  },
+                  "docId": {
+                    "type": "string",
+                    "description": "The file to edit (also when only the frame is unclear)."
+                  },
+                  "frameIds": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "description": "Top-level node id."
+                    },
+                    "description": "The frames to change; empty for an empty page (build the first frame)."
+                  },
+                  "page": {
+                    "type": "string",
+                    "description": "Page shown in Kimo for that file, else the first. Put new frames there."
+                  },
+                  "via": {
+                    "type": "string",
+                    "enum": [
+                      "given",
+                      "selection",
+                      "recent",
+                      "window",
+                      "view",
+                      "only",
+                      "empty",
+                      "picked",
+                      "selected-in-kimo"
+                    ],
+                    "description": "Why this target: the signal that decided it."
+                  },
+                  "unclear": {
+                    "type": "string",
+                    "enum": [
+                      "file",
+                      "frame"
+                    ],
+                    "description": "The level still unclear."
+                  },
+                  "reason": {
+                    "type": "string",
+                    "enum": [
+                      "conflict",
+                      "no-signal",
+                      "not-visible"
+                    ],
+                    "description": "Why it is unclear."
+                  },
+                  "label": {
+                    "type": "string",
+                    "description": "File and frame names, for your status line."
+                  }
+                },
+                "additionalProperties": false,
+                "description": "Which file and frame to edit (guide: tools)."
               },
               "you": {
                 "type": "object",
@@ -875,6 +960,8 @@
                     "PROTOCOL_MISMATCH",
                     "UNSUPPORTED",
                     "RATE_LIMITED",
+                    "TARGET_UNCLEAR",
+                    "CANCELLED",
                     "INTERNAL"
                   ],
                   "description": "Stable error code (see kimo://docs/errors)."
@@ -911,7 +998,7 @@
                     }
                   },
                   "additionalProperties": true,
-                  "description": "Code-specific detail: REVISION_CONFLICT {current, changed[]} or {kind: human-edit, ids[], by}; AREA_BUSY {kind: area, holder, holderLabel?, ids[], touched[], since}; DOCUMENT_NOT_OPEN {currentDocId?}; DOCUMENT_LOCKED {holder}; SCHEMA_VIOLATION {issue}; BATCH_TOO_LARGE {limit, newLayers}."
+                  "description": "Code-specific detail: REVISION_CONFLICT {current, changed[]} or {kind: human-edit, ids[], by}; AREA_BUSY {kind: area, holder, holderLabel?, ids[], touched[], since}; DOCUMENT_NOT_OPEN {currentDocId?}; DOCUMENT_LOCKED {holder}; SCHEMA_VIOLATION {issue}; BATCH_TOO_LARGE {limit, newLayers}; TARGET_UNCLEAR {reason, level?, choices[]}; CANCELLED {reason}."
                 }
               },
               "additionalProperties": false
@@ -1171,6 +1258,8 @@
                     "PROTOCOL_MISMATCH",
                     "UNSUPPORTED",
                     "RATE_LIMITED",
+                    "TARGET_UNCLEAR",
+                    "CANCELLED",
                     "INTERNAL"
                   ],
                   "description": "Stable error code (see kimo://docs/errors)."
@@ -1207,7 +1296,7 @@
                     }
                   },
                   "additionalProperties": true,
-                  "description": "Code-specific detail: REVISION_CONFLICT {current, changed[]} or {kind: human-edit, ids[], by}; AREA_BUSY {kind: area, holder, holderLabel?, ids[], touched[], since}; DOCUMENT_NOT_OPEN {currentDocId?}; DOCUMENT_LOCKED {holder}; SCHEMA_VIOLATION {issue}; BATCH_TOO_LARGE {limit, newLayers}."
+                  "description": "Code-specific detail: REVISION_CONFLICT {current, changed[]} or {kind: human-edit, ids[], by}; AREA_BUSY {kind: area, holder, holderLabel?, ids[], touched[], since}; DOCUMENT_NOT_OPEN {currentDocId?}; DOCUMENT_LOCKED {holder}; SCHEMA_VIOLATION {issue}; BATCH_TOO_LARGE {limit, newLayers}; TARGET_UNCLEAR {reason, level?, choices[]}; CANCELLED {reason}."
                 }
               },
               "additionalProperties": false
@@ -1648,6 +1737,8 @@
                     "PROTOCOL_MISMATCH",
                     "UNSUPPORTED",
                     "RATE_LIMITED",
+                    "TARGET_UNCLEAR",
+                    "CANCELLED",
                     "INTERNAL"
                   ],
                   "description": "Stable error code (see kimo://docs/errors)."
@@ -1684,7 +1775,7 @@
                     }
                   },
                   "additionalProperties": true,
-                  "description": "Code-specific detail: REVISION_CONFLICT {current, changed[]} or {kind: human-edit, ids[], by}; AREA_BUSY {kind: area, holder, holderLabel?, ids[], touched[], since}; DOCUMENT_NOT_OPEN {currentDocId?}; DOCUMENT_LOCKED {holder}; SCHEMA_VIOLATION {issue}; BATCH_TOO_LARGE {limit, newLayers}."
+                  "description": "Code-specific detail: REVISION_CONFLICT {current, changed[]} or {kind: human-edit, ids[], by}; AREA_BUSY {kind: area, holder, holderLabel?, ids[], touched[], since}; DOCUMENT_NOT_OPEN {currentDocId?}; DOCUMENT_LOCKED {holder}; SCHEMA_VIOLATION {issue}; BATCH_TOO_LARGE {limit, newLayers}; TARGET_UNCLEAR {reason, level?, choices[]}; CANCELLED {reason}."
                 }
               },
               "additionalProperties": false
@@ -2125,6 +2216,8 @@
                     "PROTOCOL_MISMATCH",
                     "UNSUPPORTED",
                     "RATE_LIMITED",
+                    "TARGET_UNCLEAR",
+                    "CANCELLED",
                     "INTERNAL"
                   ],
                   "description": "Stable error code (see kimo://docs/errors)."
@@ -2161,7 +2254,7 @@
                     }
                   },
                   "additionalProperties": true,
-                  "description": "Code-specific detail: REVISION_CONFLICT {current, changed[]} or {kind: human-edit, ids[], by}; AREA_BUSY {kind: area, holder, holderLabel?, ids[], touched[], since}; DOCUMENT_NOT_OPEN {currentDocId?}; DOCUMENT_LOCKED {holder}; SCHEMA_VIOLATION {issue}; BATCH_TOO_LARGE {limit, newLayers}."
+                  "description": "Code-specific detail: REVISION_CONFLICT {current, changed[]} or {kind: human-edit, ids[], by}; AREA_BUSY {kind: area, holder, holderLabel?, ids[], touched[], since}; DOCUMENT_NOT_OPEN {currentDocId?}; DOCUMENT_LOCKED {holder}; SCHEMA_VIOLATION {issue}; BATCH_TOO_LARGE {limit, newLayers}; TARGET_UNCLEAR {reason, level?, choices[]}; CANCELLED {reason}."
                 }
               },
               "additionalProperties": false
@@ -2595,6 +2688,8 @@
                     "PROTOCOL_MISMATCH",
                     "UNSUPPORTED",
                     "RATE_LIMITED",
+                    "TARGET_UNCLEAR",
+                    "CANCELLED",
                     "INTERNAL"
                   ],
                   "description": "Stable error code (see kimo://docs/errors)."
@@ -2631,7 +2726,7 @@
                     }
                   },
                   "additionalProperties": true,
-                  "description": "Code-specific detail: REVISION_CONFLICT {current, changed[]} or {kind: human-edit, ids[], by}; AREA_BUSY {kind: area, holder, holderLabel?, ids[], touched[], since}; DOCUMENT_NOT_OPEN {currentDocId?}; DOCUMENT_LOCKED {holder}; SCHEMA_VIOLATION {issue}; BATCH_TOO_LARGE {limit, newLayers}."
+                  "description": "Code-specific detail: REVISION_CONFLICT {current, changed[]} or {kind: human-edit, ids[], by}; AREA_BUSY {kind: area, holder, holderLabel?, ids[], touched[], since}; DOCUMENT_NOT_OPEN {currentDocId?}; DOCUMENT_LOCKED {holder}; SCHEMA_VIOLATION {issue}; BATCH_TOO_LARGE {limit, newLayers}; TARGET_UNCLEAR {reason, level?, choices[]}; CANCELLED {reason}."
                 }
               },
               "additionalProperties": false
@@ -2953,6 +3048,8 @@
                     "PROTOCOL_MISMATCH",
                     "UNSUPPORTED",
                     "RATE_LIMITED",
+                    "TARGET_UNCLEAR",
+                    "CANCELLED",
                     "INTERNAL"
                   ],
                   "description": "Stable error code (see kimo://docs/errors)."
@@ -2989,7 +3086,7 @@
                     }
                   },
                   "additionalProperties": true,
-                  "description": "Code-specific detail: REVISION_CONFLICT {current, changed[]} or {kind: human-edit, ids[], by}; AREA_BUSY {kind: area, holder, holderLabel?, ids[], touched[], since}; DOCUMENT_NOT_OPEN {currentDocId?}; DOCUMENT_LOCKED {holder}; SCHEMA_VIOLATION {issue}; BATCH_TOO_LARGE {limit, newLayers}."
+                  "description": "Code-specific detail: REVISION_CONFLICT {current, changed[]} or {kind: human-edit, ids[], by}; AREA_BUSY {kind: area, holder, holderLabel?, ids[], touched[], since}; DOCUMENT_NOT_OPEN {currentDocId?}; DOCUMENT_LOCKED {holder}; SCHEMA_VIOLATION {issue}; BATCH_TOO_LARGE {limit, newLayers}; TARGET_UNCLEAR {reason, level?, choices[]}; CANCELLED {reason}."
                 }
               },
               "additionalProperties": false
@@ -3323,6 +3420,8 @@
                     "PROTOCOL_MISMATCH",
                     "UNSUPPORTED",
                     "RATE_LIMITED",
+                    "TARGET_UNCLEAR",
+                    "CANCELLED",
                     "INTERNAL"
                   ],
                   "description": "Stable error code (see kimo://docs/errors)."
@@ -3359,7 +3458,7 @@
                     }
                   },
                   "additionalProperties": true,
-                  "description": "Code-specific detail: REVISION_CONFLICT {current, changed[]} or {kind: human-edit, ids[], by}; AREA_BUSY {kind: area, holder, holderLabel?, ids[], touched[], since}; DOCUMENT_NOT_OPEN {currentDocId?}; DOCUMENT_LOCKED {holder}; SCHEMA_VIOLATION {issue}; BATCH_TOO_LARGE {limit, newLayers}."
+                  "description": "Code-specific detail: REVISION_CONFLICT {current, changed[]} or {kind: human-edit, ids[], by}; AREA_BUSY {kind: area, holder, holderLabel?, ids[], touched[], since}; DOCUMENT_NOT_OPEN {currentDocId?}; DOCUMENT_LOCKED {holder}; SCHEMA_VIOLATION {issue}; BATCH_TOO_LARGE {limit, newLayers}; TARGET_UNCLEAR {reason, level?, choices[]}; CANCELLED {reason}."
                 }
               },
               "additionalProperties": false
@@ -3730,6 +3829,8 @@
                     "PROTOCOL_MISMATCH",
                     "UNSUPPORTED",
                     "RATE_LIMITED",
+                    "TARGET_UNCLEAR",
+                    "CANCELLED",
                     "INTERNAL"
                   ],
                   "description": "Stable error code (see kimo://docs/errors)."
@@ -3766,7 +3867,7 @@
                     }
                   },
                   "additionalProperties": true,
-                  "description": "Code-specific detail: REVISION_CONFLICT {current, changed[]} or {kind: human-edit, ids[], by}; AREA_BUSY {kind: area, holder, holderLabel?, ids[], touched[], since}; DOCUMENT_NOT_OPEN {currentDocId?}; DOCUMENT_LOCKED {holder}; SCHEMA_VIOLATION {issue}; BATCH_TOO_LARGE {limit, newLayers}."
+                  "description": "Code-specific detail: REVISION_CONFLICT {current, changed[]} or {kind: human-edit, ids[], by}; AREA_BUSY {kind: area, holder, holderLabel?, ids[], touched[], since}; DOCUMENT_NOT_OPEN {currentDocId?}; DOCUMENT_LOCKED {holder}; SCHEMA_VIOLATION {issue}; BATCH_TOO_LARGE {limit, newLayers}; TARGET_UNCLEAR {reason, level?, choices[]}; CANCELLED {reason}."
                 }
               },
               "additionalProperties": false
@@ -4034,6 +4135,8 @@
                     "PROTOCOL_MISMATCH",
                     "UNSUPPORTED",
                     "RATE_LIMITED",
+                    "TARGET_UNCLEAR",
+                    "CANCELLED",
                     "INTERNAL"
                   ],
                   "description": "Stable error code (see kimo://docs/errors)."
@@ -4070,7 +4173,7 @@
                     }
                   },
                   "additionalProperties": true,
-                  "description": "Code-specific detail: REVISION_CONFLICT {current, changed[]} or {kind: human-edit, ids[], by}; AREA_BUSY {kind: area, holder, holderLabel?, ids[], touched[], since}; DOCUMENT_NOT_OPEN {currentDocId?}; DOCUMENT_LOCKED {holder}; SCHEMA_VIOLATION {issue}; BATCH_TOO_LARGE {limit, newLayers}."
+                  "description": "Code-specific detail: REVISION_CONFLICT {current, changed[]} or {kind: human-edit, ids[], by}; AREA_BUSY {kind: area, holder, holderLabel?, ids[], touched[], since}; DOCUMENT_NOT_OPEN {currentDocId?}; DOCUMENT_LOCKED {holder}; SCHEMA_VIOLATION {issue}; BATCH_TOO_LARGE {limit, newLayers}; TARGET_UNCLEAR {reason, level?, choices[]}; CANCELLED {reason}."
                 }
               },
               "additionalProperties": false
@@ -4402,6 +4505,8 @@
                     "PROTOCOL_MISMATCH",
                     "UNSUPPORTED",
                     "RATE_LIMITED",
+                    "TARGET_UNCLEAR",
+                    "CANCELLED",
                     "INTERNAL"
                   ],
                   "description": "Stable error code (see kimo://docs/errors)."
@@ -4438,7 +4543,7 @@
                     }
                   },
                   "additionalProperties": true,
-                  "description": "Code-specific detail: REVISION_CONFLICT {current, changed[]} or {kind: human-edit, ids[], by}; AREA_BUSY {kind: area, holder, holderLabel?, ids[], touched[], since}; DOCUMENT_NOT_OPEN {currentDocId?}; DOCUMENT_LOCKED {holder}; SCHEMA_VIOLATION {issue}; BATCH_TOO_LARGE {limit, newLayers}."
+                  "description": "Code-specific detail: REVISION_CONFLICT {current, changed[]} or {kind: human-edit, ids[], by}; AREA_BUSY {kind: area, holder, holderLabel?, ids[], touched[], since}; DOCUMENT_NOT_OPEN {currentDocId?}; DOCUMENT_LOCKED {holder}; SCHEMA_VIOLATION {issue}; BATCH_TOO_LARGE {limit, newLayers}; TARGET_UNCLEAR {reason, level?, choices[]}; CANCELLED {reason}."
                 }
               },
               "additionalProperties": false
@@ -4866,6 +4971,8 @@
                     "PROTOCOL_MISMATCH",
                     "UNSUPPORTED",
                     "RATE_LIMITED",
+                    "TARGET_UNCLEAR",
+                    "CANCELLED",
                     "INTERNAL"
                   ],
                   "description": "Stable error code (see kimo://docs/errors)."
@@ -4902,7 +5009,7 @@
                     }
                   },
                   "additionalProperties": true,
-                  "description": "Code-specific detail: REVISION_CONFLICT {current, changed[]} or {kind: human-edit, ids[], by}; AREA_BUSY {kind: area, holder, holderLabel?, ids[], touched[], since}; DOCUMENT_NOT_OPEN {currentDocId?}; DOCUMENT_LOCKED {holder}; SCHEMA_VIOLATION {issue}; BATCH_TOO_LARGE {limit, newLayers}."
+                  "description": "Code-specific detail: REVISION_CONFLICT {current, changed[]} or {kind: human-edit, ids[], by}; AREA_BUSY {kind: area, holder, holderLabel?, ids[], touched[], since}; DOCUMENT_NOT_OPEN {currentDocId?}; DOCUMENT_LOCKED {holder}; SCHEMA_VIOLATION {issue}; BATCH_TOO_LARGE {limit, newLayers}; TARGET_UNCLEAR {reason, level?, choices[]}; CANCELLED {reason}."
                 }
               },
               "additionalProperties": false
@@ -5204,6 +5311,8 @@
                     "PROTOCOL_MISMATCH",
                     "UNSUPPORTED",
                     "RATE_LIMITED",
+                    "TARGET_UNCLEAR",
+                    "CANCELLED",
                     "INTERNAL"
                   ],
                   "description": "Stable error code (see kimo://docs/errors)."
@@ -5240,7 +5349,7 @@
                     }
                   },
                   "additionalProperties": true,
-                  "description": "Code-specific detail: REVISION_CONFLICT {current, changed[]} or {kind: human-edit, ids[], by}; AREA_BUSY {kind: area, holder, holderLabel?, ids[], touched[], since}; DOCUMENT_NOT_OPEN {currentDocId?}; DOCUMENT_LOCKED {holder}; SCHEMA_VIOLATION {issue}; BATCH_TOO_LARGE {limit, newLayers}."
+                  "description": "Code-specific detail: REVISION_CONFLICT {current, changed[]} or {kind: human-edit, ids[], by}; AREA_BUSY {kind: area, holder, holderLabel?, ids[], touched[], since}; DOCUMENT_NOT_OPEN {currentDocId?}; DOCUMENT_LOCKED {holder}; SCHEMA_VIOLATION {issue}; BATCH_TOO_LARGE {limit, newLayers}; TARGET_UNCLEAR {reason, level?, choices[]}; CANCELLED {reason}."
                 }
               },
               "additionalProperties": false
@@ -5550,6 +5659,8 @@
                     "PROTOCOL_MISMATCH",
                     "UNSUPPORTED",
                     "RATE_LIMITED",
+                    "TARGET_UNCLEAR",
+                    "CANCELLED",
                     "INTERNAL"
                   ],
                   "description": "Stable error code (see kimo://docs/errors)."
@@ -5586,7 +5697,7 @@
                     }
                   },
                   "additionalProperties": true,
-                  "description": "Code-specific detail: REVISION_CONFLICT {current, changed[]} or {kind: human-edit, ids[], by}; AREA_BUSY {kind: area, holder, holderLabel?, ids[], touched[], since}; DOCUMENT_NOT_OPEN {currentDocId?}; DOCUMENT_LOCKED {holder}; SCHEMA_VIOLATION {issue}; BATCH_TOO_LARGE {limit, newLayers}."
+                  "description": "Code-specific detail: REVISION_CONFLICT {current, changed[]} or {kind: human-edit, ids[], by}; AREA_BUSY {kind: area, holder, holderLabel?, ids[], touched[], since}; DOCUMENT_NOT_OPEN {currentDocId?}; DOCUMENT_LOCKED {holder}; SCHEMA_VIOLATION {issue}; BATCH_TOO_LARGE {limit, newLayers}; TARGET_UNCLEAR {reason, level?, choices[]}; CANCELLED {reason}."
                 }
               },
               "additionalProperties": false
@@ -5956,6 +6067,8 @@
                     "PROTOCOL_MISMATCH",
                     "UNSUPPORTED",
                     "RATE_LIMITED",
+                    "TARGET_UNCLEAR",
+                    "CANCELLED",
                     "INTERNAL"
                   ],
                   "description": "Stable error code (see kimo://docs/errors)."
@@ -5992,7 +6105,7 @@
                     }
                   },
                   "additionalProperties": true,
-                  "description": "Code-specific detail: REVISION_CONFLICT {current, changed[]} or {kind: human-edit, ids[], by}; AREA_BUSY {kind: area, holder, holderLabel?, ids[], touched[], since}; DOCUMENT_NOT_OPEN {currentDocId?}; DOCUMENT_LOCKED {holder}; SCHEMA_VIOLATION {issue}; BATCH_TOO_LARGE {limit, newLayers}."
+                  "description": "Code-specific detail: REVISION_CONFLICT {current, changed[]} or {kind: human-edit, ids[], by}; AREA_BUSY {kind: area, holder, holderLabel?, ids[], touched[], since}; DOCUMENT_NOT_OPEN {currentDocId?}; DOCUMENT_LOCKED {holder}; SCHEMA_VIOLATION {issue}; BATCH_TOO_LARGE {limit, newLayers}; TARGET_UNCLEAR {reason, level?, choices[]}; CANCELLED {reason}."
                 }
               },
               "additionalProperties": false
@@ -6435,6 +6548,8 @@
                     "PROTOCOL_MISMATCH",
                     "UNSUPPORTED",
                     "RATE_LIMITED",
+                    "TARGET_UNCLEAR",
+                    "CANCELLED",
                     "INTERNAL"
                   ],
                   "description": "Stable error code (see kimo://docs/errors)."
@@ -6471,7 +6586,7 @@
                     }
                   },
                   "additionalProperties": true,
-                  "description": "Code-specific detail: REVISION_CONFLICT {current, changed[]} or {kind: human-edit, ids[], by}; AREA_BUSY {kind: area, holder, holderLabel?, ids[], touched[], since}; DOCUMENT_NOT_OPEN {currentDocId?}; DOCUMENT_LOCKED {holder}; SCHEMA_VIOLATION {issue}; BATCH_TOO_LARGE {limit, newLayers}."
+                  "description": "Code-specific detail: REVISION_CONFLICT {current, changed[]} or {kind: human-edit, ids[], by}; AREA_BUSY {kind: area, holder, holderLabel?, ids[], touched[], since}; DOCUMENT_NOT_OPEN {currentDocId?}; DOCUMENT_LOCKED {holder}; SCHEMA_VIOLATION {issue}; BATCH_TOO_LARGE {limit, newLayers}; TARGET_UNCLEAR {reason, level?, choices[]}; CANCELLED {reason}."
                 }
               },
               "additionalProperties": false
@@ -6797,6 +6912,8 @@
                     "PROTOCOL_MISMATCH",
                     "UNSUPPORTED",
                     "RATE_LIMITED",
+                    "TARGET_UNCLEAR",
+                    "CANCELLED",
                     "INTERNAL"
                   ],
                   "description": "Stable error code (see kimo://docs/errors)."
@@ -6833,7 +6950,7 @@
                     }
                   },
                   "additionalProperties": true,
-                  "description": "Code-specific detail: REVISION_CONFLICT {current, changed[]} or {kind: human-edit, ids[], by}; AREA_BUSY {kind: area, holder, holderLabel?, ids[], touched[], since}; DOCUMENT_NOT_OPEN {currentDocId?}; DOCUMENT_LOCKED {holder}; SCHEMA_VIOLATION {issue}; BATCH_TOO_LARGE {limit, newLayers}."
+                  "description": "Code-specific detail: REVISION_CONFLICT {current, changed[]} or {kind: human-edit, ids[], by}; AREA_BUSY {kind: area, holder, holderLabel?, ids[], touched[], since}; DOCUMENT_NOT_OPEN {currentDocId?}; DOCUMENT_LOCKED {holder}; SCHEMA_VIOLATION {issue}; BATCH_TOO_LARGE {limit, newLayers}; TARGET_UNCLEAR {reason, level?, choices[]}; CANCELLED {reason}."
                 }
               },
               "additionalProperties": false
@@ -7162,6 +7279,8 @@
                     "PROTOCOL_MISMATCH",
                     "UNSUPPORTED",
                     "RATE_LIMITED",
+                    "TARGET_UNCLEAR",
+                    "CANCELLED",
                     "INTERNAL"
                   ],
                   "description": "Stable error code (see kimo://docs/errors)."
@@ -7198,7 +7317,7 @@
                     }
                   },
                   "additionalProperties": true,
-                  "description": "Code-specific detail: REVISION_CONFLICT {current, changed[]} or {kind: human-edit, ids[], by}; AREA_BUSY {kind: area, holder, holderLabel?, ids[], touched[], since}; DOCUMENT_NOT_OPEN {currentDocId?}; DOCUMENT_LOCKED {holder}; SCHEMA_VIOLATION {issue}; BATCH_TOO_LARGE {limit, newLayers}."
+                  "description": "Code-specific detail: REVISION_CONFLICT {current, changed[]} or {kind: human-edit, ids[], by}; AREA_BUSY {kind: area, holder, holderLabel?, ids[], touched[], since}; DOCUMENT_NOT_OPEN {currentDocId?}; DOCUMENT_LOCKED {holder}; SCHEMA_VIOLATION {issue}; BATCH_TOO_LARGE {limit, newLayers}; TARGET_UNCLEAR {reason, level?, choices[]}; CANCELLED {reason}."
                 }
               },
               "additionalProperties": false
@@ -7481,6 +7600,8 @@
                     "PROTOCOL_MISMATCH",
                     "UNSUPPORTED",
                     "RATE_LIMITED",
+                    "TARGET_UNCLEAR",
+                    "CANCELLED",
                     "INTERNAL"
                   ],
                   "description": "Stable error code (see kimo://docs/errors)."
@@ -7517,7 +7638,7 @@
                     }
                   },
                   "additionalProperties": true,
-                  "description": "Code-specific detail: REVISION_CONFLICT {current, changed[]} or {kind: human-edit, ids[], by}; AREA_BUSY {kind: area, holder, holderLabel?, ids[], touched[], since}; DOCUMENT_NOT_OPEN {currentDocId?}; DOCUMENT_LOCKED {holder}; SCHEMA_VIOLATION {issue}; BATCH_TOO_LARGE {limit, newLayers}."
+                  "description": "Code-specific detail: REVISION_CONFLICT {current, changed[]} or {kind: human-edit, ids[], by}; AREA_BUSY {kind: area, holder, holderLabel?, ids[], touched[], since}; DOCUMENT_NOT_OPEN {currentDocId?}; DOCUMENT_LOCKED {holder}; SCHEMA_VIOLATION {issue}; BATCH_TOO_LARGE {limit, newLayers}; TARGET_UNCLEAR {reason, level?, choices[]}; CANCELLED {reason}."
                 }
               },
               "additionalProperties": false
@@ -7962,6 +8083,8 @@
                     "PROTOCOL_MISMATCH",
                     "UNSUPPORTED",
                     "RATE_LIMITED",
+                    "TARGET_UNCLEAR",
+                    "CANCELLED",
                     "INTERNAL"
                   ],
                   "description": "Stable error code (see kimo://docs/errors)."
@@ -7998,7 +8121,7 @@
                     }
                   },
                   "additionalProperties": true,
-                  "description": "Code-specific detail: REVISION_CONFLICT {current, changed[]} or {kind: human-edit, ids[], by}; AREA_BUSY {kind: area, holder, holderLabel?, ids[], touched[], since}; DOCUMENT_NOT_OPEN {currentDocId?}; DOCUMENT_LOCKED {holder}; SCHEMA_VIOLATION {issue}; BATCH_TOO_LARGE {limit, newLayers}."
+                  "description": "Code-specific detail: REVISION_CONFLICT {current, changed[]} or {kind: human-edit, ids[], by}; AREA_BUSY {kind: area, holder, holderLabel?, ids[], touched[], since}; DOCUMENT_NOT_OPEN {currentDocId?}; DOCUMENT_LOCKED {holder}; SCHEMA_VIOLATION {issue}; BATCH_TOO_LARGE {limit, newLayers}; TARGET_UNCLEAR {reason, level?, choices[]}; CANCELLED {reason}."
                 }
               },
               "additionalProperties": false

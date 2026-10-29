@@ -187,3 +187,114 @@ test("tools/call commits the stream named by _meta claudecode/toolUseId (Claude 
   await server.close()
   host.dispose()
 })
+
+test("pick asks through elicitation/create; accept, decline, a value never offered, a client without elicitation (#78)", async () => {
+  const platform = createMemoryPlatform()
+  const host = createMemoryDocumentHost({
+    platform,
+    autosaveMs: 0,
+    validate: validateInput,
+    clientPolicy: { ...HEADLESS_POLICY, files: ["/w/**"], grants: ["files.create"] },
+  })
+  // Two files the person opened: nothing points at either.
+  const person = host.runtime.connect({ client: "kimo", label: "Kimo", transport: "in-process" })
+  for (const path of ["/w/a.kimo", "/w/b.kimo"])
+    expect((await person.call("kimo_create", { path, template: "web" })).result.ok).toBe(true)
+
+  /** One relayed client; `answer` replies to the server's elicitation/create requests. */
+  async function client(
+    capabilities: Record<string, unknown>,
+    answer?: (params: never) => unknown,
+  ) {
+    const conn = host.runtime.connect({
+      client: "claude-code",
+      label: "Claude Code",
+      transport: "socket",
+    })
+    const out: Record<string, unknown>[] = []
+    const asked: Record<string, unknown>[] = []
+    const transport: RelayTransport = new RelayTransport((line) => {
+      const m = JSON.parse(line) as Record<string, unknown>
+      if (m.method === "elicitation/create") {
+        asked.push(m.params as Record<string, unknown>)
+        const result = answer?.(m.params as never) ?? { action: "cancel" }
+        queueMicrotask(() => transport.receive({ jsonrpc: "2.0", id: m.id, result } as never))
+      } else out.push(m)
+    })
+    const server = createConnectionServer(conn, { version: "0.5.0", host: "desktop", canAsk: true })
+    await server.connect(transport)
+    const next = async (id: number) => {
+      for (let i = 0; i < 400; i++) {
+        const m = out.find((x) => x.id === id)
+        if (m) return m as { result?: Record<string, unknown>; error?: unknown }
+        await new Promise((r) => setTimeout(r, 5))
+      }
+      throw new Error(`no response ${id}`)
+    }
+    transport.receive({
+      jsonrpc: "2.0",
+      id: 1,
+      method: "initialize",
+      params: {
+        protocolVersion: "2025-11-25",
+        capabilities,
+        clientInfo: { name: "t", version: "1" },
+      },
+    } as never)
+    await next(1)
+    transport.receive({ jsonrpc: "2.0", method: "notifications/initialized" } as never)
+    let id = 1
+    const pick = async () => {
+      transport.receive({
+        jsonrpc: "2.0",
+        id: ++id,
+        method: "tools/call",
+        params: { name: "kimo_get_state", arguments: { pick: "frame" } },
+      } as never)
+      return (await next(id)).result?.structuredContent as {
+        ok: boolean
+        data?: { target: { status: string; docId: string; frameIds: string[]; via: string } }
+        errors?: { code: string; detail?: { reason: string } }[]
+      }
+    }
+    return { pick, asked, close: () => server.close() }
+  }
+  type Schema = { properties: { target: { oneOf: { const: string; title: string }[] } } }
+  const offered = (p: Record<string, unknown>) =>
+    (p.requestedSchema as Schema).properties.target.oneOf.map((o) => o.const)
+
+  // Accept an offered value: the target is clear and comes from the person's pick.
+  const yes = await client({ elicitation: {} }, (p) => ({
+    action: "accept",
+    content: { target: offered(p)[1] },
+  }))
+  const ok = await yes.pick()
+  expect(ok.ok).toBe(true)
+  const value = offered(yes.asked[0] as Record<string, unknown>)[1] as string
+  expect(ok.data?.target).toMatchObject({ status: "clear", via: "picked" })
+  expect(`${ok.data?.target.docId}/${ok.data?.target.frameIds[0]}`).toBe(value)
+  await yes.close()
+
+  // Declined: CANCELLED, never a guess.
+  const no = await client({ elicitation: {} }, () => ({ action: "decline" }))
+  const declined = await no.pick()
+  expect(declined.errors?.[0]?.code).toBe("CANCELLED")
+  await no.close()
+
+  // An answer outside the offered set is refused.
+  const odd = await client({ elicitation: {} }, () => ({
+    action: "accept",
+    content: { target: "d_0000000000000000_zzzz/DesktopFrm1" },
+  }))
+  expect((await odd.pick()).errors?.[0]?.code).toBe("INVALID_INPUT")
+  await odd.close()
+
+  // A client without elicitation is never sent a request: TARGET_UNCLEAR, ask in chat.
+  const plain = await client({})
+  const unclear = await plain.pick()
+  expect(plain.asked).toHaveLength(0)
+  expect(unclear.errors?.[0]?.code).toBe("TARGET_UNCLEAR")
+  expect(unclear.errors?.[0]?.detail?.reason).toBe("no-elicitation")
+  await plain.close()
+  await host.dispose()
+})

@@ -21,6 +21,20 @@ export interface HostAgentApproval {
   request: unknown
 }
 
+/** What a window's editor tab shows (#78): the host stamps the times. */
+export interface WindowViewReport {
+  kind: "disk" | "room" | "library" | "none"
+  /** This tab is the window's current one (false when it unmounts). */
+  active: boolean
+  focused: boolean
+  selection: readonly string[]
+  /** `agent` when kimo_focus made the selection. */
+  selectionBy: "person" | "agent"
+  page: string | null
+  /** World rectangle of the canvas view. */
+  view: { x: number; y: number; w: number; h: number } | null
+}
+
 /** A `kimo_focus` request for this window. */
 export interface HostFocusRequest {
   ref: string
@@ -226,12 +240,17 @@ export class HostClient {
     return () => this.readyListeners.delete(l)
   }
 
-  /** Reports the window's selection (kimo_get_state `selection`). */
-  reportSelection(ref: string, selection: readonly string[]): void {
+  /**
+   * Reports what the window's editor tab shows (#78: kimo_get_state `selection` and `target`).
+   * `ref`: the file's path or the room's key (#79); null for a file the host does not serve (a
+   * library or untitled file).
+   */
+  reportView(ref: string | null, view: WindowViewReport): void {
     void this.bridge.emitTo(HOST_LABEL, HOST_EVENTS.windowState, {
       from: this.bridge.label,
       ref,
-      selection: [...selection],
+      ...view,
+      selection: [...view.selection],
     })
   }
 

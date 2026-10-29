@@ -49,8 +49,11 @@ useEffect(() => host?.onFocus(({ ref, ids, select, zoom }) => {
   else if (zoom === "100") canvas.current?.zoomTo?.(1)
 }), [host, documentSession, session])
 
-// kimo_get_state.selection: report the selection, debounced, when it changes.
-session.ui.subscribe((s) => host?.reportSelection(documentSession.ref, s.selection))
+// kimo_get_state `selection` and `target` (#78): report what the tab shows on mount, on a
+// selection change (150 ms), when a pan, zoom or page change ends (300 ms), on window focus
+// gain, and `active: false` on unmount and in a window close hook (React cleanup does not run
+// when a window closes). Rooms and library files report with `ref` null.
+host?.reportView(documentSession?.ref ?? null, { kind, active, focused, selection, selectionBy, page, view })
 
 // AgentsController.undoEntry(entry): undo an agent's op group from the activity log.
 host?.agentUndo(documentSession.ref, entry.origin, entry.undoToken)   // → { ok, stale }
@@ -94,7 +97,7 @@ Window ↔ host events are JS only; Rust just routes them, and both sides need
 | `kimo://host-sync` | both | `{from, msg: HostSyncMessage}` (`@kimo/sync` host-sync, base64 Yjs updates with their origin) |
 | `kimo://host-session-state` | host → windows showing the file | `{ref, state: SessionState}` |
 | `kimo://host-focus` | host → windows showing the file | `{ref, ids, select, zoom}` |
-| `kimo://host-window-state` | window → host | `{from, ref, selection}` |
+| `kimo://host-window-state` | window → host | `{from, ref, kind, active, focused, selection, selectionBy, page, view}`: what the window's editor tab shows (`ref` a file's path or a room's `kimo-room:<room>` key, null for a library or untitled file; `selectionBy: "agent"` for a `kimo_focus` selection). The host stamps selection, view and attention times (`WindowViews`). |
 | `kimo://host-agent-approval` | host → the agent's window | `{id, origin, request: ApprovalRequest}`: an in-app agent's approval, shown as its in-thread card; answered with `agentApproval`. |
 | `kimo://host-ready` | host → all | Emitted when the host (re)starts; windows reopen and resync, and the replica keeps edits it has not sent yet. |
 | `kimo://room-sync` | both | `{from, msg: HostSyncMessage}` for rooms joined from a share link: the window's room store is the hub, the host holds a replica (`room-docs.ts`). |

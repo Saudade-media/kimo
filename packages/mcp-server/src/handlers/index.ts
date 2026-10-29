@@ -41,3 +41,4 @@ export {
   type ToolHandlerOptions,
 } from "./tools"
 export { fileIdOf, normalizePath, pathHash, sha256Hex } from "./util"
+export * from "./views"

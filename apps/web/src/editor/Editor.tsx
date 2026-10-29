@@ -911,9 +911,11 @@ function EditorShell({
   const agents = useEditorAgents({
     platform,
     hostClient,
+    manager,
     session,
     doc,
     canvas,
+    container: canvasEl,
     layout,
     // D17: the session popover's client settings open Agents & MCP on that client.
     openSettings: (client) => openSettings("agents-mcp", client ?? null),

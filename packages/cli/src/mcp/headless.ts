@@ -347,6 +347,8 @@ export async function runHeadless(o: HeadlessOptions): Promise<number> {
     host: "headless",
     includeStubs: o.includeStubs ?? false,
     version: CLI_VERSION,
+    // stdio carries server-to-client requests: a client that declared elicitation gets a picker.
+    canAsk: true,
     handlers,
     context,
     targets: (def, input, c) => {

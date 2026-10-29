@@ -1,5 +1,6 @@
 //! One authenticated socket/pipe connection from the shim to the app: connect, `kimo/hello`,
-//! then a reader thread that posts every line to the shim's event loop.
+//! then a reader thread that posts every line to the shim's event loop and a writer thread, so
+//! an app that stops reading never blocks the loop (stdin EOF and parent death still exit).
 
 use crate::paths::{pid_alive, read_endpoint, KimoPaths};
 use crate::protocol::{
@@ -149,8 +150,70 @@ mod imp {
     use super::*;
     use crate::protocol::{read_frame, FrameError};
     use std::io::BufReader;
+    use std::net::Shutdown;
     use std::os::unix::net::UnixStream;
+    use std::sync::mpsc::{channel, Receiver};
     use std::time::Duration;
+
+    /// How long dropping a connection waits for queued lines (the closing `kimo/bye`) to go out.
+    const DRAIN_MS: u64 = 500;
+
+    /// Queues lines for the writer thread. The queue is unbounded, like the Windows pipe
+    /// writer's: agent hosts wait for answers, so it stays short.
+    struct SockWriter {
+        lines: Option<Sender<Vec<u8>>>,
+        /// Disconnects when the writer thread ends.
+        done: Receiver<()>,
+        stream: UnixStream,
+    }
+
+    impl Write for SockWriter {
+        fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
+            self.lines
+                .as_ref()
+                .and_then(|tx| tx.send(buf.to_vec()).ok())
+                .ok_or_else(|| std::io::Error::from(std::io::ErrorKind::BrokenPipe))?;
+            Ok(buf.len())
+        }
+        fn flush(&mut self) -> std::io::Result<()> {
+            Ok(())
+        }
+    }
+
+    impl Drop for SockWriter {
+        /// Lets queued lines drain for a moment, then closes the socket, which also ends a
+        /// write stuck on an app that stopped reading.
+        fn drop(&mut self) {
+            drop(self.lines.take());
+            let _ = self.done.recv_timeout(Duration::from_millis(DRAIN_MS));
+            let _ = self.stream.shutdown(Shutdown::Both);
+        }
+    }
+
+    fn spawn_writer(
+        stream: UnixStream,
+        events: Sender<Event>,
+        gen: u64,
+    ) -> std::io::Result<SockWriter> {
+        let mut out = stream.try_clone()?;
+        let (lines, rx) = channel::<Vec<u8>>();
+        let (done_tx, done) = channel::<()>();
+        std::thread::spawn(move || {
+            let _done = done_tx;
+            for bytes in rx {
+                if out.write_all(&bytes).is_err() {
+                    let _ = out.shutdown(Shutdown::Both);
+                    let _ = events.send(Event::SocketClosed(gen));
+                    return;
+                }
+            }
+        });
+        Ok(SockWriter {
+            lines: Some(lines),
+            done,
+            stream,
+        })
+    }
 
     pub fn connect(
         name: &str,
@@ -158,7 +221,7 @@ mod imp {
         events: Sender<Event>,
         gen: u64,
     ) -> Result<Conn, ConnectError> {
-        let stream =
+        let mut stream =
             UnixStream::connect(name).map_err(|e| ConnectError::NotRunning(e.to_string()))?;
         stream
             .set_read_timeout(Some(Duration::from_millis(HELLO_TIMEOUT_MS)))
@@ -168,8 +231,7 @@ mod imp {
                 .try_clone()
                 .map_err(|e| ConnectError::Other(e.to_string()))?,
         );
-        let mut conn_writer = stream;
-        conn_writer
+        stream
             .write_all(format!("{hello}\n").as_bytes())
             .map_err(|e| ConnectError::NotRunning(e.to_string()))?;
         let first = match read_frame(&mut reader, MAX_FRAME_BYTES) {
@@ -179,6 +241,8 @@ mod imp {
         };
         let result = parse_hello_reply(first)?;
         let _ = reader.get_ref().set_read_timeout(None);
+        let writer = spawn_writer(stream, events.clone(), gen)
+            .map_err(|e| ConnectError::Other(e.to_string()))?;
         std::thread::spawn(move || {
             while let Ok(Some(line)) = read_frame(&mut reader, MAX_FRAME_BYTES) {
                 if events.send(Event::Socket(gen, line)).is_err() {
@@ -188,7 +252,7 @@ mod imp {
             let _ = events.send(Event::SocketClosed(gen));
         });
         Ok(Conn {
-            writer: Box::new(conn_writer),
+            writer: Box::new(writer),
             hello: result,
         })
     }

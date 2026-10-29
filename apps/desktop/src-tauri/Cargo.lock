@@ -2287,7 +2287,7 @@ dependencies = [
 name = "kimo-desktop"
 version = "1.2.1-beta.4"
 dependencies = [
- "base64 0.22.1",
+ "base64 0.23.1",
  "bytes",
  "fontdb",
  "gethostname",

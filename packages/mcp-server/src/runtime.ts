@@ -54,6 +54,10 @@ export const ROOM_PATH_PREFIX = "kimo-room:"
 /** True for the path of a room joined from a share link. */
 export const isRoomPath = (path: string): boolean => path.startsWith(ROOM_PATH_PREFIX)
 
+/** A view link takes no edits and makes no .kimo copy, like a viewer in the app (board 41). */
+export const VIEW_ROOM_SUGGESTION =
+  "Ask the owner for an edit link. A view link can export code or PNG, not a .kimo copy."
+
 /**
  * What an agent learns about a room joined from a share link. Never the link, its token or the
  * room key: those stay in the window that joined it.

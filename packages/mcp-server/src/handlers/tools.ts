@@ -45,6 +45,7 @@ import {
   isRoomPath,
   type ToolContext,
   type ToolHandler,
+  VIEW_ROOM_SUGGESTION,
 } from "../runtime"
 import {
   SCRIPT_COMPILER,
@@ -250,7 +251,10 @@ function readOnlyError(d: HostDocument): ToolError {
   return {
     code: "READ_ONLY",
     message: `This document is read-only (${d.store.readOnly?.reason ?? "read-only"}).`,
-    suggestion: "Export a copy with kimo_export target=kimo, or open a writable document.",
+    suggestion:
+      d.shared?.role === "view"
+        ? VIEW_ROOM_SUGGESTION
+        : "Export a copy with kimo_export target=kimo, or open a writable document.",
   }
 }
 
@@ -1627,6 +1631,13 @@ export function createToolHandlerMap(
     const code = (CODE_EXPORT_TARGETS as readonly string[]).includes(target)
     if (!code && !(M5_EXPORT_TARGETS as readonly string[]).includes(target))
       return fail({ code: "UNSUPPORTED", message: `Unknown export target ${target}.` })
+    // A viewer may export but not duplicate the file (board 41).
+    if (target === "kimo" && d.shared?.role === "view")
+      return fail({
+        code: "UNSUPPORTED",
+        message: "A room joined with a view link can't be copied to a .kimo file.",
+        suggestion: VIEW_ROOM_SUGGESTION,
+      })
     const outDir = typeof input.outDir === "string" ? normalizePath(input.outDir) : null
     if (!outDir && !code)
       return fail({
@@ -1737,8 +1748,14 @@ export function createToolHandlerMap(
           },
         })
     } else {
-      const name =
-        ids.length === 1 ? ids[0] : `${basename(d.ref.path).replace(/\.kimo$/i, "")}-export`
+      // A room's path is `kimo-room:<room>`: its file takes the room's name instead.
+      const base = isRoomPath(d.ref.path)
+        ? nameOf(d)
+            .replace(/[\\/:*?"<>|]/g, "-")
+            .replace(/\p{Cc}/gu, "")
+            .trim() || "Shared file"
+        : basename(d.ref.path).replace(/\.kimo$/i, "")
+      const name = ids.length === 1 ? ids[0] : `${base}-export`
       planned.push({
         name: `${name}.kimo`,
         bytes: async () => new TextEncoder().encode(serialize(subtreeDocument(d.store, ids))),

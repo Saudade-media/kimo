@@ -18,6 +18,7 @@ import {
   type HostResult,
   isRoomPath,
   type SharedRoomInfo,
+  VIEW_ROOM_SUGGESTION,
 } from "../runtime"
 import { formatDocId, parseDocId } from "../topology"
 import { journalFor } from "./journal"
@@ -242,7 +243,10 @@ export function createDocumentHost(options: CoreHostOptions): CoreDocumentHost {
       const reason = d.readOnlyReason() ?? d.store.readOnly?.reason ?? null
       if (reason !== null)
         return err("READ_ONLY", `This document is read-only (${reason}); it is never saved.`, {
-          suggestion: "Save a copy with kimo_export target=kimo instead.",
+          suggestion:
+            d.shared?.()?.role === "view"
+              ? VIEW_ROOM_SUGGESTION
+              : "Save a copy with kimo_export target=kimo instead.",
         })
       const cur = d.store.revision
       if (baseRevision && (baseRevision.epoch !== cur.epoch || baseRevision.seq !== cur.seq))

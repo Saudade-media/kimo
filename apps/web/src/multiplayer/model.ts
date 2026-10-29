@@ -356,13 +356,16 @@ export interface JoinModel {
   /** Clears the join card state (the rooms stay joined). */
   reset(): void
   /**
-   * The rooms this window keeps joined, in join order (stable until one joins or leaves). On
-   * desktop a room stays joined while its tab is open, in front or not (#79).
+   * The rooms this window keeps joined, one per room, in join order (stable until one joins or
+   * leaves). On desktop a room stays joined while its tab is open, in front or not (#79).
    */
   rooms(): readonly JoinedRoom[]
   /** The room joined from `link`, or null. */
   roomFor(link: string): SharedSession | null
-  /** Leaves the room of `link` (its tab closed, the web join page left), or stops its join. */
+  /**
+   * Leaves the room of `link` (its tab closed, the web join page left), or stops its join. The
+   * room stays connected while another link to it is kept.
+   */
   leave(link: string): void
 }
 
@@ -1141,7 +1144,18 @@ function createJoinModel(
   const keep = (link: string, room: JoinedRoom | null) => {
     if (room) kept.set(link, room)
     else kept.delete(link)
-    keptList = [...kept.values()]
+    // Two links to one room (a view and an edit link) share its session: listed once.
+    const seen = new Set<SharedSession>()
+    keptList = [...kept.values()].filter((r) => {
+      if (seen.has(r.session)) return false
+      seen.add(r.session)
+      return true
+    })
+  }
+  /** Leaves `session` unless another kept link still shows it. */
+  const release = (session: SharedSession) => {
+    for (const r of kept.values()) if (r.session === session) return
+    void session.leave().catch(() => undefined)
   }
   const joinedState = (room: JoinedRoom): JoinState => ({
     ...JOIN_IDLE,
@@ -1229,7 +1243,7 @@ function createJoinModel(
         }
         // The link was left meanwhile (its tab closed, the page went): its room is not kept.
         if (flight.left) {
-          void session.leave().catch(() => undefined)
+          release(session)
           return flight.state
         }
         const room: JoinedRoom = { session, relayHost }
@@ -1282,7 +1296,7 @@ function createJoinModel(
       }
       if (room) keep(link, null)
       notify()
-      if (room) void room.session.leave().catch(() => undefined)
+      if (room) release(room.session)
     },
     join(link) {
       showing = link

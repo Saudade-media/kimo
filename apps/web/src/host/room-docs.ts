@@ -6,13 +6,15 @@
  * `kimo-room:<room>`): an agent's edit lands on the replica, reaches the window's store and goes
  * to the relay from there. Only the room id, the relay host and the role cross the bridge.
  *
- * - Host ({@link createHostRooms}): `room.attach`, `room.detach` and `room.asset`; the replicas as
- *   backend documents. A view link's replica is read-only, so edits fail with READ_ONLY.
+ * - Host ({@link createHostRooms}): `room.attach`, `room.detach`, `room.claims` and `room.asset`;
+ *   the replicas as backend documents. A view link's replica is read-only, so edits fail with
+ *   READ_ONLY. The agent area claims the window's store sees (its peers', its own agents') gate
+ *   MCP edits on the replica (spec §15.11).
  * - Window ({@link serveRoomsToHost}): attaches each room the window keeps joined (again after a
- *   host restart), detaches it when the room is left, and answers asset reads for renders. It
- *   never takes an update from the host while the room is read-only.
+ *   host restart), detaches it when the room is left, sends its claims and answers asset reads
+ *   for renders. It never takes an update from the host while the room is read-only.
  */
-import { createDocStore, type DocStore } from "@kimo/editor-state"
+import { type ClaimRecord, claimsFor, createDocStore, type DocStore } from "@kimo/editor-state"
 import { type BackendDocument, isRoomPath } from "@kimo/mcp-server"
 import {
   base64ToBytes,
@@ -48,6 +50,31 @@ const ENDED_REASON = "the room's connection ended"
 /** A room asset read waits this long for the window, then the render goes without it. */
 const ASSET_TIMEOUT_MS = 5000
 const ASSET_SRC = /^\.\/assets\/([^\\/]+)$/
+
+/** Most claim records a window sends per room, and ids per record (a bridge payload guard). */
+const MAX_CLAIM_RECORDS = 256
+const MAX_CLAIM_IDS = 4096
+
+/** The claim records of a `room.claims` payload, checked (malformed records are dropped). */
+function claimRecordsOf(value: unknown): ClaimRecord[] {
+  if (!Array.isArray(value)) return []
+  const out: ClaimRecord[] = []
+  for (const raw of value.slice(0, MAX_CLAIM_RECORDS)) {
+    const r = raw as Record<string, unknown> | null
+    if (!r || typeof r.holder !== "string" || !Array.isArray(r.ids)) continue
+    if (typeof r.since !== "number" || typeof r.renewed !== "number") continue
+    const ids = r.ids.filter((id): id is string => typeof id === "string").slice(0, MAX_CLAIM_IDS)
+    out.push({
+      holder: r.holder.slice(0, 200),
+      ids,
+      since: r.since,
+      renewed: r.renewed,
+      ...(typeof r.turn === "string" ? { turn: r.turn.slice(0, 200) } : {}),
+      ...(typeof r.label === "string" ? { label: r.label.slice(0, 200) } : {}),
+    })
+  }
+  return out
+}
 
 /** The attach payload, checked: a room ref, a host name, a role (a bad role reads as view). */
 function attachOf(args: Record<string, unknown>): RoomAttach {
@@ -101,6 +128,16 @@ interface RoomEntry {
 export function createHostRooms(options: HostRoomsOptions): HostRooms {
   const { bridge, viewers } = options
   const rooms = new Map<string, RoomEntry>()
+  /** A window's claims sit on the replica's registry as one remote peer per window. */
+  const claimPeers = new Map<string, number>()
+  const claimPeer = (from: string) => {
+    let peer = claimPeers.get(from)
+    if (peer === undefined) {
+      peer = claimPeers.size + 1
+      claimPeers.set(from, peer)
+    }
+    return peer
+  }
   const listeners = new Set<{ from: string; l: (m: HostSyncMessage) => void }>()
   const offs: Promise<() => void>[] = [
     bridge.listen<{ from: string; msg: HostSyncMessage }>(HOST_EVENTS.roomSync, ({ from, msg }) => {
@@ -236,6 +273,7 @@ export function createHostRooms(options: HostRoomsOptions): HostRooms {
       const i = e ? e.holders.findIndex((h) => h.from === from) : -1
       if (!e || i < 0) return
       e.holders.splice(i, 1)
+      claimsFor(e.store).removePeer(claimPeer(from))
       const set = viewers.get(ref)
       set?.delete(from)
       if (set?.size === 0) viewers.delete(ref)
@@ -265,6 +303,13 @@ export function createHostRooms(options: HostRoomsOptions): HostRooms {
       if (!held) return { ok: false }
       held.info = info
       applyInfo(rooms.get(info.ref) as RoomEntry)
+      return { ok: true }
+    },
+    /** The agent area claims the window's store sees for a room (its peers', its own agents'). */
+    async "room.claims"(args, from) {
+      const e = rooms.get(String(args.ref ?? ""))
+      if (!e?.holders.some((h) => h.from === from)) return { ok: false }
+      claimsFor(e.store).setRemote(claimPeer(from), claimRecordsOf(args.records))
       return { ok: true }
     },
     async "room.detach"(args, from) {
@@ -319,10 +364,13 @@ export interface ServedRooms {
 export function serveRoomsToHost(client: HostClient, source: WindowRooms): ServedRooms {
   const bridge = client.bridge
   const listeners = new Set<(m: HostSyncMessage) => void>()
-  /** `ended`: the room's connection ended for good (a revoked link, a closed room). */
+  /**
+   * `ended`: the room's connection ended (a revoked link, a closed room) and has not been
+   * welcomed again. `claims`: the claim records last sent.
+   */
   const served = new Map<
     string,
-    { room: JoinedRoom; info: string; ended: boolean; off: () => void }
+    { room: JoinedRoom; info: string; ended: boolean; claims: string | null; off: () => void }
   >()
   const offs: (() => void)[] = []
   let disposed = false
@@ -365,13 +413,43 @@ export function serveRoomsToHost(client: HostClient, source: WindowRooms): Serve
     // Edits to a room whose connection ended would never reach anyone.
     readOnly: ended ? ENDED_REASON : (room.session.store.readOnly?.reason ?? null),
   })
+  /** Claims the window's store sees (its peers' and its own agents'), as records. */
+  const claimsOf = (room: JoinedRoom): ClaimRecord[] =>
+    claimsFor(room.session.store)
+      .list()
+      .map(({ holder, ids, since, renewed, turn, label }) => ({
+        holder,
+        ids,
+        since,
+        renewed,
+        ...(turn ? { turn } : {}),
+        ...(label ? { label } : {}),
+      }))
+  const sendClaims = (ref: string) => {
+    const s = served.get(ref)
+    if (!s) return
+    const records = claimsOf(s.room)
+    const key = JSON.stringify(records)
+    if (key === s.claims) return
+    s.claims = key
+    void client.call("room.claims", { ref, records }).catch(() => undefined)
+  }
   const attach = async (ref: string) => {
     await installed
     const s = served.get(ref)
-    if (!disposed && s)
-      await client
-        .call("room.attach", { ...infoOf(s.room, s.ended) })
-        .catch((e: unknown) => console.warn("Kimo: agents cannot see a shared room", e))
+    if (disposed || !s) return
+    const ok = await client.call("room.attach", { ...infoOf(s.room, s.ended) }).then(
+      () => true,
+      (e: unknown) => {
+        console.warn("Kimo: agents cannot see a shared room", e)
+        return false
+      },
+    )
+    // A new replica has no claims yet: send them again.
+    if (ok && served.get(ref) === s) {
+      s.claims = null
+      sendClaims(ref)
+    }
   }
   /** The role or the read-only reason changed (a view link, a revoked link). */
   const recheck = (ref: string) => {
@@ -387,13 +465,18 @@ export function serveRoomsToHost(client: HostClient, source: WindowRooms): Serve
   const sync = () => {
     if (disposed) return
     const live = new Map(source.rooms().map((r) => [roomKeyOf(r.session.room), r]))
-    for (const [ref, s] of served)
-      if (live.get(ref) !== s.room) {
-        s.off()
-        served.delete(ref)
-        hub.unregister(ref)
-        void client.call("room.detach", { ref }).catch(() => undefined)
+    for (const [ref, s] of served) {
+      const room = live.get(ref)
+      // Another link to the same room keeps its session: the replica and its docId stay.
+      if (room?.session === s.room.session) {
+        s.room = room
+        continue
       }
+      s.off()
+      served.delete(ref)
+      hub.unregister(ref)
+      void client.call("room.detach", { ref }).catch(() => undefined)
+    }
     for (const [ref, room] of live) {
       if (served.has(ref)) continue
       hub.register(ref, room.session.store)
@@ -402,15 +485,18 @@ export function serveRoomsToHost(client: HostClient, source: WindowRooms): Serve
         room.session.onEvent((event) => {
           const entry = served.get(ref)
           if (!entry) return
-          if (event.type === "denied" || (event.type === "closed" && !event.willRetry))
-            entry.ended = true
+          // A refused message (denied) leaves the connection open; a welcome brings it back.
+          if (event.type === "closed" && !event.willRetry) entry.ended = true
+          else if (event.type === "welcome") entry.ended = false
           recheck(ref)
         }),
+        claimsFor(room.session.store).subscribe(() => sendClaims(ref)),
       ]
       served.set(ref, {
         room,
         info: JSON.stringify(infoOf(room)),
         ended: false,
+        claims: null,
         off: () => {
           for (const o of offs) o()
         },
@@ -419,8 +505,17 @@ export function serveRoomsToHost(client: HostClient, source: WindowRooms): Serve
     }
   }
   offs.push(source.subscribe(sync))
-  // After a host restart the new host has no replicas: attach them all again.
-  offs.push(client.onReady(() => void Promise.all([...served.keys()].map(attach))))
+  // After a host restart the new host has no replicas: attach them all again. The old host's
+  // peers never said bye, so each room's hub starts over.
+  offs.push(
+    client.onReady(() => {
+      for (const [ref, s] of served) {
+        hub.unregister(ref)
+        hub.register(ref, s.room.session.store)
+      }
+      void Promise.all([...served.keys()].map(attach))
+    }),
+  )
   sync()
 
   return {

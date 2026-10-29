@@ -267,19 +267,15 @@ describe("Kimo Cloud workspace files in the document host", () => {
 })
 
 describe("rooms joined from a share link (#79)", () => {
-  test("MCP lists a window's rooms with their role, edits one through the window, a view link refuses edits, and no link secret reaches a result", async () => {
-    // The owner shares two files from another device: one edit link, one view link.
-    const owner = makePeer()
-    const shared = makeTarget("/Users/owner/site.kimo", ["Frame00001"])
-    const viewed = makeTarget("/Users/owner/brand.kimo", ["Logo000001"])
-    const { room } = await owner.service.startSharing(shared, { relayUrl: relay.url })
-    const { room: viewRoom } = await owner.service.startSharing(viewed, { relayUrl: relay.url })
-    const edit = (await owner.service.mintLink(room, { role: "edit", ttlSeconds: null })).link
-    const view = (await owner.service.mintLink(viewRoom, { role: "view", ttlSeconds: null })).link
-    await owner.service.connect(shared, room)
+  type Doc = {
+    doc: { id: string; path: string; readOnly: boolean }
+    shared?: { relay?: string; role: string }
+    selection: string[]
+  }
 
-    // A desktop window joins both links; its document host serves MCP.
-    const platform = createMemoryPlatform({ pid: 7103, settings: { "files.autosave": false } })
+  /** A desktop window that joins links, its document host and an MCP client of the host. */
+  async function roomWindow(pid: number) {
+    const platform = createMemoryPlatform({ pid, settings: { "files.autosave": false } })
     const net = createMemoryBridgeNetwork()
     net.commands.set("kimo_mcp_policies_get", () => ({}))
     const service = await startDocumentHostService({
@@ -309,21 +305,11 @@ describe("rooms joined from a share link (#79)", () => {
       join: (link) => guest.joinLink(link),
     })
     const served = serveRoomsToHost(client, model.join)
-    expect((await model.join.join(edit)).phase).toBe("joined")
-    expect((await model.join.join(view)).phase).toBe("joined")
-    // Joining the second room kept the first one joined (a room tab in the back).
-    expect(model.join.rooms()).toHaveLength(2)
-
     const conn = service.runtime.connect({
       client: "claude-code",
       label: "Claude Code",
       transport: "socket",
     })
-    type Doc = {
-      doc: { id: string; path: string; readOnly: boolean }
-      shared?: { relay?: string; role: string }
-      selection: string[]
-    }
     const state = async () => {
       const r = (await conn.call("kimo_get_state", {})).result as ToolResult<{ documents: Doc[] }>
       if (!r.ok) throw new Error(r.summary)
@@ -331,6 +317,42 @@ describe("rooms joined from a share link (#79)", () => {
     }
     const docOf = async (key: string) =>
       (await state()).data.documents.find((d) => d.doc.path === key)
+    const rename = async (docId: string, id: string, name: string) =>
+      (await conn.call("kimo_apply_ops", { docId, ops: [{ op: "update", id, set: { name } }] }))
+        .result
+    return {
+      client,
+      model,
+      state,
+      docOf,
+      rename,
+      async dispose() {
+        served.dispose()
+        await service.dispose()
+        client.dispose()
+      },
+    }
+  }
+
+  test("MCP lists a window's rooms with their role, edits one through the window, a view link refuses edits, a peer's claim gates it, and no link secret reaches a result", async () => {
+    // The owner shares two files from another device: one edit link, one view link.
+    const owner = makePeer()
+    const shared = makeTarget("/Users/owner/site.kimo", ["Frame00001"])
+    const viewed = makeTarget("/Users/owner/brand.kimo", ["Logo000001"])
+    const { room } = await owner.service.startSharing(shared, { relayUrl: relay.url })
+    const { room: viewRoom } = await owner.service.startSharing(viewed, { relayUrl: relay.url })
+    const edit = (await owner.service.mintLink(room, { role: "edit", ttlSeconds: null })).link
+    const view = (await owner.service.mintLink(viewRoom, { role: "view", ttlSeconds: null })).link
+    const ownerSession = await owner.service.connect(shared, room)
+
+    // A desktop window joins both links; its document host serves MCP.
+    const w = await roomWindow(7103)
+    const { model, state, docOf } = w
+    expect((await model.join.join(edit)).phase).toBe("joined")
+    expect((await model.join.join(view)).phase).toBe("joined")
+    // Joining the second room kept the first one joined (a room tab in the back).
+    expect(model.join.rooms()).toHaveLength(2)
+
     await until(async () => (await state()).data.documents.length === 2)
     const listed = await state()
     const relayHost = new URL(relay.url).host
@@ -352,29 +374,34 @@ describe("rooms joined from a share link (#79)", () => {
 
     // An agent's edit reaches the owner through the window's room connection.
     const editId = (await docOf(roomKeyOf(room)))?.doc.id as string
-    const applied = (
-      await conn.call("kimo_apply_ops", {
-        docId: editId,
-        ops: [{ op: "update", id: "Frame00001", set: { name: "From the agent" } }],
-      })
-    ).result
+    const applied = await w.rename(editId, "Frame00001", "From the agent")
     if (!applied.ok) throw new Error(applied.summary)
     await until(() => shared.store.getNode("Frame00001")?.name === "From the agent")
 
     // A view link stays read only: the agent's edit is refused and nothing changes.
     const viewId = (await docOf(roomKeyOf(viewRoom)))?.doc.id as string
-    const refused = (
-      await conn.call("kimo_apply_ops", {
-        docId: viewId,
-        ops: [{ op: "update", id: "Logo000001", set: { name: "Changed" } }],
-      })
-    ).result
+    const refused = await w.rename(viewId, "Logo000001", "Changed")
     expect(refused.ok).toBe(false)
     if (!refused.ok) expect(refused.errors[0]?.code).toBe("READ_ONLY")
     expect(viewed.store.getNode("Logo000001")?.name).toBe("Logo000001")
 
+    // The owner's agent claims a frame (spec §15.11): MCP edits there wait (AREA_BUSY).
+    const now = Date.now()
+    ownerSession.setPresence({
+      user: { id: "owner", name: "Owner", color: "presence-clay" },
+      claims: [{ holder: "agent:kimo.owner.1", ids: ["Frame00001"], since: now, renewed: now }],
+    })
+    let busy: ToolResult<unknown> | null = null
+    await until(async () => {
+      const r = await w.rename(editId, "Frame00001", "From the agent")
+      if (r.ok || r.errors[0]?.code !== "AREA_BUSY") return false
+      busy = r
+      return true
+    })
+    expect(busy).toMatchObject({ errors: [{ detail: { holder: "agent:kimo.owner.1" } }] })
+
     // The window's selection in a room is the room document's selection.
-    client.reportSelection(roomKeyOf(room), ["Frame00001"])
+    w.client.reportSelection(roomKeyOf(room), ["Frame00001"])
     await until(async () => (await docOf(roomKeyOf(room)))?.selection[0] === "Frame00001")
 
     // Leaving the room (its tab closed) takes it off the list.
@@ -383,10 +410,46 @@ describe("rooms joined from a share link (#79)", () => {
     expect(await docOf(roomKeyOf(viewRoom))).toBeDefined()
 
     model.join.leave(view)
-    served.dispose()
-    await service.dispose()
-    client.dispose()
+    await w.dispose()
     await owner.service.stopSharing(room)
     await owner.service.stopSharing(viewRoom)
+  }, 30_000)
+
+  test("a view and an edit link to one room share its session: closing one tab keeps the other live (a bug: it detached the room)", async () => {
+    const owner = makePeer()
+    const shared = makeTarget("/Users/owner/site.kimo", ["Frame00001"])
+    const { room } = await owner.service.startSharing(shared, { relayUrl: relay.url })
+    const edit = (await owner.service.mintLink(room, { role: "edit", ttlSeconds: null })).link
+    const view = (await owner.service.mintLink(room, { role: "view", ttlSeconds: null })).link
+    await owner.service.connect(shared, room)
+
+    // The view link's tab, then the edit link's: the view session upgrades in place.
+    const w = await roomWindow(7104)
+    const { model, docOf } = w
+    expect((await model.join.join(view)).phase).toBe("joined")
+    expect((await model.join.join(edit)).phase).toBe("joined")
+    const session = model.join.roomFor(edit)
+    expect(model.join.roomFor(view)).toBe(session)
+    expect(model.join.rooms()).toHaveLength(1)
+    // Agents see the room take edits: the upgrade's reconnect did not end it.
+    await until(async () => (await docOf(roomKeyOf(room)))?.doc.readOnly === false)
+    const docId = (await docOf(roomKeyOf(room)))?.doc.id as string
+
+    // The view tab closes. The edit tab's room stays connected, and agents keep the same docId.
+    model.join.leave(view)
+    expect(model.join.roomFor(edit)).toBe(session)
+    session?.store.apply(
+      { op: "update", id: "Frame00001", set: { name: "From the tab" } },
+      { origin: "user" },
+    )
+    await until(() => shared.store.getNode("Frame00001")?.name === "From the tab")
+    const applied = await w.rename(docId, "Frame00001", "From the agent")
+    if (!applied.ok) throw new Error(applied.summary)
+    await until(() => shared.store.getNode("Frame00001")?.name === "From the agent")
+
+    model.join.leave(edit)
+    await until(async () => (await docOf(roomKeyOf(room))) === undefined)
+    await w.dispose()
+    await owner.service.stopSharing(room)
   }, 30_000)
 })

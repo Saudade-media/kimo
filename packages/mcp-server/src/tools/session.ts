@@ -55,7 +55,7 @@ const OpenDoc = Obj({
       },
       {
         description:
-          "Set for a room joined from a share link (path kimo-room:<room>). It has no file: edits sync live to everyone in it.",
+          "A room joined from a share link (kimo-room:<room>). Edits sync live; it has no file.",
       },
     ),
   ),

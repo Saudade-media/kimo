@@ -1,6 +1,6 @@
 {
   "name": "@kimo/editor-state",
-  "version": "1.2.1-beta.3",
+  "version": "1.2.1-beta.4",
   "private": true,
   "description": "Document store, op layer, undo and revisions",
   "license": "MIT",

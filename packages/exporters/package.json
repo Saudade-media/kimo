@@ -1,6 +1,6 @@
 {
   "name": "@kimo/exporters",
-  "version": "1.2.1-beta.3",
+  "version": "1.2.1-beta.4",
   "private": true,
   "description": "Deterministic export: document subtree \u2192 IR \u2192 React+Tailwind v4, HTML/CSS, design tokens (DTCG, CSS vars, Tailwind @theme), SVG, PDF; PNG through the renderer",
   "license": "MIT",

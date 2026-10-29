@@ -43,15 +43,16 @@ function JoinFlow({ model, initialLink }: { model: MultiplayerModel; initialLink
     void model.join.join(link)
   }, [model, link])
 
-  // Leaving the route (Home, another file) leaves the room, unless this is a remount.
+  // Leaving the route (Home, another file or room tab) leaves the room, unless this is a remount
+  // (the same room is still the joined one). Another room's tab starts its own join.
   useEffect(() => {
     active++
     return () => {
       active--
+      const session = model.join.getState().session
       setTimeout(() => {
-        if (active > 0) return
-        const session = model.join.getState().session
-        model.join.reset()
+        if (active > 0 && model.join.getState().session === session) return
+        if (active === 0) model.join.reset()
         if (session) void session.leave().catch(() => undefined)
       }, 0)
     }

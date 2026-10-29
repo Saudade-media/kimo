@@ -82,7 +82,12 @@ import { useOpenSettings, useRuntime } from "../platform/runtime"
 import { exitSelection, PreviewOverlay, pickPreviewFrame, usePreviewTarget } from "../preview"
 import { diskPath, lastHomePath, navigate } from "../router"
 import { useEditorAgentPanel } from "./agent-panel"
-import { useAgentTouched, useConnectedOrigins, useEditorAgents } from "./agents"
+import {
+  useAgentTabActivity,
+  useAgentTouched,
+  useConnectedOrigins,
+  useEditorAgents,
+} from "./agents"
 import { refName } from "./bindings"
 import { useCanvasMenu } from "./CanvasMenu"
 import {
@@ -902,7 +907,7 @@ function EditorShell({
     undoRedo,
   ])
 
-  // Board 21: agents (presence chip, approvals, canvas attribution, layer dots, Activity tab).
+  // Board 21: agents (avatars in the stack, approvals, canvas attribution, layer dots, Activity).
   const agents = useEditorAgents({
     platform,
     hostClient,
@@ -960,6 +965,8 @@ function EditorShell({
     areaBusy: multiplayer.areaBusy,
   })
   agentPersona.current = agentPanel.canvas
+  // Board 48 §5: the Agent tab's dot (the built-in agent and this window's MCP clients).
+  const agentTabActivity = useAgentTabActivity(agentPanel.controller, agents.controller)
   const { claimedOrigins, hiddenOrigins } = multiplayer
   // Connected MCP clients count as live agents on the canvas (their placeholders read "building").
   // Board 41 › 7: agents with a claim outline lose board 36's section outline; paused agents
@@ -1080,8 +1087,8 @@ function EditorShell({
   )
 
   // Board 44: the card headers replace the topbar (boards 03 / 16). Left: File Menu (logo, file
-  // name, File menu) and Collapse; right: People (agent presence, avatar stack, Share), Zoom
-  // (View menu), Play and Collapse.
+  // name, File menu) and Collapse; right: People (avatar stack with agents and people, Share),
+  // Zoom (View menu), Play and Collapse.
   // macOS overlay title bar: the lights sit over the left card header until the tab strip owns
   // the window chrome (`EditorChromeContext` false).
   const lightsInset = ownsChrome && platform.capabilities.trafficLights ? windowChrome.inset : 0
@@ -1119,26 +1126,26 @@ function EditorShell({
       onPreview={openPreview}
       previewTarget={previewTarget}
       collapsed={cards.right}
-      people={
-        <>
-          {agents.presence}
-          {/* Board 41 §1: avatar stack, people list and Share (a file's, or a joined room's). */}
-          <TopbarShare
-            docKey={shareKey}
-            card
-            nodeName={(id) => {
-              const n = session.store.getNode(id)?.name
-              return typeof n === "string" ? n : null
-            }}
-            onRevealNodes={(ids) => {
-              const live = ids.filter((id) => session.store.getNode(id))
-              if (!live.length) return
-              session.ui.getState().select(live)
-              canvas.current?.zoomToFit(live, 96)
-            }}
-          />
-        </>
-      }
+      people={agents.stack((stack) => (
+        // Board 48 §1: one stack for everyone (this window's agents first, then the people of a
+        // file's or a joined room's share), the people popover, and Share.
+        <TopbarShare
+          docKey={shareKey}
+          card
+          agents={stack.agents}
+          onPeopleOpenChange={stack.onPeopleOpenChange}
+          nodeName={(id) => {
+            const n = session.store.getNode(id)?.name
+            return typeof n === "string" ? n : null
+          }}
+          onRevealNodes={(ids) => {
+            const live = ids.filter((id) => session.store.getNode(id))
+            if (!live.length) return
+            session.ui.getState().select(live)
+            canvas.current?.zoomToFit(live, 96)
+          }}
+        />
+      ))}
     />
   )
 
@@ -1302,6 +1309,7 @@ function EditorShell({
             <RightPanel
               header={rightHeader}
               collapsed={cards.right}
+              agentActivity={agentTabActivity}
               {...(caps.canExport ? { onExport: openExport } : {})}
               session={session}
               layout={layout}

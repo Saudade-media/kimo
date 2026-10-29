@@ -504,13 +504,13 @@ export function AgentsMcpPane(props: AgentsMcpPaneProps) {
         />
         {server.askBeforeDestructive && (
           <SettingRow
-            label="Ask before destructive or out-of-scope ops"
+            label="Ask before destructive or out-of-scope changes"
             description="With Ask before changes on, deleting 2+ frames, edits outside the client’s files and variable or theme changes need approval."
             control={
               <Toggle
                 checked={server.askBeforeDestructive.value}
                 onChange={server.askBeforeDestructive.set}
-                label="Ask before destructive or out-of-scope ops"
+                label="Ask before destructive or out-of-scope changes"
               />
             }
           />

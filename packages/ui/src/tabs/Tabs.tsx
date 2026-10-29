@@ -1,17 +1,34 @@
 import { type ComponentPropsWithRef, type KeyboardEvent, useRef } from "react"
 import { cx } from "../internal/util"
 
+/** A 6 px dot after a tab's label (board 48 §5: the Agent tab while an agent works or waits). */
+export interface TabDot {
+  /** CSS color: `var(--kimo-agent)`, `var(--kimo-warning)`. */
+  color: string
+  /** What it means, for assistive tech: "Agent working". */
+  label: string
+}
+
 /** Props for {@link Tab}. Native `<button>` props pass through. */
 export interface TabProps extends ComponentPropsWithRef<"button"> {
   /** `Tab/Active`: bg-muted fill, label text-primary 600. */
   active?: boolean
+  /** Board 48 §5 Tab · Agent (4dafLeX6R7): row gap 6, center › Label, Dot 6 × 6. */
+  dot?: TabDot
 }
 
 /**
  * One tab. Mirrors `Tab` (GfneW) / `Tab/Active` (P3e7Mp): radius-pill, padding [5, 12];
  * label sans 12 / 500 text-secondary; active fill bg-muted, label 600 text-primary.
  */
-export function Tab({ active = false, className, children, type = "button", ...rest }: TabProps) {
+export function Tab({
+  active = false,
+  dot,
+  className,
+  children,
+  type = "button",
+  ...rest
+}: TabProps) {
   return (
     <button
       tabIndex={active ? 0 : -1}
@@ -22,6 +39,14 @@ export function Tab({ active = false, className, children, type = "button", ...r
       className={cx("kimo-tab", active && "kimo-tab--active", className)}
     >
       <span className="kimo-tab__label">{children}</span>
+      {dot && (
+        <span
+          className="kimo-tab__dot"
+          role="img"
+          aria-label={dot.label}
+          style={{ background: dot.color }}
+        />
+      )}
     </button>
   )
 }
@@ -32,6 +57,8 @@ export interface TabsItem<V extends string = string> {
   label: string
   /** id of the controlled tab panel (sets `aria-controls`). */
   panelId?: string
+  /** A dot after the label. */
+  dot?: TabDot
 }
 
 /** Props for {@link Tabs}. Remaining `<div>` props go to the tablist. */
@@ -81,6 +108,7 @@ export function Tabs<V extends string = string>({
           }}
           active={item.value === value}
           aria-controls={item.panelId}
+          {...(item.dot ? { dot: item.dot } : {})}
           onClick={() => item.value !== value && onChange?.(item.value)}
           onKeyDown={(e) => onKeyDown(e, i)}
         >

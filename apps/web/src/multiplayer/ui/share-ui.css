@@ -25,9 +25,17 @@
   outline-offset: 2px;
 }
 
-/* Section 2 E / F: presence is stale while the relay is gone. */
-.mp-stack--dim {
-  opacity: 0.5;
+/* Board 48 §1: an agent in the stack, its AgentMark 24 (no ring). */
+.mp-stack__agent {
+  display: inline-flex;
+  flex: none;
+  width: 24px;
+  height: 24px;
+}
+
+/* Its Tooltip (xbtkW, Key hidden) floats above the cards. */
+.kimo-tooltip.mp-stack__tip {
+  z-index: 80;
 }
 
 /* gap -4: each avatar after the first overlaps the previous one by 4. */
@@ -66,6 +74,14 @@
   font-weight: var(--kimo-font-weight-semibold);
   line-height: normal;
   white-space: nowrap;
+}
+
+/* Section 2 E / F: presence is stale while the relay is gone (people and other people's
+   agents; this window's agents stay live). */
+.mp-stack--dim .mp-avatar,
+.mp-stack--dim .mp-stack__agent--remote,
+.mp-stack--dim .mp-stack__more {
+  opacity: 0.5;
 }
 
 /* --- Share popover (MN5Yp / iCSXL / c6fdt): 360 wide; People (ZccsX): 300 ------------------- */
@@ -514,16 +530,24 @@
 
 /* --- People list (ZccsX) ------------------------------------------------------------------- */
 
-/* Body (qO5G7): column, gap 2, padding 6. */
+/* Body (jBfyCGl7pz): column, gap 2, padding 6. Board 48 §2 rule: the list scrolls past 8 rows
+   under the header. The board's 8 rows with both heads and the divider: padding 6 + 6, Agents
+   Head 21, Divider 1, People Head 21, 8 rows of 36, 10 gaps of 2 = 363. */
 .mp-people__body {
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
   gap: 2px;
   width: 100%;
+  max-height: 363px;
   margin: 0;
   padding: 6px;
+  overflow-y: auto;
   list-style: none;
+}
+
+.mp-people__body > * {
+  flex: none;
 }
 
 /* Person / Agent row (tW5ly): 36 tall, radius-sm, gap 8, padding [0, 4, 0, 6], center. */
@@ -594,8 +618,9 @@
   background: var(--kimo-border);
 }
 
-/* Agents Head (Hkm9s): padding [6, 6, 2, 6] › Label sans 11 / 500 tertiary. */
-.mp-agents-head {
+/* Agents Head / People Head (7BYVUAnBO0 / xS8NIp1JX9): padding [6, 6, 2, 6] › Label sans 11 /
+   500 tertiary. */
+.mp-people__head {
   box-sizing: border-box;
   width: 100%;
   padding: 6px 6px 2px 6px;
@@ -616,7 +641,39 @@
   height: 24px;
 }
 
-/* Agent Meta (tKHOY): sans 11 in the persona hue. */
+/* This window's agent: its mark and text open its changes (board 48 §2 › §3). */
+.mp-agent-open {
+  box-sizing: border-box;
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: var(--kimo-radius-sm);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+  appearance: none;
+}
+
+.mp-agent-open:focus-visible {
+  outline: 2px solid var(--kimo-accent);
+  outline-offset: -2px;
+}
+
+.mp-person--agent .mp-label-strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Agent Meta (8qIyqk3lO2): sans 11 in the persona hue. */
 .mp-agent-meta {
   overflow: hidden;
   color: var(--mp-color);

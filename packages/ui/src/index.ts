@@ -297,7 +297,14 @@ export {
   type SwapPopoverProps,
 } from "./swap-popover/SwapPopover"
 export { SwatchTile, type SwatchTileProps } from "./swatch-tile/SwatchTile"
-export { Tab, type TabProps, Tabs, type TabsItem, type TabsProps } from "./tabs/Tabs"
+export {
+  Tab,
+  type TabDot,
+  type TabProps,
+  Tabs,
+  type TabsItem,
+  type TabsProps,
+} from "./tabs/Tabs"
 export { axisIcon, ThemePinRow, type ThemePinRowProps } from "./theme-pin-row/ThemePinRow"
 export { Toast, type ToastProps } from "./toast/Toast"
 export { Toggle, type ToggleProps } from "./toggle/Toggle"

@@ -1,7 +1,7 @@
 /**
- * Approval Prompt (weJXw, board 21 L2eaCu): anchored under the presence chip; the agent's call
- * blocks until Deny / Always for this session / Allow once, or the 2-minute timeout denies it.
- * Prompts queue oldest first (rule "Approval"); Esc = Deny.
+ * Approval Prompt (weJXw, board 21 L2eaCu): anchored under the waiting agent's avatar (board 48);
+ * the agent's call blocks until Deny / Always for this session / Allow once, or the 2-minute
+ * timeout denies it. Prompts queue oldest first (rule "Approval"); Esc = Deny.
  */
 import { AgentMark, AgentOpRow, Button, floating, useAnchoredPosition } from "@kimo/ui"
 import { ChevronDown, ChevronUp } from "lucide-react"
@@ -20,7 +20,7 @@ import {
 
 export interface ApprovalPromptProps {
   controller: AgentsControllerExt
-  /** The presence chip; null: top-right under the topbar (fixed). */
+  /** The waiting agent's avatar in the right card's stack (board 48); null: top right (fixed). */
   anchor: HTMLElement | null
 }
 
@@ -35,9 +35,10 @@ export function ApprovalPrompt({ controller, anchor }: ApprovalPromptProps) {
   const rect =
     anchor ??
     (typeof window !== "undefined" ? { ...FALLBACK, x: window.innerWidth - 16 } : FALLBACK)
+  // Under the avatar on its left edge, shifted to stay in the window (board 48 §2 rule).
   const pos = useAnchoredPosition(root, rect, {
     side: "bottom",
-    align: "end",
+    align: anchor ? "start" : "end",
     offset: anchor ? 18 : 8,
   })
   const id = prompt?.request.id

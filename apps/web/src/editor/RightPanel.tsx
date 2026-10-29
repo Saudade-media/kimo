@@ -11,7 +11,7 @@
 import type { NodeData } from "@kimo/editor-state"
 import type { LayoutResult } from "@kimo/layout"
 import type { IconProvider } from "@kimo/renderer"
-import { Badge, EmptyState, PropSection, Tabs } from "@kimo/ui"
+import { Badge, EmptyState, PropSection, type TabDot, Tabs, type TabsItem } from "@kimo/ui"
 import { type ReactNode, useContext, useEffect, useMemo, useRef, useState } from "react"
 import { useCropSession } from "../canvas/crop"
 import { type CodeExportPreset, CodeTab } from "../code-tab"
@@ -57,6 +57,12 @@ const TABS = [
   { value: "agent", label: "Agent" },
 ] as const
 
+/** Board 48 §5 Dot (5GwcxabDJa / aZEI42bzst): agent while one works, warning while one waits. */
+const AGENT_DOT: Record<"working" | "waiting", TabDot> = {
+  working: { color: "var(--kimo-agent)", label: "An agent is working" },
+  waiting: { color: "var(--kimo-warning)", label: "An agent is waiting for you" },
+}
+
 interface RightPanelProps {
   session: FileSession
   /** The canvas's latest layout; sections select only the boxes they show from it. */
@@ -97,6 +103,8 @@ interface RightPanelProps {
   header?: ReactNode
   /** Board 44 §3: only the header shows, as a pill. */
   collapsed?: boolean
+  /** Board 48 §5: a dot after "Agent" while an agent works (agent) or waits for you (warning). */
+  agentActivity?: "working" | "waiting" | null
 }
 
 export function RightPanel({
@@ -117,6 +125,7 @@ export function RightPanel({
   onExport,
   header = null,
   collapsed = false,
+  agentActivity = null,
 }: RightPanelProps) {
   const [tab, setTab] = useState<RightTab>(initialTab)
   const agentRev = useBusValue(openAgent ?? NO_REV)
@@ -159,12 +168,14 @@ export function RightPanel({
     if (conflicts) setTab("conflicts")
   }, [reviewRev, conflicts])
   const items = useMemo(() => {
-    const base: { value: RightTab; label: string }[] = [...TABS]
+    const base: TabsItem<RightTab>[] = TABS.map((t) =>
+      t.value === "agent" && agentActivity ? { ...t, dot: AGENT_DOT[agentActivity] } : t,
+    )
     if (hasActivity) base.push({ value: "activity", label: "Activity" })
     if (conflicts && counts)
       base.push({ value: "conflicts", label: conflictsTabLabel(counts.open) })
     return base
-  }, [conflicts, counts, hasActivity])
+  }, [conflicts, counts, hasActivity, agentActivity])
   const nothingSelected = useUi(session.ui, (s) => s.selection.length === 0)
   // Board 44 §3: collapsed, the card is its header as a pill (the tab stays).
   if (collapsed)

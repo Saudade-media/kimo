@@ -15,4 +15,4 @@ export {
 } from "./controller"
 export * from "./model"
 export { AgentPausedBanner } from "./PausedBanner"
-export { AgentPresence } from "./Presence"
+export { AgentStack, type AgentStackEntry, type AgentStackSlot } from "./Presence"

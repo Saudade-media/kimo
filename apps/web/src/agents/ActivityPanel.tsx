@@ -94,7 +94,7 @@ export function AgentActivityPanel({
               className="agents-activity__empty-state"
               icon={<AgentIcon name="history" size={18} />}
               title="No agent activity yet"
-              description="Every change an agent makes to this file shows up here, with undo per entry."
+              description="Agent changes show up here. Undo any of them."
             />
             {state.connections.length === 0 && onConnectAgent && (
               <CompactButton
@@ -156,8 +156,6 @@ export function AgentActivityPanel({
         ))}
       </div>
       <div className="agents-activity__footer">
-        <span className="agents-activity__retention">last 500 calls · this file</span>
-        <span className="agents-spacer" />
         <Button
           size="sm"
           variant="ghost"

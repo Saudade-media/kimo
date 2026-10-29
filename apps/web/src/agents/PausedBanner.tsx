@@ -10,7 +10,7 @@ import { AgentIcon } from "./icons"
 
 export interface AgentPausedBannerProps {
   controller: AgentsControllerExt
-  /** "Show ops": opens the session popover / Activity tab. */
+  /** "Show changes": opens the session popover / Activity tab. */
   onShowOps?: () => void
   /** "Save a copy…" (read-only files). */
   onSaveCopy?: () => void
@@ -25,10 +25,10 @@ export function AgentPausedBanner({ controller, onShowOps, onSaveCopy }: AgentPa
   const lockCleared = locked && store !== null && store.readOnly === null
   const reason = store?.readOnly?.reason
   const body = locked
-    ? `${chip.paused.summary || "The file is locked by another app."} ${chip.label}’s last call returned DOCUMENT_LOCKED; its ops were not applied. Agents can still read.`
+    ? `${chip.paused.summary || "The file is locked by another app."} ${chip.label}’s last call returned DOCUMENT_LOCKED; its changes were not applied. Agents can still read.`
     : `This file is read-only${reason ? ` (${reason})` : ""}: ${chip.label}’s last call returned READ_ONLY and was not applied. Agents can still read.`
   const actions: BannerActionItem[] = [
-    { id: "show-ops", label: "Show ops", variant: "ghost" },
+    { id: "show-ops", label: "Show changes", variant: "ghost" },
     lockCleared
       ? { id: "resume", label: "Resume", variant: "primary" }
       : locked

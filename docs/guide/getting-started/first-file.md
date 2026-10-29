@@ -63,6 +63,7 @@ Kimo opens pen.dev `.pen` design files (the plain-JSON format, schema 2.x) like 
 - Opening the same, unchanged `.pen` again reopens that `.kimo`, with your edits.
 - If `design.kimo` already exists and did not come from this `.pen` (or the `.pen` changed since), Kimo writes `design 2.kimo` instead. It never replaces a file.
 - Components, instances and their overrides, slots, variables and themes, auto layout, gradients, images, mesh gradients and shader fills all carry over. Shader files (`.glsl`) stay where they are and are referenced relative to the file.
+- An instance that has its own layers in the `.pen` becomes a frame, or a component if it was one. A Kimo instance always shows its component's layers.
 - In the browser, only images linked by `https://` URL can be fetched; images next to the `.pen` show as missing.
 
 The full definition is the [file format spec](../../spec/kimo-format-1.0.md). For merging `.kimo` files in git, see [`kimo merge`](../../../packages/cli/README.md#kimo-merge-the-git-merge-driver).

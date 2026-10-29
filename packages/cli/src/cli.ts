@@ -157,7 +157,7 @@ export async function run(
       case "version":
       case "--version":
       case "-v":
-        io.stdout("kimo 1.2.1-beta.2 (format 1.0)\n")
+        io.stdout("kimo 1.2.1-beta.3 (format 1.0)\n")
         return 0
       case undefined:
       case "help":

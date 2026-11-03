@@ -398,7 +398,6 @@ describe("rooms joined from a share link (#79)", () => {
       platform,
       conn,
       client,
-      conn,
       model,
       state,
       docOf,

@@ -600,6 +600,20 @@ button {
   text-overflow: ellipsis;
 }
 
+.selection-header__input {
+  flex: 1 1 0;
+  min-width: 0;
+  padding: 0 4px;
+  border: 1px solid var(--kimo-accent-text);
+  border-radius: 4px;
+  background: transparent;
+  color: var(--kimo-text-primary);
+  font: inherit;
+  font-size: var(--kimo-text-base);
+  font-weight: var(--kimo-font-weight-semibold);
+  outline: none;
+}
+
 .selection-header__spacer {
   flex: 1 1 0;
   height: 1px;

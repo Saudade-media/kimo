@@ -273,6 +273,64 @@ function InertSections({ on, children }: { on: boolean; children: ReactNode }) {
   )
 }
 
+/** The header name; a double-click renames the layer in place (same as the layers panel). */
+function SelectionName({
+  session,
+  id,
+  name,
+  canRename,
+}: {
+  session: FileSession
+  id: string
+  name: string
+  canRename: boolean
+}) {
+  const [renaming, setRenaming] = useState(false)
+  const [draft, setDraft] = useState(name)
+  const finish = (save: boolean) => {
+    setRenaming(false)
+    const next = draft.trim()
+    if (save && next && next !== name) {
+      session.apply({ op: "update", id, set: { name: next } }, "Rename layer")
+    }
+  }
+  if (renaming) {
+    return (
+      <input
+        // biome-ignore lint/a11y/noAutofocus: rename starts on an explicit double-click
+        autoFocus
+        className="selection-header__input"
+        aria-label="Layer name"
+        value={draft}
+        onFocus={(e) => e.currentTarget.select()}
+        onChange={(e) => setDraft(e.currentTarget.value)}
+        onBlur={() => finish(true)}
+        onKeyDown={(e) => {
+          e.stopPropagation()
+          if (e.key === "Enter") finish(true)
+          else if (e.key === "Escape") finish(false)
+        }}
+      />
+    )
+  }
+  return (
+    <span
+      className="selection-header__name"
+      data-testid="selection-name"
+      {...(canRename
+        ? {
+            onDoubleClick: () => {
+              setDraft(name)
+              setRenaming(true)
+            },
+          }
+        : {})}
+    >
+      {name}
+    </span>
+  )
+}
+
 function DesignTab({
   session,
   layout,
@@ -382,9 +440,18 @@ function DesignTab({
               size={14}
             />
           </span>
-          <span className="selection-header__name" data-testid="selection-name">
-            {sel.length === 1 ? nodeName(first.node) : `${sel.length} layers`}
-          </span>
+          {single ? (
+            <SelectionName
+              session={session}
+              id={single}
+              name={nodeName(first.node)}
+              canRename={!viewOnly && !inInstance}
+            />
+          ) : (
+            <span className="selection-header__name" data-testid="selection-name">
+              {`${sel.length} layers`}
+            </span>
+          )}
           <span className="selection-header__spacer" />
           {kindText ? (
             <KindPill label={kindText} derived={m3kind === "derived"} />

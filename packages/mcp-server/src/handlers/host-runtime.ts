@@ -36,7 +36,7 @@ import type { ApplyStream } from "../stream"
 import type { ToolDef } from "../tools/define"
 import { ActivityLog, type ActivityStore, ApprovalBroker, PresenceTracker } from "./activity"
 import { createToolHandlers } from "./create"
-import { streamEngineOf, type ToolHandlerOptions } from "./tools"
+import { readOnlyError, streamEngineOf, type ToolHandlerOptions } from "./tools"
 import { fileIdOf, randomId } from "./util"
 
 export interface McpHostRuntimeOptions {
@@ -287,6 +287,12 @@ const STATE_OF: Record<string, AgentPresence["state"]> = {
   kimo_export: "rendering",
 }
 
+/** A call that changes a document (not a dry run). */
+function writes(def: ToolDef, input: Record<string, unknown>): boolean {
+  if (!def.mutating || input.dryRun === true) return false
+  return (def.scopeFor ? def.scopeFor(input as never) : def.scope) !== "read"
+}
+
 export function createMcpHostRuntime(options: McpHostRuntimeOptions): McpHostRuntime {
   const { host } = options
   const now = options.now ?? Date.now
@@ -416,6 +422,7 @@ export function createMcpHostRuntime(options: McpHostRuntimeOptions): McpHostRun
         if (r.ok) {
           t.path = r.value.ref.path
           t.pathAlreadyOpen = true
+          if (r.value.store.readOnly && writes(def, input)) t.readOnly = readOnlyError(r.value)
           if (policy.nodes.length) {
             const out = opts.scope
               ? opts.scope(def, input, r.value.store, policy)

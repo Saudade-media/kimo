@@ -4,7 +4,8 @@
  * (host/INTEGRATION.md): kimo_focus → select / zoom, selection reports for
  * `kimo_get_state.selection`. Only files on disk with an MCP host get agents (desktop, memory
  * harnesses); untitled documents have no path, so no agent can target them. A room joined from a
- * share link is an MCP document too (#79): focus and selection work there under its room key.
+ * share link is an MCP document too (#79): its tab gets the same Agents UI, focus and selection
+ * under its room key (#86).
  */
 import type { LayoutResult } from "@kimo/layout"
 import { isPlatformError, type KimoPlatform, sha256Hex } from "@kimo/platform"
@@ -26,6 +27,18 @@ import { roomKeyOf } from "../multiplayer/backend"
 import type { FileDocumentSession } from "../platform/session"
 import { failureText } from "./errors"
 import type { FileSession } from "./session"
+
+/**
+ * The document's ref in the host: a file's path, or a joined room's key (`kimo-room:<room>`).
+ * Null for an untitled or a library file (no agent can target those).
+ */
+export function hostRefOf(
+  doc: FileDocumentSession | null,
+  session: Pick<FileSession, "shared">,
+): string | null {
+  if (doc && !doc.untitled) return doc.ref
+  return session.shared ? roomKeyOf(session.shared.room) : null
+}
 
 /** `sha256(path)[:16]`: the activity / lease / recovery key of a file (ADR 0013 §6). */
 export function useFileId(path: string | null): string | null {
@@ -71,6 +84,7 @@ export function useEditorAgents({
   layout,
   openSettings,
   onSaveCopy,
+  viewOnly = false,
   onError,
 }: {
   platform: KimoPlatform
@@ -80,14 +94,16 @@ export function useEditorAgents({
   canvas: { current: CanvasHandle | null }
   layout: Bus<LayoutResult | null>
   openSettings: (client?: string) => void
+  /** "Save a copy…" in the paused banner (absent: the document can't be copied). */
   onSaveCopy?: () => void
+  /** A view link's room: its view-only banner already says edits are off (no paused banner). */
+  viewOnly?: boolean
   /** A failed agent action or export: Toast/Danger ("Couldn't …" + the cause). */
   onError: (notice: AgentsNotice) => void
 }): EditorAgents {
-  const path = doc && !doc.untitled ? doc.ref : null
-  /** The document's ref in the host: a file's path, or a joined room's key. */
-  const hostRef = path ?? (session.shared ? roomKeyOf(session.shared.room) : null)
-  const fileId = useFileId(path)
+  /** A file's path or a joined room's key: the Agents UI keys on it like on a file (#86). */
+  const hostRef = hostRefOf(doc, session)
+  const fileId = useFileId(hostRef)
   const mcp = platform.mcp ?? null
   const openActivity = useMemo(() => createBus(0), [])
   // Stable across renders so the controller is not rebuilt when the caller's closure changes.
@@ -103,17 +119,17 @@ export function useEditorAgents({
   )
   const controller = useMemo(
     () =>
-      mcp && path && fileId
+      mcp && hostRef && fileId
         ? createAgentsController({
             host: mcp,
             fileId,
-            filePath: path,
+            filePath: hostRef,
             store: session.store,
             onFocus: (ids) => focus(ids),
             onError: (n) => errorRef.current(n),
           })
         : null,
-    [mcp, path, fileId, session.store, focus],
+    [mcp, hostRef, fileId, session.store, focus],
   )
   useEffect(() => () => controller?.dispose(), [controller])
 
@@ -166,7 +182,7 @@ export function useEditorAgents({
         {render}
       </AgentStack>
     ),
-    banner: (
+    banner: viewOnly ? null : (
       <AgentPausedBanner
         controller={controller}
         onShowOps={() => openActivity.set(openActivity.get() + 1)}

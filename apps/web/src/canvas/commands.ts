@@ -642,7 +642,7 @@ export function nudgeOps(
 }
 
 /**
- * Arrow-key reorder of auto-layout children (Figma): an arrow along the parent's direction
+ * Arrow-key reorder of auto-layout children: an arrow along the layout direction
  * (←/→ in a row, ↑/↓ in a column) moves each selected flow child one place earlier / later.
  * Children at the edge (or blocked by a selected neighbour there) stay put.
  */

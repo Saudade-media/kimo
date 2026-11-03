@@ -471,6 +471,34 @@ describe("derived components", () => {
       density: "compact",
     })
   })
+
+  test("an instance's overrides reach the derived component's own replacement content", () => {
+    // §9.5: instance-owned nodes inside the derived component are its descendants.
+    const d2 = doc(
+      nodes({
+        ...iconButton,
+        ...icons,
+        derived001: {
+          type: "instance",
+          parent: null,
+          of: "btn0000001",
+          component: true,
+          overrides: { btnLabel01: { replace: true } },
+        },
+        newLabel01: { type: "text", parent: "derived001", at: "btnLabel01", content: "Derived" },
+        use0000002: {
+          type: "instance",
+          parent: null,
+          of: "derived001",
+          overrides: { newLabel01: { set: { content: "Mine" } } },
+        },
+      }),
+    )
+    expect(validate(d2).errors).toEqual([])
+    const v = view(d2)
+    expect(v.getNode("use0000002/newLabel01")?.content).toBe("Mine")
+    expect(v.issues("use0000002")).toEqual([])
+  })
 })
 
 describe("theme along the expanded placement path", () => {

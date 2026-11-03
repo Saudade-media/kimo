@@ -740,7 +740,9 @@ export function createExpandedView(
       : rootThemes
     if (r.node.type === "instance") {
       // Derived component: paths resolve through it (§9.5); its own layers sit below ours.
-      const ctx: Ctx = { ns: r.ns, prefix: outId, top: owner.ctx.top ?? outId, layers: null, stack }
+      // Its slot and replacement nodes are emitted in this context, and they are descendants
+      // of the derived component, so our layers (keyed relative to it) apply to them too.
+      const ctx: Ctx = { ns: r.ns, prefix: outId, top: owner.ctx.top ?? outId, layers, stack }
       expandInstance(
         outId,
         r.node,

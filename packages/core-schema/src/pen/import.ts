@@ -13,6 +13,8 @@
  * - `ref` instances: root props go to `props`, `descendants` become tagged overrides. A `set`
  *   replaces a property wholesale, so each override is the diff between the converted target
  *   (with every override above it merged in, `.pen`-side) and the converted target as authored.
+ * - A `ref` with its own `children` (they replace the component's) becomes a plain node, a
+ *   component when it is `reusable`, since no Kimo override targets an instance's root.
  * - Ids that do not fit Kimo's grammar (`.pen` uses 5 characters) are re-keyed, consistently in
  *   every override path.
  */
@@ -48,6 +50,7 @@ export interface PenImportWarning {
     | "VARIABLE_MISSING"
     | "VARIABLE_RENAMED"
     | "IMPORTS_UNSUPPORTED"
+    | "INSTANCE_DETACHED"
     | "VALUE_INVALID"
   message: string
   /** `.pen` id of the node concerned, when there is one. */
@@ -255,6 +258,8 @@ const CONTAINERS = new Set(["frame", "group"])
 
 class PenImporter {
   private readonly byId = new Map<string, PenNode>()
+  /** `.pen` id → the ref whose `descendants` authored the node (replacement or slot content). */
+  private readonly owners = new Map<string, string>()
   private readonly ids = new Map<string, string>()
   private readonly used = new Set<string>()
   private readonly nodes: Record<string, Obj> = {}
@@ -320,15 +325,34 @@ class PenImporter {
 
   // --- Ids --------------------------------------------------------------------------------------
 
-  private collect(n: PenNode): void {
+  /** Indexes `n`'s subtree; `owner` is the ref whose `descendants` authored it, if any. */
+  private collect(n: PenNode, owner?: string): void {
     if (!isObj(n)) return
-    if (typeof n.id === "string" && !this.byId.has(n.id)) this.byId.set(n.id, n)
-    for (const c of n.children ?? []) this.collect(c)
+    if (typeof n.id === "string" && !this.byId.has(n.id)) {
+      this.byId.set(n.id, n)
+      if (owner !== undefined) this.owners.set(n.id, owner)
+    }
+    for (const c of n.children ?? []) this.collect(c, owner)
+    const self = typeof n.id === "string" ? n.id : undefined
     for (const d of Object.values(n.descendants ?? {})) {
       if (!isObj(d)) continue
-      if (typeof d.type === "string") this.collect(d as PenNode)
-      else for (const c of (d as PenNode).children ?? []) this.collect(c)
+      if (typeof d.type === "string") this.collect(d as PenNode, self)
+      else for (const c of (d as PenNode).children ?? []) this.collect(c, self)
     }
+  }
+
+  /**
+   * The Kimo key of `.pen` override path `segs`. A replacement or slot node a ref authors in
+   * its own `descendants` is reached in `.pen` by crossing that ref, but in Kimo it is an
+   * instance-owned node, which sits in the ref's own scope: that crossing is dropped.
+   */
+  private kimoPath(segs: readonly string[]): string {
+    const out: string[] = []
+    segs.forEach((s, i) => {
+      const next = segs[i + 1]
+      if (next === undefined || this.owners.get(next) !== s) out.push(this.kid(s))
+    })
+    return out.join("/")
   }
 
   /** Kimo id of a `.pen` id (stable for the whole import). */
@@ -1080,7 +1104,7 @@ class PenImporter {
         this.warn("OVERRIDE_UNRESOLVED", `Override path "${path}" names a missing node`, n.id)
         continue
       }
-      const at = segs.map((s) => this.kid(s)).join("/")
+      const at = this.kimoPath(segs)
       const base = this.eff(comp, segs)
       if (!base) {
         this.warn("OVERRIDE_UNRESOLVED", `Override path "${path}" does not resolve`, n.id)
@@ -1097,18 +1121,33 @@ class PenImporter {
           for (const c of children) if (isObj(c)) this.convertTree(c, id, at, penOrderKey(order++))
           out[at] = { slot: true }
         } else {
-          const replacement: PenNode = { ...merge(base, rest), id: undefined, children }
+          // A nested instance given children becomes a ref with its own children (see
+          // `detach`); its old overrides address the component content those children replace.
+          const replacement: PenNode = {
+            ...merge({ ...base, descendants: undefined }, rest),
+            id: undefined,
+            children,
+          }
           this.convertTree(replacement, id, at, penOrderKey(order++))
           out[at] = { replace: true }
         }
         continue
       }
       let set: Obj | undefined
-      if (base.type === "ref") {
+      if (base.type === "ref" && !Array.isArray(base.children)) {
         const { descendants, ...own } = ov
         // Nested overrides of the nested instance continue as deeper paths of this instance.
         for (const [k, v] of Object.entries(descendants ?? {})) entries.push([`${path}/${k}`, v])
         set = this.instanceSet(base, merge(base, own))
+      } else if (base.type === "ref") {
+        // A ref with its own children is a plain node here (see `detach`), and its nested
+        // overrides address those children, which sit in this same scope.
+        const { descendants, ...own } = ov
+        const scope = segs.slice(0, -1).join("/")
+        for (const [k, v] of Object.entries(descendants ?? {}))
+          entries.push([scope ? `${scope}/${k}` : k, v])
+        const prev = this.body(this.detach(base))
+        set = this.diff(this.body(this.detach(merge(base, own))), prev, SET_FORBIDDEN, n.id)
       } else {
         set = this.diff(this.body(merge(base, ov)), this.body(base), SET_FORBIDDEN, n.id)
       }
@@ -1140,6 +1179,63 @@ class PenImporter {
     return Object.keys(out).length ? out : undefined
   }
 
+  /**
+   * A `ref` that has its own `children` as a plain `.pen` node. Those children replace the
+   * component's, which a Kimo instance cannot say (no override targets the root), so the ref
+   * becomes a node of the component root's type with the ref's props merged over the root's.
+   * The children are authored in the ref's scope: `.pen` override paths reach them without
+   * crossing an instance boundary, so the same paths resolve in Kimo once the ref is a node.
+   */
+  private detach(n: PenNode): PenNode {
+    const base = this.root(String(n.ref))
+    const out: PenNode = { ...this.visual(base ?? {}), ...this.visual(n) }
+    out.type = base?.type ?? "frame"
+    out.id = n.id
+    out.name = n.name ?? base?.name
+    // Placement is the ref's own, never the component's (its canvas position, `reusable`).
+    for (const k of ["x", "y", "layoutPosition", "reusable", "context", "metadata"])
+      if (n[k] !== undefined) out[k] = n[k]
+    const pins = base?.theme
+    const theme = { ...(isObj(pins) ? pins : {}), ...(isObj(n.theme) ? n.theme : {}) }
+    if (Object.keys(theme).length) out.theme = theme
+    return compact(out)
+  }
+
+  /**
+   * `children` with the `descendants` of the ref that owns them applied (same scope): a single
+   * id overrides that node, a deeper path goes to the nested instance its first segment names.
+   */
+  private applyDescendants(
+    children: PenNode[],
+    descendants: PenNode["descendants"],
+    owner?: string,
+  ): PenNode[] {
+    const own = new Map<string, PenNode>()
+    const deeper = new Map<string, Record<string, PenNode>>()
+    for (const [path, ov] of Object.entries(descendants ?? {})) {
+      if (!isObj(ov)) continue
+      const [head = "", ...rest] = path.split("/")
+      if (rest.length === 0) own.set(head, ov)
+      else deeper.set(head, { ...deeper.get(head), [rest.join("/")]: ov })
+    }
+    if (own.size === 0 && deeper.size === 0) return children
+    const used = new Set<string>()
+    const visit = (c: PenNode): PenNode => {
+      if (!isObj(c)) return c
+      const id = typeof c.id === "string" ? c.id : ""
+      let out = override(c, own.get(id)) ?? c
+      const nested = deeper.get(id)
+      if (nested && out.type === "ref") out = merge(out, { descendants: nested })
+      if (own.has(id) || (nested && out.type === "ref")) used.add(id)
+      return Array.isArray(out.children) ? { ...out, children: out.children.map(visit) } : out
+    }
+    const result = children.map(visit)
+    for (const head of [...own.keys(), ...deeper.keys()])
+      if (!used.has(head))
+        this.warn("OVERRIDE_UNRESOLVED", `Override path "${head}" names a missing node`, owner)
+    return result
+  }
+
   /** Converts `n` and its subtree into Kimo nodes under `parent`. */
   private convertTree(
     n: PenNode,
@@ -1147,6 +1243,12 @@ class PenImporter {
     at: string | undefined,
     order: string,
   ): void {
+    if (n.type === "ref" && Array.isArray(n.children)) {
+      if (this.byId.has(String(n.ref)))
+        this.warn("INSTANCE_DETACHED", "An instance with its own layers became a frame", n.id)
+      else this.warn("ID_UNKNOWN", `Instance of a missing component "${String(n.ref)}"`, n.id)
+      n = { ...this.detach(n), children: this.applyDescendants(n.children, n.descendants, n.id) }
+    }
     const id = typeof n.id === "string" && n.id ? this.kid(n.id) : this.fresh("r")
     let node: Obj
     if (n.type === "ref") {

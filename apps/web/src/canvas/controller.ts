@@ -89,6 +89,7 @@ import {
   nudgeOps,
   pathOf,
   type ResizeStart,
+  reorderOps,
   resizeOps,
   resizeStart,
   type ShapeKind,
@@ -2834,7 +2835,10 @@ export class CanvasController {
       return run(() => {
         if (this.layoutResult)
           this.apply(
-            nudgeOps(this.store, this.layoutResult, ui.selection, a[0] * k, a[1] * k),
+            [
+              ...nudgeOps(this.store, this.layoutResult, ui.selection, a[0] * k, a[1] * k),
+              ...reorderOps(this.store, ui.selection, a[0], a[1]),
+            ],
             "Nudge",
           )
       })

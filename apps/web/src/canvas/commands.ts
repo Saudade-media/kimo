@@ -642,6 +642,41 @@ export function nudgeOps(
 }
 
 /**
+ * Arrow-key reorder of auto-layout children (Figma): an arrow along the parent's direction
+ * (←/→ in a row, ↑/↓ in a column) moves each selected flow child one place earlier / later.
+ * Children at the edge (or blocked by a selected neighbour there) stay put.
+ */
+export function reorderOps(doc: DocReader, ids: readonly string[], dx: number, dy: number): Op[] {
+  const ops: Op[] = []
+  const byParent = new Map<string, Set<string>>()
+  for (const id of ids) {
+    const n = doc.getNode(id)
+    if (!n || n.locked === true || !isFlowChild(doc, id)) continue
+    const set = byParent.get(n.parent as string) ?? new Set<string>()
+    set.add(id)
+    byParent.set(n.parent as string, set)
+  }
+  for (const [parent, sel] of byParent) {
+    const layout = doc.getNode(parent)?.layout as { dir?: unknown } | undefined
+    const column = layout?.dir === "column"
+    const step = column ? (dx === 0 ? Math.sign(dy) : 0) : dy === 0 ? Math.sign(dx) : 0
+    if (!step) continue
+    const order = [...doc.children(parent)]
+    const keys = [...order.keys()]
+    for (const i of step < 0 ? keys : keys.reverse()) {
+      const j = i + step
+      if (!sel.has(order[i] as string) || j < 0 || j >= order.length) continue
+      if (sel.has(order[j] as string)) continue
+      const a = order[i] as string
+      order[i] = order[j] as string
+      order[j] = a
+      ops.push({ op: "move", id: a, parent, index: j })
+    }
+  }
+  return ops
+}
+
+/**
  * Board 27 §6 rule K0t6s "Flip H / V" (⇧H / ⇧V, panel toggles beside Rotation): stored as
  * `flipX` / `flipY` (mirrors around the node centre, W/H stay positive). Flips every selected
  * top-level node on when any is unflipped, else turns them all off (unset). Groups, instances

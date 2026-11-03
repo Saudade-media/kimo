@@ -16,6 +16,7 @@ import {
   nextName,
   nudgeOps,
   POLYGON_SIDES,
+  reorderOps,
   resizeOps,
   resizeStart,
   topLevel,
@@ -109,6 +110,17 @@ describe("canvas commands", () => {
     expect(nudgeOps(store, l, ["frameA", "rect01"], 10, 0)).toEqual([
       { op: "update", id: "frameA", set: { x: 110, y: 50 } },
     ])
+  })
+
+  test("arrows reorder auto-layout children along the layout direction, stopping at the edges", async () => {
+    const { store } = await fixture()
+    expect(reorderOps(store, ["rect02"], 0, 1)).toEqual([])
+    expect(reorderOps(store, ["rect02"], -1, 0)).toEqual([])
+    const ops = reorderOps(store, ["rect02"], 1, 0)
+    expect(ops).toEqual([{ op: "move", id: "rect02", parent: "rowFrm", index: 1 }])
+    apply(store, ops)
+    expect(store.children("rowFrm")).toEqual(["rect03", "rect02"])
+    expect(reorderOps(store, ["rect02"], 1, 0)).toEqual([])
   })
 
   test("resize: single, flow child (size only), multi (scaled)", async () => {

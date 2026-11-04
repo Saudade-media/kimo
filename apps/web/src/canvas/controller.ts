@@ -2078,6 +2078,25 @@ export class CanvasController {
     const before = ui.selection
     // SHORTCUTS "Add to selection" (⇧ click) / "Select inside group" (⌘ click).
     const add = pointerHeld("addToSelection", e)
+    // A press inside a multi-selection's bounding box moves every selected layer.
+    if (!add && !artboard && before.length > 1 && this.layoutResult) {
+      const nodes = this.layoutResult.nodes
+      const box = unionRects(before.map((id) => nodes.get(id)?.world).filter((b): b is Rect => !!b))
+      const w = this.toWorld(p)
+      if (box && w.x >= box.x && w.x <= box.x + box.w && w.y >= box.y && w.y <= box.y + box.h) {
+        this.drag = {
+          kind: "press",
+          start: p,
+          startWorld: w,
+          target: before[0] ?? null,
+          before: [],
+          scope: null,
+          collapse: false,
+          toggle: false,
+        }
+        return
+      }
+    }
     if (!deepest) {
       if (!add) ui.clearSelection()
       this.drag = {

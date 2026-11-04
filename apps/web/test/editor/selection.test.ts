@@ -16,6 +16,9 @@ describe("drill-down selection chain", () => {
     expect(pickTarget(doc, "label/inner", [], false)).toBe("hero")
     expect(pickTarget(doc, "label/inner", [], true)).toBe("label/inner")
   })
+  test("a click inside a selected top-level frame keeps the frame", () => {
+    expect(pickTarget(doc, "label/inner", ["page"], false)).toBe("page")
+  })
   test("each double-click goes exactly one level deeper, down to the leaf and no further", () => {
     let cur: string | undefined = pickTarget(doc, "label/inner", [], false)
     const seen = [cur]

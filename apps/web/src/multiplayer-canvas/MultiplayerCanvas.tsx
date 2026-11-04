@@ -208,8 +208,15 @@ export function useEditorMultiplayer(o: EditorMultiplayerOptions): EditorMultipl
   usePublishPresence(shared ? doc : null, session.ui, o.container, session.store)
 
   // Local image keys (asset placeholders), only while shared.
-  const localKeys = useLocalKeys(shared ? o.assets : null)
-  const ensure = useCallback((key: string) => void doc?.ensureAsset(key).catch(() => false), [doc])
+  const [localKeys, reloadKeys] = useLocalKeys(shared ? o.assets : null)
+  const ensure = useCallback(
+    async (key: string) => {
+      // An agent may have written the file to disk without telling the asset store.
+      if ((await reloadKeys()).has(key)) return true
+      return (await doc?.ensureAsset(key).catch(() => false)) ?? false
+    },
+    [doc, reloadKeys],
+  )
 
   const canvasLayer = (
     <>
@@ -369,26 +376,32 @@ function useStableSet(items: readonly string[]): ReadonlySet<string> {
 }
 
 /** Keys of the images held locally (refreshed when the store changes). */
-function useLocalKeys(assets: AssetStore | null): ReadonlySet<string> {
+function useLocalKeys(
+  assets: AssetStore | null,
+): [ReadonlySet<string>, () => Promise<ReadonlySet<string>>] {
   const [keys, setKeys] = useState<ReadonlySet<string>>(NONE)
-  useEffect(() => {
-    if (!assets) return
-    let live = true
-    const load = () =>
-      void assets
-        .keys()
-        .then((k) => {
-          if (live) setKeys(new Set(k))
-        })
-        .catch(() => {})
-    load()
-    const off = assets.subscribe(load)
-    return () => {
-      live = false
-      off()
+  const live = useRef(true)
+  const reload = useCallback(async (): Promise<ReadonlySet<string>> => {
+    if (!assets) return NONE
+    try {
+      const next = new Set(await assets.keys())
+      if (live.current) setKeys(next)
+      return next
+    } catch {
+      return NONE
     }
   }, [assets])
-  return keys
+  useEffect(() => {
+    if (!assets) return
+    live.current = true
+    void reload()
+    const off = assets.subscribe(() => void reload())
+    return () => {
+      live.current = false
+      off()
+    }
+  }, [assets, reload])
+  return [keys, reload]
 }
 
 /**

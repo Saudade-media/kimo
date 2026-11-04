@@ -20,10 +20,7 @@ export function pickTarget(
   for (const s of selection) {
     const i = path.indexOf(s)
     // Clicking a selected node or inside it keeps that node (so a drag moves it).
-    if (i >= 0) {
-      depth = Math.max(depth, i)
-      continue
-    }
+    if (i >= 0) return s
     // Clicking a sibling (or a sibling's subtree) of a selected node selects at that depth.
     const sp = pathOf(doc, s)
     const k = sp.length - 1

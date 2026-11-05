@@ -2079,14 +2079,16 @@ export class CanvasController {
     // SHORTCUTS "Add to selection" (⇧ click) / "Select inside group" (⌘ click).
     const add = pointerHeld("addToSelection", e)
     // A press inside the multi-selection box keeps the selection so a drag moves all of it; a
-    // release without a drag collapses to the layer under the pointer. ⇧ and ⌘ clicks skip this.
+    // release without a drag collapses to the selected layer under the pointer. ⇧ and ⌘ clicks skip this.
     if (before.length > 1 && !add && !pointerHeld("selectInside", e)) {
       const box = unionRects(
         before.map((id) => this.layoutResult?.nodes.get(id)?.world).filter((b): b is Rect => !!b),
       )
       const w = this.toWorld(p)
       if (box && w.x >= box.x && w.x <= box.x + box.w && w.y >= box.y && w.y <= box.y + box.h) {
-        const under = deepest ? this.pick(deepest, before, false) : null
+        const picked = deepest ? this.pick(deepest, before, false) : null
+        // A layer that is not itself selected needs drill-down: keep the multi-selection.
+        const under = picked !== null && before.includes(picked) ? picked : null
         this.drag = {
           kind: "press",
           start: p,

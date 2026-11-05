@@ -26,6 +26,7 @@ import { type Bus, createBus } from "../lib/hooks"
 import { roomKeyOf } from "../multiplayer/backend"
 import type { FileDocumentSession } from "../platform/session"
 import { failureText } from "./errors"
+import { cssRadius } from "./props"
 import type { FileSession } from "./session"
 
 /**
@@ -292,13 +293,12 @@ function AgentCanvasHost({
         if (!b) return null
         const z = viewport.zoom
         const n = session.store.getNode(id) as { radius?: unknown } | undefined
-        const r = typeof n?.radius === "number" ? n.radius : 0
         return {
           x: (b.x - viewport.x) * z,
           y: (b.y - viewport.y) * z,
           w: b.w * z,
           h: b.h * z,
-          radius: r * z,
+          radius: cssRadius(n?.radius, z),
         }
       }}
       viewportKey={layoutNow ? `${viewport.zoom}:${viewport.x}:${viewport.y}` : "none"}

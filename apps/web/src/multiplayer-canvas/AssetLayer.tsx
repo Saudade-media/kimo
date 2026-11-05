@@ -29,6 +29,7 @@ import {
   useSyncExternalStore,
 } from "react"
 import type { UiStore } from "../canvas/contract"
+import { cssRadius } from "../editor/props"
 import type { Bus } from "../lib/hooks"
 import { Icon } from "../lib/icons"
 import type { AssetTransfers } from "../multiplayer/backend"
@@ -90,7 +91,7 @@ interface Placeholder {
   id: string
   key: string
   state: Exclude<AssetPlaceholderState, null>
-  box: { x: number; y: number; w: number; h: number; r: number }
+  box: { x: number; y: number; w: number; h: number; r: number | string }
   /** Insets (screen px) cut by clipping ancestors, as CSS `inset()` [top, right, bottom, left]. */
   clip: [number, number, number, number] | null
   /** Chip scale: 1 at the board's size, less on small boxes, 0 when hidden. */
@@ -193,7 +194,7 @@ export function AssetLayer(props: AssetLayerProps) {
       if (!state) continue
       if (state === "missing" && fetchAssets) wanted.push(key)
       const n = store.getNode(id) as { radius?: unknown } | undefined
-      const r = typeof n?.radius === "number" ? n.radius * v.zoom : 0
+      const r = cssRadius(n?.radius, v.zoom)
       items.push({
         id,
         key,

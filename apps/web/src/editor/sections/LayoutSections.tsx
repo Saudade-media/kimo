@@ -412,6 +412,7 @@ export function PositionSection({ sel }: { sel: readonly Sel[] }) {
                   value={rValue}
                   editor={editor}
                   min={0}
+                  disabled={individualCorners === true}
                   onNumber={(n) => setOps(ids, "radius", n === 0 ? undefined : n)}
                   onText={(t) => {
                     const v = parseRadius(t)
@@ -420,25 +421,24 @@ export function PositionSection({ sel }: { sel: readonly Sel[] }) {
                 />
               )}
             </Bindable>
-            <span className="rp-row__empty" aria-hidden="true" />
+            <PanelIconToggle
+              label="Individual corners"
+              icon={<Icon name="scan" size={14} />}
+              pressed={individualCorners === true}
+              onClick={() => {
+                const on = individualCorners !== true
+                editor.apply(
+                  sel.flatMap((s) => {
+                    const c = cornerRadii(s.node.radius)
+                    if (on) return setOps([s.id], "radius", [...c])
+                    const m = Math.max(...c)
+                    return setOps([s.id], "radius", m === 0 ? undefined : m)
+                  }),
+                  on ? "Individual corners" : "Uniform corners",
+                )
+              }}
+            />
           </PropRow>
-        )}
-        {hasRadius && (
-          <ToggleRow
-            label="Individual corners"
-            checked={individualCorners}
-            onChange={(on) =>
-              editor.apply(
-                sel.flatMap((s) => {
-                  const c = cornerRadii(s.node.radius)
-                  if (on) return setOps([s.id], "radius", [...c])
-                  const m = Math.max(...c)
-                  return setOps([s.id], "radius", m === 0 ? undefined : m)
-                }),
-                on ? "Individual corners" : "Uniform corners",
-              )
-            }
-          />
         )}
         {hasRadius && individualCorners === true && (
           <div className="rp-sides">

@@ -238,6 +238,24 @@ function parsePad(
 /** Radius display: `24`, `8 · 8 · 0 · 0`. */
 export const formatRadius = (v: unknown) => (v === undefined ? "0" : formatPad(v))
 
+/** A radius as four corner values `[tl, tr, br, bl]` (a binding or absent reads as 0). */
+export function cornerRadii(radius: unknown): [number, number, number, number] {
+  if (Array.isArray(radius) && radius.length === 4) {
+    const v = radius.map((x) => (typeof x === "number" ? x : 0))
+    return [v[0] ?? 0, v[1] ?? 0, v[2] ?? 0, v[3] ?? 0]
+  }
+  const n = typeof radius === "number" ? radius : 0
+  return [n, n, n, n]
+}
+
+/** A radius as a CSS `border-radius` value at `zoom`: a number, or `tl tr br bl` in px. */
+export function cssRadius(radius: unknown, zoom: number): number | string {
+  if (typeof radius === "number") return radius * zoom
+  if (Array.isArray(radius) && radius.length === 4)
+    return radius.map((x) => `${(typeof x === "number" ? x : 0) * zoom}px`).join(" ")
+  return 0
+}
+
 /** Parses a radius: one number or four. */
 export function parseRadius(input: string): number | [number, number, number, number] | null {
   const p = parsePad(input)

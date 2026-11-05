@@ -17,7 +17,7 @@ interface SectionBox {
   y: number
   w: number
   h: number
-  radius?: number
+  radius?: number | string
 }
 
 export interface SectionCursorView {

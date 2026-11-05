@@ -36,6 +36,7 @@ import { NumberField, ToggleRow } from "../fields"
 import { SectionTitle } from "../m3/overrides"
 import { type Sel, usePanel } from "../panel-context"
 import {
+  cornerRadii,
   formatNumber,
   formatRadius,
   MIXED,
@@ -306,6 +307,7 @@ export function PositionSection({ sel }: { sel: readonly Sel[] }) {
   const clip = shared(nodes, (n) => n.clip === true)
   const r = shared(nodes, (n) => n.radius)
   const rValue = r === MIXED ? MIXED : typeof r === "number" ? r : formatRadius(r)
+  const individualCorners = shared(nodes, (n) => Array.isArray(n.radius) && n.radius.length === 4)
   const absolute = shared(nodes, (n) => n.position === "absolute")
 
   return (
@@ -420,6 +422,48 @@ export function PositionSection({ sel }: { sel: readonly Sel[] }) {
             </Bindable>
             <span className="rp-row__empty" aria-hidden="true" />
           </PropRow>
+        )}
+        {hasRadius && (
+          <ToggleRow
+            label="Individual corners"
+            checked={individualCorners}
+            onChange={(on) =>
+              editor.apply(
+                sel.flatMap((s) => {
+                  const c = cornerRadii(s.node.radius)
+                  if (on) return setOps([s.id], "radius", [...c])
+                  const m = Math.max(...c)
+                  return setOps([s.id], "radius", m === 0 ? undefined : m)
+                }),
+                on ? "Individual corners" : "Uniform corners",
+              )
+            }
+          />
+        )}
+        {hasRadius && individualCorners === true && (
+          <div className="rp-sides">
+            {["TL", "TR", "BR", "BL"].map((name, i) => {
+              const vals = nodes.map((n) => cornerRadii(n.radius)[i] ?? 0)
+              const v = vals.every((x) => x === vals[0]) ? (vals[0] ?? 0) : MIXED
+              return (
+                <NumberField
+                  key={name}
+                  prefix={name}
+                  label={`Corner radius ${name}`}
+                  value={v}
+                  editor={editor}
+                  min={0}
+                  onNumber={(n) =>
+                    sel.flatMap((s) => {
+                      const c = cornerRadii(s.node.radius)
+                      c[i] = n
+                      return setOps([s.id], "radius", c)
+                    })
+                  }
+                />
+              )
+            })}
+          </div>
         )}
         {inLayout && (
           <ToggleRow

@@ -2132,6 +2132,25 @@ export class CanvasController {
         : undefined
     let collapse = false
     let toggle = false
+    // Drilling into a layer nested inside a selected layer keeps the multi-selection.
+    const drillDown =
+      !add &&
+      before.length > 1 &&
+      !before.includes(target) &&
+      before.some((s) => pathOf(this.vdoc, target).includes(s))
+    if (drillDown) {
+      this.drag = {
+        kind: "press",
+        start: p,
+        startWorld: this.toWorld(p),
+        target: before[0] as string,
+        before: [],
+        scope: null,
+        collapse: false,
+        toggle: false,
+      }
+      return
+    }
     if (add) {
       if (before.includes(target)) toggle = true
       else ui.toggleSelection(target)

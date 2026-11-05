@@ -84,7 +84,7 @@ export interface AssetLayerProps {
   /** Keys held locally (the editor's asset store). */
   localKeys: ReadonlySet<string>
   fetchAssets: boolean
-  ensure(key: string): void
+  ensure(key: string): Promise<boolean>
 }
 
 interface Placeholder {
@@ -215,14 +215,23 @@ export function AssetLayer(props: AssetLayerProps) {
     for (const key of wantedKey ? wantedKey.split(",") : []) {
       if (asked.current.has(key)) continue
       asked.current.add(key)
-      ensure(key)
+      void ensure(key).then(
+        (ok) => {
+          if (!ok) asked.current.delete(key)
+        },
+        () => asked.current.delete(key),
+      )
     }
   }, [wantedKey, ensure])
 
   return (
     <div ref={root} className="mp-assets" data-testid="mp-asset-layer">
       {items.map((p) => (
-        <AssetPlaceholderView key={`${p.id}:${p.key}`} p={p} fetching={fetchAssets} />
+        <AssetPlaceholderView
+          key={`${p.id}:${p.key}`}
+          p={p}
+          fetching={fetchAssets && transfers.fetching.some((f) => f.key === p.key)}
+        />
       ))}
     </div>
   )
@@ -230,8 +239,8 @@ export function AssetLayer(props: AssetLayerProps) {
 
 function AssetPlaceholderView({ p, fetching }: { p: Placeholder; fetching: boolean }) {
   const { x, y, w, h, r } = p.box
-  // A missing image that is being asked for shows as fetching.
-  const state = p.state === "missing" && fetching ? "fetching" : p.state
+  // A missing image shows as fetching only while a transfer is running, else unavailable.
+  const state = p.state === "missing" ? (fetching ? "fetching" : "unavailable") : p.state
   const style: CSSProperties & Record<"--mp-asset-chip", number> = {
     left: x,
     top: y,

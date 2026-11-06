@@ -1,3 +1,4 @@
+import { t } from "@kimo/i18n"
 import { ArrowUp, ChevronDown, CircleCheck, CircleX, LoaderCircle } from "lucide-react"
 import {
   type ComponentPropsWithRef,
@@ -129,7 +130,7 @@ export function Composer({
   defaultValue = "",
   onValueChange,
   onSend,
-  placeholder = "Ask Kimo to design or edit…",
+  placeholder = t("ui.pkg.agent.agent.ask-kimo-to-design-or-edit"),
   context,
   model,
   onModelClick,
@@ -162,7 +163,7 @@ export function Composer({
       <textarea
         className="kimo-composer__input"
         rows={1}
-        aria-label="Message the agent"
+        aria-label={t("ui.pkg.agent.agent.message-the-agent")}
         placeholder={placeholder}
         value={text}
         disabled={disabled}
@@ -195,7 +196,7 @@ export function Composer({
         <button
           type="submit"
           className="kimo-composer__send"
-          aria-label="Send"
+          aria-label={t("ui.pkg.agent.agent.send")}
           disabled={disabled || text.trim() === ""}
         >
           <span className="kimo-composer__send-icon" aria-hidden="true">

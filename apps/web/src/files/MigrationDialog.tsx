@@ -6,9 +6,11 @@
  * `format` tertiary, `"0.2"` secondary, `arrow-right` 12 tertiary, `"0.4"` primary / 500).
  * Footer: "⌘S also counts as consent" · Open read-only · Upgrade and save. Esc = read-only.
  */
+
 import type { HostOS } from "@kimo/platform"
 import { Dialog, DialogScrim } from "@kimo/ui"
 import { ArrowRight, FilePen, FileUp, History, ShieldCheck } from "lucide-react"
+import { t } from "../lib/i18n"
 import type { MigrationConsentRequest } from "../platform/contract"
 import type { FileDocumentSession } from "../platform/session"
 import { useSessionState } from "./hooks"
@@ -44,8 +46,11 @@ function MigrationDialogView({
       data-pen="UuonK"
       className="kimo-files-migration"
       icon={<FileUp />}
-      title={`Upgrade ${r.fileName} to format ${r.toFormat}?`}
-      description={`It was saved by an older Kimo (format ${r.fromFormat}) and opened migrated in memory. Nothing is written yet.`}
+      title={t("ui.files.migration.title", {
+        file: r.fileName,
+        format: r.toFormat,
+      })}
+      description={t("ui.files.migration.desc", { format: r.fromFormat })}
       footnote={`${os === "macos" ? "⌘S" : "Ctrl+S"} also counts as consent`}
       cancelLabel="Open read-only"
       confirmLabel="Upgrade and save"
@@ -57,15 +62,14 @@ function MigrationDialogView({
           <div className="kimo-files-migration__item">
             <FilePen className="kimo-files-migration__icon kimo-files-migration__icon--primary" />
             <span className="kimo-files-migration__text">
-              Upgrading rewrites the file on disk: the format line plus the fields the migration
-              changes (about {r.approxChangedLines} lines in git).
+              {t("ui.files.migration.rewrites", { lines: String(r.approxChangedLines) })}
             </span>
           </div>
           <div className="kimo-files-migration__item">
             <History className="kimo-files-migration__icon" />
             <span className="kimo-files-migration__text">
-              Kimo older than {r.minimumReader} will no longer open it.
-              {prev ? ` Teammates on ${prev} should update first.` : ""}
+              {t("ui.files.migration.older", { version: r.minimumReader })}
+              {prev ? t("ui.files.migration.updateFirst", { version: prev }) : ""}
             </span>
           </div>
           <div className="kimo-files-migration__item">

@@ -17,6 +17,7 @@
  *
  * SVG files are not handled here: they go through the SVG import popover (`svg-drop.tsx`).
  */
+
 import type { NodeData, Op } from "@kimo/editor-state"
 import { generateId } from "@kimo/editor-state"
 import type { LayoutResult } from "@kimo/layout"
@@ -25,6 +26,7 @@ import { toLocal } from "../../canvas/commands"
 import type { CanvasHandle } from "../../canvas/contract"
 import type { AssetInfo, AssetStore } from "../../lib/assets"
 import { MAX_ASSET_BYTES, sniffImage } from "../../lib/assets"
+import { t, tn } from "../../lib/i18n"
 import type { M3Controller } from "../m3/controller"
 import type { FileSession } from "../session"
 import { canPasteInto, pasteTarget } from "./target"
@@ -137,8 +139,8 @@ function rejectionText(
 /** Drop pill copy (vgvYj "Drop Pill"): "Drop 2 images" or "1 of 3 can't be imported". */
 export function dropPillText(supported: number, total: number): string {
   const bad = total - supported
-  if (bad > 0) return `${bad} of ${total} can't be imported`
-  return `Drop ${total} image${total === 1 ? "" : "s"}`
+  if (bad > 0) return t("ui.editor.clipboard.dropSome", { bad: String(bad), total: String(total) })
+  return tn("ui.editor.clipboard.dropOne", "ui.editor.clipboard.drop", total)
 }
 
 // --- Asset store registry ---------------------------------------------------------------------
@@ -392,28 +394,48 @@ export async function importRasterFiles(
   }
 
   const n = accepted.length
-  const label = n === 1 ? "Import image" : `Import ${n} images`
-  if (!session.apply(ops, placement.kind === "paste" ? label.replace("Import", "Paste") : label))
-    return { created: [] }
+  const label =
+    placement.kind === "paste"
+      ? tn("ui.editor.clipboard.pasteLabelOne", "ui.editor.clipboard.pasteLabel", n)
+      : tn("ui.editor.clipboard.importLabelOne", "ui.editor.clipboard.importLabel", n)
+  if (!session.apply(ops, label)) return { created: [] }
   ui.getState().select(created)
-  const undo = { label: "Undo", run: () => void session.store.undo("user") }
+  const undo = {
+    label: t("ui.editor.clipboard.undo"),
+    run: () => void session.store.undo("user"),
+  }
   const into = parent
-    ? ` into ${String(pn?.name ?? (pn?.type === "group" ? "Group" : "Frame"))}`
+    ? t("ui.editor.clipboard.into", {
+        name: String(pn?.name ?? (pn?.type === "group" ? "Group" : "Frame")),
+      })
     : ""
   if (placement.kind === "paste") {
     const first = accepted[0] as Accepted
+    const size = {
+      w: String(Math.round((first.info.width as number) / first.density)),
+      h: String(Math.round((first.info.height as number) / first.density)),
+    }
     const what =
       n === 1
-        ? `${first.name === PASTED_IMAGE_NAME ? "Pasted image" : `Pasted “${first.name}”`} · ${Math.round((first.info.width as number) / first.density)} × ${Math.round((first.info.height as number) / first.density)}`
-        : `Pasted ${n} images`
-    const where = parent ? into : via === "pointer" ? " at the pointer" : " at the viewport centre"
+        ? first.name === PASTED_IMAGE_NAME
+          ? t("ui.editor.clipboard.pastedImage", size)
+          : t("ui.editor.clipboard.pastedNamed", { ...size, name: first.name })
+        : t("ui.editor.clipboard.pastedMany", { n: String(n) })
+    const where = parent
+      ? into
+      : via === "pointer"
+        ? t("ui.editor.clipboard.atPointer")
+        : t("ui.editor.clipboard.atCentre")
     m3.toast({ tone: "success", icon: "clipboard-check", text: `${what}${where}`, action: undo })
   } else {
     const bytes = accepted.reduce((s, a) => s + (a.added ? a.info.bytes : 0), 0)
-    const mb = bytes > 0 ? ` · ${formatMb(bytes)} added to assets` : ""
+    const mb = bytes > 0 ? t("ui.editor.clipboard.addedToAssets", { size: formatMb(bytes) }) : ""
     m3.toast({
       tone: "success",
-      text: `Imported ${n} image${n === 1 ? "" : "s"}${into}${mb}`,
+      text: tn("ui.editor.clipboard.importedOne", "ui.editor.clipboard.imported", n, {
+        into,
+        mb,
+      }),
       action: undo,
     })
   }

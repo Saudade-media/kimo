@@ -4,7 +4,9 @@
  * "Home — Mobile"). Every value is copied from those nodes; the document is built through
  * editor-state ops (one op group), so it goes through validation like any user edit.
  */
+
 import { createEmptyDocument, type DocStore, generateId, type Op } from "@kimo/editor-state"
+import { t } from "../lib/i18n"
 
 /** Font family of the design's `$font-sans` variable. */
 const SANS = "Inter"
@@ -174,7 +176,7 @@ export function sampleOps(newId: () => string = () => generateId()): Op[] {
  * the sample is the starting point rather than an undoable edit.
  */
 export function buildSampleDocument(store: DocStore): void {
-  const r = store.apply(sampleOps(), { origin: "user", label: "Sample document" })
+  const r = store.apply(sampleOps(), { origin: "user", label: t("ui.lib.sample.sample-document") })
   if (!r.ok)
     throw new Error(`Sample document rejected: ${r.errors.map((e) => e.message).join("; ")}`)
   store.clearHistory("user")

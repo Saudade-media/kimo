@@ -73,6 +73,7 @@ import type {
   SaveFailure,
   RecoveryReason as SyncRecoveryReason,
 } from "@kimo/sync"
+import { t, tn, t as tr } from "../lib/i18n"
 
 // ===============================================================================================
 // Compile-time links between the packages (fail typecheck when they drift)
@@ -140,8 +141,12 @@ export function saveStatusLabel(s: SaveStatus): string {
       return s.untitled ? "Not saved" : "Unsaved changes"
     case "paused":
       return s.reason === "git"
-        ? `Autosave paused · ${s.operation ?? "git"}`
-        : `${s.open} conflict${s.open === 1 ? "" : "s"} · autosave paused`
+        ? tr("ui.platform.contract.autosavePaused", { op: s.operation ?? "git" })
+        : tn(
+            "ui.platform.contract.conflictPausedOne",
+            "ui.platform.contract.conflictPaused",
+            s.open,
+          )
     case "read-only":
       return s.cause === "failed-load" ? "Read-only · couldn't load" : "Read-only"
     case "locked":
@@ -437,13 +442,11 @@ export interface BannerCopy {
 /** "Reveal in Finder" per OS (board 17 shows the macOS label). */
 export function revealLabel(os: HostOS): string {
   return os === "windows"
-    ? "Show in Explorer"
+    ? t("file.revealExplorer")
     : os === "linux"
-      ? "Show in folder"
-      : "Reveal in Finder"
+      ? t("file.revealFolder")
+      : t("file.revealFinder")
 }
-
-const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`
 
 /** POSIX-shell escaping of a path argument ("Pricing page.kimo" → "Pricing\\ page.kimo"). */
 export function shellEscapePath(p: string): string {
@@ -483,56 +486,77 @@ export function bannerCopy(
           ? ""
           : ` with the feature${b.features.length === 1 ? "" : "s"} ${b.features.map((f) => `"${f}"`).join(", ")}`
       return {
-        title: "Read-only: made with a newer Kimo",
+        title: t("ui.platform.contract.read-only-made-with-a-newer-kimo"),
         body: `${b.fileName} uses format ${b.fileFormat}${feat}; this app reads up to ${b.readerFormat}. Nothing will be overwritten.`,
         actions: [
-          { id: "whats-new", label: "What's new", variant: "ghost" },
-          { id: "update-kimo", label: "Update Kimo", variant: "primary" },
+          { id: "whats-new", label: t("ui.platform.contract.what-s-new"), variant: "ghost" },
+          { id: "update-kimo", label: t("ui.platform.contract.update-kimo"), variant: "primary" },
         ],
       }
     }
     case "external-change":
       return {
         title: `${b.fileName} changed on disk`,
-        body: "You have unsaved edits. Merge the change into them, or keep your version and save it over the file.",
+        body: t(
+          "ui.platform.contract.you-have-unsaved-edits-merge-the-change-into-them-or-keep-your-version-and-save-it-over-the-file",
+        ),
         actions: [
-          { id: "external-keep", label: "Keep mine", variant: "secondary" },
-          { id: "external-merge", label: "Merge", variant: "primary" },
+          { id: "external-keep", label: t("ui.platform.contract.keep-mine"), variant: "secondary" },
+          { id: "external-merge", label: t("ui.platform.contract.merge"), variant: "primary" },
         ],
       }
     case "locked": {
       const app = b.holder.appLabel.replace(/\s*\(.*\)$/, "")
       return {
-        title: "Locked by another process",
+        title: t("ui.platform.contract.locked-by-another-process"),
         body: `${app} (pid ${b.holder.pid}) has had ${b.fileName} open for writing since ${fmt.formatTime(Date.parse(b.holder.sinceIso))}.`,
         actions: [
-          { id: "open-read-only", label: "Open read-only", variant: "secondary" },
-          { id: "retry-lease", label: "Retry", variant: "primary" },
+          {
+            id: "open-read-only",
+            label: t("ui.platform.contract.open-read-only"),
+            variant: "secondary",
+          },
+          { id: "retry-lease", label: t("settings.retry"), variant: "primary" },
         ],
       }
     }
     case "git-operation":
       return {
-        title: `${b.operation ? OPERATION_TITLE[b.operation] : "Git operation"} in progress · autosave paused`,
-        body: `Your ${plural(b.unsavedEdits, "unsaved edit")} ${b.unsavedEdits === 1 ? "is" : "are"} kept in memory.`,
+        title: tr("ui.platform.contract.gitOpTitle", {
+          operation: b.operation ? OPERATION_TITLE[b.operation] : tr("ui.platform.contract.gitOp"),
+        }),
+        body: tn(
+          "ui.platform.contract.gitKeptOne",
+          "ui.platform.contract.gitKept",
+          b.unsavedEdits,
+          {
+            edits: tn("ui.platform.contract.editOne", "ui.platform.contract.edit", b.unsavedEdits),
+          },
+        ),
         actions: [
-          { id: "git-discard", label: "Discard", variant: "ghost" },
-          { id: "git-stash", label: "Stash as recovery file", variant: "secondary" },
-          { id: "git-keep", label: "Keep my edits", variant: "primary" },
+          { id: "git-discard", label: t("ui.agent.panel.modes.4"), variant: "ghost" },
+          {
+            id: "git-stash",
+            label: t("ui.platform.contract.stash-as-recovery-file"),
+            variant: "secondary",
+          },
+          { id: "git-keep", label: t("ui.platform.contract.keep-my-edits"), variant: "primary" },
         ],
       }
     case "save-failed": {
       const f = b.failure
       if (f.code === "PERMISSION")
         return {
-          title: "Couldn't save: permission denied",
+          title: t("ui.platform.contract.couldn-t-save-permission-denied"),
           body: `${fmt.displayDir(f.path)} is read-only for your user (${f.errno ?? "EACCES"}). Save a copy somewhere else.`,
-          actions: [{ id: "save-as", label: "Save as…", variant: "primary" }],
+          actions: [{ id: "save-as", label: t("file.saveAs"), variant: "primary" }],
         }
       if (f.code === "READ_BACK_MISMATCH")
         return {
-          title: "Saved, but the read-back didn't match",
-          body: "The file on disk differs from what Kimo wrote (antivirus or sync client?). Your version is in a recovery file.",
+          title: t("ui.platform.contract.saved-but-the-read-back-didn-t-match"),
+          body: t(
+            "ui.platform.contract.the-file-on-disk-differs-from-what-kimo-wrote-antivirus-or-sync-client-your-version-is-in-a-recovery-file",
+          ),
           // E8: no diff view yet; the recovery copy is revealed instead (hidden on the web).
           actions: [
             ...(fmt.reveal === false
@@ -540,40 +564,48 @@ export function bannerCopy(
               : [
                   {
                     id: "reveal-recovery" as const,
-                    label: "Reveal recovery copy",
+                    label: t("ui.platform.contract.reveal-recovery-copy"),
                     variant: "secondary" as const,
                   },
                 ]),
-            { id: "save-as", label: "Save as…", variant: "primary" },
+            { id: "save-as", label: t("file.saveAs"), variant: "primary" },
           ],
         }
       const free =
         f.freeBytes !== undefined
-          ? `, ${fmt.formatBytes(f.freeBytes)} free${f.volume ? ` on ${f.volume}` : ""}`
+          ? f.volume
+            ? tr("ui.platform.contract.freeWithVolume", {
+                size: fmt.formatBytes(f.freeBytes),
+                volume: f.volume,
+              })
+            : tr("ui.platform.contract.free", { size: fmt.formatBytes(f.freeBytes) })
           : ""
       return {
-        title: `Couldn't save ${b.fileName}`,
+        title: tr("ui.platform.contract.saveFailed", { file: b.fileName }),
         body:
           f.code === "DISK_FULL"
-            ? `The disk is full (${f.errno ?? "ENOSPC"}${free}). Your edits are safe in a recovery file; retrying every 30 s.`
+            ? tr("ui.platform.contract.diskFull", {
+                code: f.errno ?? "ENOSPC",
+                free,
+              })
             : // IO: not drawn on board 17; same layout as disk full (flagged in ADR 0012).
-              `${f.message}. Your edits are safe in a recovery file; retrying every 30 s.`,
+              tr("ui.platform.contract.ioBody", { message: f.message }),
         actions: [
-          { id: "save-as", label: "Save as…", variant: "secondary" },
-          { id: "retry-save", label: "Retry", variant: "primary" },
+          { id: "save-as", label: t("file.saveAs"), variant: "secondary" },
+          { id: "retry-save", label: t("settings.retry"), variant: "primary" },
         ],
       }
     }
     case "failed-load":
       return {
-        title: `Couldn't open ${b.fileName}`,
-        body: "The file is untouched. Kimo won't write to it from this window.",
+        title: tr("ui.platform.contract.openFailed", { file: b.fileName }),
+        body: tr("ui.platform.contract.openFailedBody"),
         actions:
           fmt.reveal === false
             ? []
             : [
                 { id: "reveal", label: revealLabel(fmt.os), variant: "secondary" },
-                { id: "open-as-text", label: "Open as text", variant: "secondary" },
+                { id: "open-as-text", label: t("ui.files.failedloadview.1"), variant: "secondary" },
               ],
       }
     case "merge-conflicts": {
@@ -585,21 +617,39 @@ export function bannerCopy(
             b.info?.theirs && b.info.ours
               ? `Merging ${b.info.theirs} → ${b.info.ours}`
               : "Merge in progress",
-          body: "All conflicts resolved. Save to mark them resolved for git.",
+          body: t("ui.platform.contract.all-conflicts-resolved-save-to-mark-them-resolved-for-git"),
           // Board 25 §6 (f) aEUZq: no "Abort merge" in v1 — Kimo doesn't run git, and a disabled
           // stand-in would promise a path that doesn't exist (hidden, not greyed out).
-          actions: [{ id: "mark-resolved-save", label: "Save", variant: "primary" }],
+          actions: [{ id: "mark-resolved-save", label: t("file.save"), variant: "primary" }],
         }
       const into =
-        b.info?.theirs && b.info.ours ? `Merging ${b.info.theirs} into ${b.info.ours}: ` : ""
+        b.info?.theirs && b.info.ours
+          ? tr("ui.platform.contract.mergingInto", {
+              theirs: b.info.theirs,
+              ours: b.info.ours,
+            })
+          : ""
       const applied =
-        b.info?.changes !== undefined ? `${plural(b.info.changes, "change")} applied, ` : ""
+        b.info?.changes !== undefined
+          ? tr("ui.platform.contract.changesApplied", {
+              changes: tn(
+                "ui.platform.contract.reloadedChangeOne",
+                "ui.platform.contract.reloadedChange",
+                b.info.changes,
+              ),
+            })
+          : ""
       return {
-        title: `kimo merge left ${plural(b.open, "conflict")}`,
-        body: `${into}${applied}${b.resolved} of ${b.total} conflicts resolved. Pick a side for the rest, then save.`,
+        title: tn("ui.platform.contract.mergeLeftOne", "ui.platform.contract.mergeLeft", b.open),
+        body: tr("ui.platform.contract.mergeBody", {
+          into,
+          applied,
+          resolved: String(b.resolved),
+          total: String(b.total),
+        }),
         actions: [
-          { id: "previous-conflict", label: "Previous", variant: "ghost" },
-          { id: "next-conflict", label: "Next conflict", variant: "primary" },
+          { id: "previous-conflict", label: t("ui.platform.contract.previous"), variant: "ghost" },
+          { id: "next-conflict", label: t("ui.shortcuts.next-conflict"), variant: "primary" },
         ],
       }
     }
@@ -608,17 +658,31 @@ export function bannerCopy(
       // confirms "Copied" (check); the banner stays until git is clean.
       const command = b.command ?? commitCommand(b.fileName)
       return {
-        title: "Ready to commit",
+        title: t("ui.platform.contract.ready-to-commit"),
         body: b.copied
-          ? `Copied '${command}'. Run it in your terminal.`
+          ? tr("ui.platform.contract.copiedCommand", { command })
           : b.resolved
-            ? `${plural(b.resolved, "conflict")} resolved and saved to ${b.fileName}.`
-            : `Resolved and saved to ${b.fileName}.`,
+            ? tn(
+                "ui.platform.contract.resolvedSavedOne",
+                "ui.platform.contract.resolvedSaved",
+                b.resolved,
+                { file: b.fileName },
+              )
+            : tr("ui.platform.contract.resolvedSavedPlain", { file: b.fileName }),
         actions: [
-          { id: "review-changes", label: "Review changes", variant: "secondary" },
+          { id: "review-changes", label: t("ui.export.exportdialog.28"), variant: "secondary" },
           b.copied
-            ? { id: "copy-commit-command", label: "Copied", variant: "primary", icon: "check" }
-            : { id: "copy-commit-command", label: "Commit in terminal…", variant: "primary" },
+            ? {
+                id: "copy-commit-command",
+                label: t("settings.about.copied"),
+                variant: "primary",
+                icon: "check",
+              }
+            : {
+                id: "copy-commit-command",
+                label: t("ui.platform.contract.commit-in-terminal"),
+                variant: "primary",
+              },
         ],
       }
     }
@@ -657,27 +721,53 @@ export function toastCopy(t: Toast): { text: string; action: string; component: 
       }
     case "external-merged":
       return {
-        text: `Merged ${plural(t.changes, "change")} from disk with your ${plural(t.localEdits, "edit")}`,
+        text: tr("ui.platform.contract.mergedToast", {
+          changes: tn(
+            "ui.platform.contract.reloadedChangeOne",
+            "ui.platform.contract.reloadedChange",
+            t.changes,
+          ),
+          edits: tn("ui.platform.contract.editOne", "ui.platform.contract.edit", t.localEdits),
+        }),
         action: "Undo",
         component: "Toast",
       }
     case "external-conflicts":
       return {
-        text: `Changed on disk while you were editing: ${plural(t.conflicts, "conflict")}`,
+        text: tr("ui.platform.contract.conflictsToast", {
+          conflicts: tn(
+            "ui.platform.contract.conflictOne",
+            "ui.platform.contract.conflict",
+            t.conflicts,
+          ),
+        }),
         action: "Review",
         component: "Toast/Warning",
       }
     case "merge-saved":
       return {
-        text: `Resolved ${plural(t.resolved, "conflict")} and saved ${t.fileName}`,
+        text: tr("ui.platform.contract.mergeSavedToast", {
+          conflicts: tn(
+            "ui.platform.contract.conflictOne",
+            "ui.platform.contract.conflict",
+            t.resolved,
+          ),
+          file: t.fileName,
+        }),
         action: "Undo",
         component: "Toast",
       }
     case "update-ready":
-      return { text: `Kimo ${t.info.version} is ready`, action: "Restart", component: "Toast" }
+      return {
+        text: tr("ui.platform.contract.updateReady", { version: t.info.version }),
+        action: "Restart",
+        component: "Toast",
+      }
     case "update-save-first":
       return {
-        text: `Restart after saving ${plural(t.unsavedFiles, "file")}?`,
+        text: tr("ui.platform.contract.restartAfterSaving", {
+          files: tn("ui.platform.contract.fileOne", "ui.platform.contract.file", t.unsavedFiles),
+        }),
         action: "Save & restart",
         component: "Toast",
       }

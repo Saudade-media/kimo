@@ -5,8 +5,10 @@
  * checkout, 3 D checkout not finished). Each step is a Body and a Footer for the wizard's shell.
  * Board 46 1F is Subscribe with the workspace's name, for the first workspace and for New workspace.
  */
+
 import { Badge, Button, Input } from "@kimo/ui"
 import { type ReactNode, useEffect, useId, useState } from "react"
+import { t } from "../../lib/i18n"
 import { Icon } from "../../lib/icons"
 import { type CloudState, type CloudStore, looksLikeEmail } from "../cloud/store"
 import type { BillingInterval } from "../cloud/types"
@@ -172,7 +174,7 @@ function EmailField({
   return (
     <div className="rw-email">
       <label className="rw-label" htmlFor={id}>
-        Email
+        {t("ui.multiplayer.ui.cloudwizardsteps.10")}
       </label>
       <Input
         id={id}
@@ -245,7 +247,7 @@ function Billing({
     <div
       className="rw-billing"
       role="radiogroup"
-      aria-label="Billing"
+      aria-label={t("ui.multiplayer.ui.cloudwizardsteps.9")}
       onKeyDown={(e) => radioKeys(e, options, interval, (v) => onChange(v as BillingInterval))}
     >
       {options.map(({ value }) => {
@@ -288,7 +290,7 @@ export function cloudStepView(args: StepArgs): CloudStepView {
           <>
             <Intro
               icon="mail"
-              title="Sign in to Kimo Cloud"
+              title={t("ui.multiplayer.ui.cloudwizardsteps.8")}
               desc="We email you a link. No password to remember."
             />
             <EmailField
@@ -319,8 +321,8 @@ export function cloudStepView(args: StepArgs): CloudStepView {
           <>
             <Center
               icon="mail-check"
-              title="Check your inbox"
-              desc={`We sent a link to ${s.email}. Open it on any device and this one signs in.`}
+              title={t("ui.multiplayer.ui.cloudwizardsteps.7")}
+              desc={t("ui.mp.cloudwizard.linkSent", { email: s.email })}
               waiting="Waiting for the link"
             />
             <ErrorLine
@@ -351,8 +353,8 @@ export function cloudStepView(args: StepArgs): CloudStepView {
             <Intro
               icon="mail-x"
               tone="warning"
-              title="That link no longer works"
-              desc={`Links work once, for 15 minutes. Send a new one to ${s.email}.`}
+              title={t("ui.multiplayer.ui.cloudwizardsteps.6")}
+              desc={t("ui.mp.cloudwizard.linkOnce", { email: s.email })}
             />
             <ErrorLine code={s.error} state={state} onRetry={() => void cloud.resend()} />
           </>
@@ -382,7 +384,7 @@ export function cloudStepView(args: StepArgs): CloudStepView {
             desc="This device is now linked to your account. Any device you sign in on can start sharing."
           />
           {self && (
-            <ul className="mp-device-list" aria-label="This device">
+            <ul className="mp-device-list" aria-label={t("ui.multiplayer.ui.cloudwizardsteps.5")}>
               <CloudDeviceRow device={self} now={args.clock.now()} />
             </ul>
           )}
@@ -413,7 +415,7 @@ export function cloudStepView(args: StepArgs): CloudStepView {
       body: (
         <Center
           icon="credit-card"
-          title="Finish in your browser"
+          title={t("ui.multiplayer.ui.cloudwizardsteps.4")}
           desc="Checkout is open in your browser. Kimo moves on as soon as the payment goes through."
           waiting="Waiting for checkout"
         />
@@ -429,7 +431,7 @@ export function cloudStepView(args: StepArgs): CloudStepView {
             icon={<Icon name="external-link" size={16} />}
             onClick={() => void cloud.reopenCheckout()}
           >
-            Open checkout again
+            {t("ui.multiplayer.ui.cloudwizardsteps.11")}
           </Button>
         </>
       ),
@@ -442,7 +444,7 @@ export function cloudStepView(args: StepArgs): CloudStepView {
           <Intro
             icon="circle-alert"
             tone="warning"
-            title="Payment did not go through"
+            title={t("ui.multiplayer.ui.cloudwizardsteps.3")}
             desc="Nothing was charged. Try again, or pick another way to pay in checkout."
           />
           <ErrorLine code={c.error} state={state} onRetry={retry} />
@@ -480,7 +482,11 @@ export function cloudStepView(args: StepArgs): CloudStepView {
     bodyGap: 16,
     body: (
       <>
-        <Intro icon="cloud" title="Kimo Cloud" desc="One plan for your team. Viewers are free." />
+        <Intro
+          icon="cloud"
+          title={t("ui.multiplayer.ui.cloudwizardsteps.2")}
+          desc="One plan for your team. Viewers are free."
+        />
         {named && (
           <WorkspaceNameField
             value={args.workspaceName}
@@ -489,7 +495,7 @@ export function cloudStepView(args: StepArgs): CloudStepView {
           />
         )}
         <Billing state={state} interval={interval} onChange={(v) => cloud.chooseInterval(v)} />
-        <ul className="rw-includes" aria-label="Included">
+        <ul className="rw-includes" aria-label={t("ui.multiplayer.ui.cloudwizardsteps.1")}>
           {includes.map((text) => (
             <li key={text} className="rw-include">
               <span className="rw-include__icon" aria-hidden="true">
@@ -533,7 +539,7 @@ function WorkspaceNameField({
   return (
     <div className="mp-field rw-workspace-name">
       <label className="mp-field-label" htmlFor={id}>
-        Workspace name
+        {t("ui.multiplayer.ui.cloudwizardsteps.12")}
       </label>
       <Input
         id={id}

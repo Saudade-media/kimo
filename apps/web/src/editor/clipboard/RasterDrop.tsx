@@ -17,10 +17,12 @@
  *   unsupported files.
  * Drops and image pastes run {@link importRasterFiles}.
  */
+
 import { useEffect, useMemo, useRef, useState } from "react"
 import type { CanvasHandle } from "../../canvas/contract"
 import type { AssetStore } from "../../lib/assets"
 import { isTyping } from "../../lib/hooks"
+import { t } from "../../lib/i18n"
 import { Icon } from "../../lib/icons"
 import type { M3Controller } from "../m3/controller"
 import type { FileSession } from "../session"
@@ -152,11 +154,14 @@ export function useRasterDrop({
       const n = view.getNode(id)
       const name = String(n?.name ?? "Frame")
       let bar: NonNullable<DragState["target"]>["bar"] = null
-      let tag = `Into ${name}`
+      let tag = t("ui.editor.rasterdrop.into", { name })
       if (isAutoLayout(n)) {
         const p = { x: v.x + x / v.zoom, y: v.y + y / v.zoom }
         const index = flowSlot(view, layout, id, p)
-        tag = `Into ${name} · slot ${slotNumber(view, id, index)}`
+        tag = t("ui.editor.rasterdrop.intoSlot", {
+          name,
+          n: String(slotNumber(view, id, index)),
+        })
         bar = insertionBar(view, layout, id, index, toScreen)
       }
       target = { box: toScreen(world), tag, bar }

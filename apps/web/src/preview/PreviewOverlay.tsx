@@ -17,10 +17,12 @@
  * Fit (0) · 50 · 100 (1) · 200 %, ⌘-scroll / pinch zoom, space-drag pans; Esc / Exit / ⇧Space
  * leave and restore the selection (the last frame becomes selected when navigation happened).
  */
+
 import type { Libraries, Theme } from "@kimo/core-schema"
 import type { DocStore } from "@kimo/editor-state"
 import { KimoLogo, MenuItem } from "@kimo/ui"
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react"
+import { t as tr } from "../lib/i18n"
 import { Icon } from "../lib/icons"
 import { MenuPopover } from "../lib/MenuPopover"
 import {
@@ -266,7 +268,7 @@ export function PreviewOverlay(props: PreviewOverlayProps) {
     <div
       className="preview"
       role="dialog"
-      aria-label="Preview"
+      aria-label={tr("ui.preview.previewoverlay.9")}
       data-frame={frame}
       data-zoom={view ? view.zoom.toFixed(4) : undefined}
       data-box={box ? `${box.x},${box.y},${box.w},${box.h}` : undefined}
@@ -288,7 +290,7 @@ export function PreviewOverlay(props: PreviewOverlayProps) {
           <button
             type="button"
             className="preview__nav-btn"
-            aria-label="Previous frame"
+            aria-label={tr("ui.preview.previewoverlay.8")}
             disabled={index <= 0}
             onClick={() => go(-1)}
           >
@@ -298,7 +300,7 @@ export function PreviewOverlay(props: PreviewOverlayProps) {
           <button
             type="button"
             className="preview__nav-btn"
-            aria-label="Next frame"
+            aria-label={tr("ui.preview.previewoverlay.7")}
             disabled={index < 0 || index >= frames.length - 1}
             onClick={() => go(1)}
           >
@@ -351,11 +353,16 @@ export function PreviewOverlay(props: PreviewOverlayProps) {
           </MenuPopover>
         ))}
         <MenuPopover
-          label="Zoom"
+          label={tr("ui.preview.previewoverlay.6")}
           align="end"
           className="preview__menu"
           trigger={(t) => (
-            <button type="button" className="preview__pill" aria-label="Zoom" {...t}>
+            <button
+              type="button"
+              className="preview__pill"
+              aria-label={tr("ui.preview.previewoverlay.5")}
+              {...t}
+            >
               <span className="preview__pill-value preview__pill-value--mono">
                 {zoomLabel(preset, zoom)}
               </span>
@@ -388,11 +395,11 @@ export function PreviewOverlay(props: PreviewOverlayProps) {
         {failed && <span className="preview__failed">Preview could not render: {failed}</span>}
       </div>
       <div className="preview__hints">
-        <Hint keys="← →" label="Previous / next frame" />
-        <Hint keys="0" label="Fit" />
+        <Hint keys="← →" label={tr("ui.preview.previewoverlay.4")} />
+        <Hint keys="0" label={tr("ui.preview.previewoverlay.3")} />
         <Hint keys="1" label="100 %" />
-        <Hint keys="T" label="Toggle light / dark" />
-        <Hint keys="esc" label="Exit" />
+        <Hint keys="T" label={tr("ui.preview.previewoverlay.2")} />
+        <Hint keys="esc" label={tr("ui.preview.previewoverlay.1")} />
       </div>
     </div>
   )

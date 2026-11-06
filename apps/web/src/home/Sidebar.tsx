@@ -7,6 +7,7 @@ import type { KimoPlatform, WatchedFolder } from "@kimo/platform"
 import { KimoLockup } from "@kimo/ui"
 import type { MouseEvent, ReactNode } from "react"
 import { LocalFolders, TrafficLightInset } from "../files"
+import { t } from "../lib/i18n"
 import { Icon } from "../lib/icons"
 import { type HomeSection, homeSectionPath } from "../router"
 import { SECTION_TITLE } from "./model"
@@ -51,13 +52,16 @@ export function HomeSidebar({
     <NavRow
       href={href({ kind } as HomeSection)}
       icon={icon}
-      label={SECTION_TITLE[kind]}
+      label={t(SECTION_TITLE[kind])}
       active={section.kind === kind}
       {...(count !== undefined ? { count } : {})}
     />
   )
   return (
-    <nav className={`home-sidebar${desktop ? " home-sidebar--desktop" : ""}`} aria-label="Library">
+    <nav
+      className={`home-sidebar${desktop ? " home-sidebar--desktop" : ""}`}
+      aria-label={t("home.library")}
+    >
       {desktop && <TrafficLightInset platform={platform} leading={4} />}
       <div className="home-sidebar__brand">
         <KimoLockup />
@@ -82,13 +86,13 @@ export function HomeSidebar({
         <>
           {/* Folders Header (CttNG): text-xs 600, ls 0.6, padding [20, 10, 6, 10]. */}
           <div className="home-folders-header">
-            <span className="home-folders-header__label">LOCAL FOLDERS</span>
+            <span className="home-folders-header__label">{t("home.localFolders")}</span>
           </div>
           <span className="home-nav home-nav--static" aria-disabled="true">
             <span className="home-nav__icon">
               <Icon name="folder-git-2" size={16} />
             </span>
-            <span className="home-nav__label">Desktop app only</span>
+            <span className="home-nav__label">{t("home.desktopOnly")}</span>
           </span>
         </>
       )}
@@ -98,15 +102,15 @@ export function HomeSidebar({
           <span className="home-oss__icon">
             <Icon name="github" size={14} />
           </span>
-          <span className="home-oss__title">Kimo is open source</span>
+          <span className="home-oss__title">{t("home.openSource")}</span>
         </div>
-        <p className="home-oss__desc">MIT licensed. Your files are plain JSON on your disk.</p>
+        <p className="home-oss__desc">{t("home.openSourceDesc")}</p>
       </div>
       <button type="button" className="home-nav home-nav--button" onClick={onOpenSettings}>
         <span className="home-nav__icon">
           <Icon name="settings" size={16} />
         </span>
-        <span className="home-nav__label">Settings</span>
+        <span className="home-nav__label">{t("settings.title")}</span>
       </button>
     </nav>
   )

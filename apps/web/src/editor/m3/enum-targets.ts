@@ -9,7 +9,9 @@
  * A UI Property maps to one or more stored fields (Size → `w` + `h`); rows are the stored
  * entries grouped back into properties. Pure (unit-tested).
  */
+
 import { isNodeType, isRef, nodeKeys } from "@kimo/core-schema"
+import type { MessageKey } from "../../lib/i18n"
 
 type Rec = Record<string, unknown>
 const isObj = (v: unknown): v is Rec => typeof v === "object" && v !== null && !Array.isArray(v)
@@ -19,7 +21,7 @@ type PropertyKind = "number" | "pad" | "color" | "boolean" | "string" | "radius"
 /** A Property of the target picker (rule FZirR: "filtered to what that layer supports"). */
 interface TargetProperty {
   key: string
-  label: string
+  label: MessageKey
   /** Stored fields (`<property>` or `<property>/<key>`); one row writes all of them. */
   fields: readonly string[]
   kind: PropertyKind
@@ -31,26 +33,32 @@ interface TargetProperty {
  * Catalog, in picker order. Multi-field properties come first so grouping prefers them.
  */
 export const TARGET_PROPERTIES: readonly TargetProperty[] = [
-  { key: "size", label: "Size", fields: ["w", "h"], kind: "number", types: ["icon"] },
-  { key: "w", label: "Width", fields: ["w"], kind: "number", types: "*" },
-  { key: "h", label: "Height", fields: ["h"], kind: "number", types: "*" },
-  { key: "pad", label: "Padding", fields: ["layout/pad"], kind: "pad", types: ["frame"] },
-  { key: "gap", label: "Gap", fields: ["layout/gap"], kind: "number", types: ["frame"] },
-  { key: "radius", label: "Radius", fields: ["radius"], kind: "radius", types: "*" },
-  { key: "opacity", label: "Opacity", fields: ["opacity"], kind: "number", types: "*" },
-  { key: "fill", label: "Fill", fields: ["fill"], kind: "color", types: "*" },
-  { key: "color", label: "Color", fields: ["color"], kind: "color", types: ["icon"] },
-  { key: "fontSize", label: "Font size", fields: ["style/size"], kind: "number", types: ["text"] },
+  { key: "size", label: "ui.prop.size", fields: ["w", "h"], kind: "number", types: ["icon"] },
+  { key: "w", label: "ui.prop.width", fields: ["w"], kind: "number", types: "*" },
+  { key: "h", label: "ui.prop.height", fields: ["h"], kind: "number", types: "*" },
+  { key: "pad", label: "ui.prop.padding", fields: ["layout/pad"], kind: "pad", types: ["frame"] },
+  { key: "gap", label: "ui.prop.gap", fields: ["layout/gap"], kind: "number", types: ["frame"] },
+  { key: "radius", label: "ui.prop.radius", fields: ["radius"], kind: "radius", types: "*" },
+  { key: "opacity", label: "ui.prop.opacity", fields: ["opacity"], kind: "number", types: "*" },
+  { key: "fill", label: "ui.prop.fill", fields: ["fill"], kind: "color", types: "*" },
+  { key: "color", label: "ui.prop.color", fields: ["color"], kind: "color", types: ["icon"] },
+  {
+    key: "fontSize",
+    label: "ui.prop.fontSize",
+    fields: ["style/size"],
+    kind: "number",
+    types: ["text"],
+  },
   {
     key: "fontWeight",
-    label: "Font weight",
+    label: "ui.prop.fontWeight",
     fields: ["style/weight"],
     kind: "number",
     types: ["text"],
   },
-  { key: "visible", label: "Visibility", fields: ["visible"], kind: "boolean", types: "*" },
-  { key: "content", label: "Text", fields: ["content"], kind: "string", types: ["text"] },
-  { key: "icon", label: "Icon", fields: ["icon"], kind: "string", types: ["icon"] },
+  { key: "visible", label: "ui.prop.visibility", fields: ["visible"], kind: "boolean", types: "*" },
+  { key: "content", label: "ui.prop.text", fields: ["content"], kind: "string", types: ["text"] },
+  { key: "icon", label: "ui.prop.icon", fields: ["icon"], kind: "string", types: ["icon"] },
 ]
 
 /** Instance layers take single-level `props/<field>` targets of these properties. */

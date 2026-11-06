@@ -3,6 +3,7 @@
  * the design shows. Order (board 20 "Group icons", note AApU5): Document (header conflicts),
  * Variables, then nodes in layer order. Pure: reads the store through {@link ConflictSource}.
  */
+
 import {
   type Conflict,
   type ConflictSide,
@@ -13,6 +14,7 @@ import {
 } from "@kimo/core-schema"
 import type { NodeData } from "@kimo/editor-state"
 import { kindLabel } from "../editor/props"
+import { tn } from "../lib/i18n"
 import type { ConflictRowView, ConflictSideView } from "../platform/contract"
 
 /** What the rows read from the document. A `DocStore` satisfies it. */
@@ -93,7 +95,7 @@ function nodeSummary(node: Obj, base: Obj | undefined): string {
   let n = 0
   for (const k of keys)
     if (!PLACEMENT.has(k) && JSON.stringify(node[k]) !== JSON.stringify(base[k])) n++
-  return n === 0 ? "Unchanged" : `Edited · ${n} prop${n === 1 ? "" : "s"}`
+  return n === 0 ? "Unchanged" : tn("ui.conflicts.rows.editedOne", "ui.conflicts.rows.edited", n)
 }
 
 /** A node as stored at the merge base: "Legal · 600×24" (board 20 note h0kgW). */

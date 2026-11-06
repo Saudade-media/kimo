@@ -9,6 +9,7 @@
  * Drag a tile or row onto the canvas → instance (the editor's canvas drop handler reads the
  * `application/x-kimo-component` payload); double-click inserts at the viewport center.
  */
+
 import {
   AssetRow,
   AssetTile,
@@ -19,6 +20,7 @@ import {
   StatusPill,
 } from "@kimo/ui"
 import { Fragment, useEffect, useMemo, useState } from "react"
+import { t } from "../../lib/i18n"
 import { Icon } from "../../lib/icons"
 import { keyHint } from "../kbd"
 import type { FileSession } from "../session"
@@ -133,19 +135,27 @@ export function AssetsTab({ session, m3 }: { session: FileSession; m3: M3Control
         <div className="m3-assets__search">
           <Input
             icon={<Icon name="search" size={16} />}
-            placeholder="Search assets"
-            aria-label="Search assets"
+            placeholder={t("ui.editor.m3.assetstab.6")}
+            aria-label={t("ui.editor.m3.assetstab.5")}
             type="search"
             value={query}
             onChange={(e) => setQuery(e.currentTarget.value)}
             frameProps={{ className: "left-panel__search-input" }}
           />
           <Segmented
-            label="Assets view"
+            label={t("ui.editor.m3.assetstab.4")}
             className="m3-assets__view"
             options={[
-              { value: "grid", label: "Grid", icon: <Icon name="layout-grid" size={14} /> },
-              { value: "list", label: "List", icon: <Icon name="list" size={14} /> },
+              {
+                value: "grid",
+                label: t("ui.editor.m3.assetstab.grid"),
+                icon: <Icon name="layout-grid" size={14} />,
+              },
+              {
+                value: "list",
+                label: t("ui.editor.m3.assetstab.list"),
+                icon: <Icon name="list" size={14} />,
+              },
             ]}
             value={view}
             onChange={(v) => setView(v as View)}
@@ -156,7 +166,7 @@ export function AssetsTab({ session, m3 }: { session: FileSession; m3: M3Control
         <div className="m3-assets__empty">
           <EmptyState
             icon={<Icon name="component" size={18} />}
-            title="No components yet"
+            title={t("ui.editor.m3.assetstab.3")}
             description={`Select layers and press ${keyHint("createComponent", "⌥⌘K")} to make a component, or link a library to use its components.`}
           />
           <div className="m3-assets__empty-actions">
@@ -174,7 +184,7 @@ export function AssetsTab({ session, m3 }: { session: FileSession; m3: M3Control
                   })
               }}
             >
-              Create component
+              {t("ui.editor.m3.assetstab.7")}
             </M3Button>
             <M3Button
               variant="secondary"
@@ -182,7 +192,7 @@ export function AssetsTab({ session, m3 }: { session: FileSession; m3: M3Control
               className="m3-assets__empty-button"
               onClick={() => void linkLibraryFlow(m3)}
             >
-              Link library…
+              {t("ui.editor.m3.assetstab.8")}
             </M3Button>
           </div>
         </div>
@@ -206,14 +216,14 @@ export function AssetsTab({ session, m3 }: { session: FileSession; m3: M3Control
                   className="m3-missing-banner__locate"
                   onClick={() => void locateLibrary(m3, l.alias)}
                 >
-                  Locate…
+                  {t("ui.editor.m3.assetstab.9")}
                 </M3Button>
                 <M3Button
                   variant="ghost"
                   className="m3-missing-banner__unlink"
                   onClick={() => void unlinkLibrary(m3, l.alias)}
                 >
-                  Unlink
+                  {t("ui.editor.m3.assetstab.10")}
                 </M3Button>
               </div>
             </div>
@@ -221,10 +231,10 @@ export function AssetsTab({ session, m3 }: { session: FileSession; m3: M3Control
           {!missingOnly && (
             <>
               <PanelHeader
-                title="Local components"
+                title={t("ui.editor.m3.assetstab.2")}
                 className="m3-assets__header"
                 action={{
-                  label: "Collapse all",
+                  label: t("ui.editor.m3.assetstab.collapse-all"),
                   icon: <Icon name="chevrons-down-up" size={14} />,
                   onClick: () =>
                     setClosed(new Set(groupByPath(filtered).map(([g]) => `local:${g}`))),
@@ -268,7 +278,7 @@ export function AssetsTab({ session, m3 }: { session: FileSession; m3: M3Control
                 )
               })}
               {filtered.length === 0 && local.length > 0 && (
-                <div className="m3-assets__none">No matching components</div>
+                <div className="m3-assets__none">{t("ui.editor.m3.assetstab.t1")}</div>
               )}
               <div className="m3-assets__divider">
                 <span className="m3-assets__divider-line" />
@@ -276,10 +286,10 @@ export function AssetsTab({ session, m3 }: { session: FileSession; m3: M3Control
             </>
           )}
           <PanelHeader
-            title="Libraries"
+            title={t("ui.editor.m3.assetstab.1")}
             className={missingOnly ? undefined : "m3-assets__header"}
             action={{
-              label: "Manage libraries",
+              label: t("ui.editor.m3.assetstab.manage-libraries"),
               icon: <Icon name="settings-2" size={14} />,
               onClick: () => m3.openPanel({ libraryManager: true }),
             }}
@@ -335,7 +345,7 @@ export function AssetsTab({ session, m3 }: { session: FileSession; m3: M3Control
             className="m3-assets__link"
             onClick={() => void linkLibraryFlow(m3)}
           >
-            Link library…
+            {t("ui.editor.m3.assetstab.11")}
           </M3Button>
         </div>
       )}

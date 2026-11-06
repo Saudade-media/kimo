@@ -4,6 +4,7 @@
  * TrashRow/Header (Vm6RF, LVJiO), the inline rename field (zucQA) and the Menu/Dense menus
  * (oRMVN, FgXgs, InPFe, NRPdz).
  */
+
 import {
   Banner,
   Button,
@@ -36,6 +37,7 @@ import {
   useRef,
   useState,
 } from "react"
+import { t } from "../lib/i18n"
 import { causeOf, stemOf } from "./model"
 import { previewUrl, type Template } from "./templates"
 
@@ -275,13 +277,13 @@ export function TemplateCard({
           size="sm"
           className="home-template-card__use"
           disabled={busy}
-          aria-label={`Use the ${template.name} template`}
+          aria-label={t("ui.home.useTemplate", { name: template.name })}
           onClick={(e) => {
             e.stopPropagation()
             onUse()
           }}
         >
-          Use template
+          {t("home.useTemplate")}
         </Button>
       </span>
     </div>
@@ -295,13 +297,13 @@ export function TrashRowHeader({ locationLabel }: { locationLabel: string }) {
     <div className="home-trash-row home-trash-row--header" aria-hidden="true">
       <span className="home-trash-row__icon-cell" />
       <span className="home-trash-row__name-cell">
-        <span className="home-trash-row__label">NAME</span>
+        <span className="home-trash-row__label">{t("home.table.name")}</span>
       </span>
       <span className="home-trash-row__location-cell">
         <span className="home-trash-row__label">{locationLabel}</span>
       </span>
       <span className="home-trash-row__deleted-cell">
-        <span className="home-trash-row__label">DELETED</span>
+        <span className="home-trash-row__label">{t("home.table.deleted")}</span>
       </span>
       <span className="home-trash-row__actions-cell" />
     </div>
@@ -354,17 +356,17 @@ export function TrashRow({
           aria-label={`Restore ${name}`}
           onClick={onRestore}
         >
-          Restore
+          {t("home.restore")}
         </Button>
         <Button
           variant="ghost"
           size="sm"
           className="home-trash-row__delete"
           disabled={busy}
-          aria-label={`Delete ${name} forever`}
+          aria-label={t("ui.home.deleteNamed", { name })}
           onClick={onDelete}
         >
-          Delete forever
+          {t("home.deleteForever")}
         </Button>
       </span>
     </div>

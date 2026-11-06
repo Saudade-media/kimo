@@ -14,9 +14,11 @@
  * Undrawn on the board, chosen here: the Plan desc for members, Rename as an inline field in place
  * of the Select, Leave's button, the pending transfer's Cancel, and the empty pane.
  */
+
 import { Badge, Button, IconButton, Input, Select, StatusPill } from "@kimo/ui"
 import { useEffect, useMemo, useRef, useState } from "react"
 import { failureText } from "../../editor/errors"
+import { t } from "../../lib/i18n"
 import { Icon } from "../../lib/icons"
 import { useOptionalRuntime } from "../../platform/runtime"
 import type { Member, MemberRole, WorkspaceSummary } from "../cloud/types"
@@ -53,9 +55,9 @@ import {
 import "./cloud.css"
 import "./share-ui.css"
 
-const ROLE_OPTIONS = [
-  { value: "editor" as const, label: "Editor" },
-  { value: "admin" as const, label: "Admin" },
+const roleOptions = () => [
+  { value: "editor" as const, label: t("ui.ws.role.editor") },
+  { value: "admin" as const, label: t("ui.ws.role.admin") },
 ]
 
 /** The Select's last entry, which opens New workspace (1F) instead of picking. */
@@ -119,7 +121,7 @@ export function WorkspacePane({ focus }: { focus?: string | null }) {
             try {
               await store.renameWorkspace(w.id, next)
             } catch (e) {
-              toast({ tone: "danger", text: failureText("rename the workspace", e) })
+              toast({ tone: "danger", text: failureText(t("errors.renameWorkspace"), e) })
             }
           }}
           onCancel={() => setRenaming(false)}
@@ -129,10 +131,10 @@ export function WorkspacePane({ focus }: { focus?: string | null }) {
         w && (
           <Select
             className="ws-select ws-select--180"
-            label="Workspace"
+            label={t("ui.multiplayer.ui.workspacepane.4")}
             options={[
               ...list.map((x) => ({ value: x.id, label: x.name })),
-              { value: NEW_WORKSPACE, label: "New workspace…" },
+              { value: NEW_WORKSPACE, label: t("ui.multiplayer.ui.workspacepane.new-workspace") },
             ]}
             value={w.id}
             onChange={(v) => (v === NEW_WORKSPACE ? setOpen({ kind: "new" }) : setPicked(v))}
@@ -146,7 +148,7 @@ export function WorkspacePane({ focus }: { focus?: string | null }) {
     return (
       <>
         {titleBar}
-        <p className="mp-desc ws-empty">You're not in a workspace yet.</p>
+        <p className="mp-desc ws-empty">{t("ui.multiplayer.ui.workspacepane.t5")}</p>
       </>
     )
 
@@ -179,7 +181,7 @@ export function WorkspacePane({ focus }: { focus?: string | null }) {
           <p className="mp-setting__label">Plan</p>
           <p className="mp-desc">
             {owner
-              ? `You pay for ${w.name}'s plan.`
+              ? t("ui.mp.wspane.youPayFor", { name: w.name })
               : `${ownerMember ? firstName(ownerMember.email) : "The Owner"} pays for ${w.name}'s plan.`}
           </p>
         </div>
@@ -215,17 +217,17 @@ export function WorkspacePane({ focus }: { focus?: string | null }) {
                 data-action="manage-billing"
                 disabled={busy === "billing"}
                 onClick={() =>
-                  void act("billing", "open billing", async () => {
+                  void act("billing", t("errors.openBilling"), async () => {
                     await store.openPortal(w.id)
                     toast({
                       tone: "component",
                       icon: "external-link",
-                      text: "Billing opened in your browser",
+                      text: t("ui.multiplayer.ui.workspacepane.billing-opened-in-your-browser"),
                     })
                   })
                 }
               >
-                Manage billing
+                {t("ui.multiplayer.ui.workspacepane.5")}
               </WsButton>
             )}
             {admin && (
@@ -236,7 +238,7 @@ export function WorkspacePane({ focus }: { focus?: string | null }) {
                 icon={<Icon name="pencil" size={16} />}
                 onClick={() => setRenaming(true)}
               >
-                Rename
+                {t("ui.multiplayer.ui.workspacepane.6")}
               </Button>
             )}
           </div>
@@ -246,9 +248,9 @@ export function WorkspacePane({ focus }: { focus?: string | null }) {
       <div className="mp-setting" data-setting="members">
         <div className="mp-text mp-text--2">
           <p className="mp-setting__label">Members</p>
-          <p className="mp-desc">Each member is a seat. Viewers are free.</p>
+          <p className="mp-desc">{t("ui.multiplayer.ui.workspacepane.t4")}</p>
         </div>
-        <ul className="ws-list ws-members-list" aria-label="Members">
+        <ul className="ws-list ws-members-list" aria-label={t("ui.multiplayer.ui.workspacepane.3")}>
           {members.map((m) => {
             const canEdit = admin && m.role !== "owner" && !m.self
             return (
@@ -266,7 +268,7 @@ export function WorkspacePane({ focus }: { focus?: string | null }) {
                     <Select
                       className="ws-select ws-select--96"
                       label={`Role of ${personName(m.email)}`}
-                      options={ROLE_OPTIONS}
+                      options={roleOptions()}
                       value={m.role as MemberRole}
                       disabled={busy === `role:${m.account}`}
                       onChange={(role) =>
@@ -298,13 +300,17 @@ export function WorkspacePane({ focus }: { focus?: string | null }) {
               <span className="ws-member__text">
                 <span className="ws-member__name-row">
                   <span className="ws-member__name">{inv.email}</span>
-                  <StatusPill status="changed" label="Invited" className="ws-pill" />
+                  <StatusPill
+                    status="changed"
+                    label={t("ui.multiplayer.ui.workspacepane.2")}
+                    className="ws-pill"
+                  />
                 </span>
                 <span className="ws-member__meta">{inviteMeta(inv.invitedBy, inv.expiresAt)}</span>
               </span>
               <IconButton
                 className="ws-icon-button"
-                label={`Cancel the invite to ${inv.email}`}
+                label={t("ui.mp.wspane.cancelInvite", { email: inv.email })}
                 icon={<Icon name="x" size={14} />}
                 size="sm"
                 tone="ghost"
@@ -323,14 +329,16 @@ export function WorkspacePane({ focus }: { focus?: string | null }) {
             <span className="ws-members-footer__icon" aria-hidden="true">
               <Icon name="info" size={14} />
             </span>
-            <span className="ws-members-footer__hint">Invites are free until accepted.</span>
+            <span className="ws-members-footer__hint">
+              {t("ui.multiplayer.ui.workspacepane.t3")}
+            </span>
             <WsButton
               variant="primary"
               icon="user-plus"
               data-action="invite"
               onClick={() => setOpen({ kind: "invite" })}
             >
-              Invite people
+              {t("ui.multiplayer.ui.workspacepane.7")}
             </WsButton>
           </div>
         )}
@@ -339,8 +347,8 @@ export function WorkspacePane({ focus }: { focus?: string | null }) {
       {requests.length > 0 && (
         <div className="mp-setting ws-setting--requests" data-setting="requests">
           <div className="mp-text mp-text--2">
-            <p className="mp-setting__label">Edit requests</p>
-            <p className="mp-desc">People who asked to edit from a view link.</p>
+            <p className="mp-setting__label">{t("ui.multiplayer.ui.workspacepane.t2")}</p>
+            <p className="mp-desc">{t("ui.multiplayer.ui.workspacepane.t1")}</p>
           </div>
           {requests.map((r) => (
             <div key={r.id} className="ws-request-row" data-request={r.email}>
@@ -360,7 +368,7 @@ export function WorkspacePane({ focus }: { focus?: string | null }) {
                   )
                 }
               >
-                Decline
+                {t("ui.multiplayer.ui.workspacepane.8")}
               </WsButton>
               <WsButton
                 variant="primary"
@@ -388,10 +396,10 @@ export function WorkspacePane({ focus }: { focus?: string | null }) {
                 data-action="cancel-transfer"
                 disabled={busy === "transfer"}
                 onClick={() =>
-                  void act("transfer", "cancel the transfer", () => store.cancelTransfer(w.id))
+                  void act("transfer", t("errors.cancelTransfer"), () => store.cancelTransfer(w.id))
                 }
               >
-                {`Cancel transfer to ${firstName(pending.to)}`}
+                {t("ui.mp.wspane.cancelTransfer", { name: firstName(pending.to) })}
               </WsButton>
             ) : (
               <WsButton
@@ -400,7 +408,7 @@ export function WorkspacePane({ focus }: { focus?: string | null }) {
                 data-action="transfer"
                 onClick={() => setOpen({ kind: "transfer" })}
               >
-                Transfer ownership
+                {t("ui.multiplayer.ui.workspacepane.9")}
               </WsButton>
             )}
             <WsButton
@@ -410,7 +418,7 @@ export function WorkspacePane({ focus }: { focus?: string | null }) {
               data-action="delete"
               onClick={() => setOpen({ kind: "delete" })}
             >
-              Delete workspace
+              {t("ui.multiplayer.ui.workspacepane.10")}
             </WsButton>
           </>
         ) : (
@@ -420,7 +428,7 @@ export function WorkspacePane({ focus }: { focus?: string | null }) {
             data-action="leave"
             onClick={() => setOpen({ kind: "leave" })}
           >
-            Leave workspace
+            {t("ui.multiplayer.ui.workspacepane.11")}
           </WsButton>
         )}
       </div>
@@ -488,7 +496,7 @@ function RenameField({
     <Input
       ref={ref}
       frameProps={{ className: "ws-rename-field" }}
-      aria-label="Workspace name"
+      aria-label={t("ui.multiplayer.ui.workspacepane.1")}
       maxLength={64}
       spellCheck={false}
       value={value}

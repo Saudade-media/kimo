@@ -8,10 +8,12 @@
  * 36 cursor, `tATIY`). A paused agent hides its cursor; outline (`c9cvS`) and tab (`Vt30y`) turn
  * warning and the note docks to the right of the outline (`gnEkC`) with Resume now and Stop.
  */
+
 import { useSyncExternalStore } from "react"
 import { cursorFlip, SectionCursor } from "../canvas/AgentSectionCursor"
 import { CanvasAgentMark } from "../canvas/agent-mark"
 import type { UiStore } from "../canvas/contract"
+import { t } from "../lib/i18n"
 import {
   type ClaimOutlineView,
   PAUSED_NOTE_GAP,
@@ -88,7 +90,7 @@ export function ClaimLayer({ outlines, ui, onResume, onStop, hideCursors }: Clai
                     data-testid="mp-resume-now"
                     onClick={() => onResume(o.holder)}
                   >
-                    Resume now
+                    {t("ui.multiplayer.canvas.claimlayer.1")}
                   </button>
                   <button
                     type="button"
@@ -96,7 +98,7 @@ export function ClaimLayer({ outlines, ui, onResume, onStop, hideCursors }: Clai
                     data-testid="mp-stop-agent"
                     onClick={() => onStop(o.holder)}
                   >
-                    Stop
+                    {t("ui.multiplayer.canvas.claimlayer.2")}
                   </button>
                 </div>
               </div>

@@ -11,9 +11,11 @@
  * billing and Update payment open the portal. Guests see nothing during grace; the guest side of
  * read-only needs the relay's refusal on the sync socket and is not here.
  */
+
 import { Banner } from "@kimo/ui"
 import { useEffect, useState } from "react"
 import { failureText } from "../../editor/errors"
+import { t } from "../../lib/i18n"
 import { Icon } from "../../lib/icons"
 import { useOptionalRuntime } from "../../platform/runtime"
 import type { CloudState, CloudStore } from "../cloud/store"
@@ -106,15 +108,19 @@ function CloudPlanBanner({
       cloud.backToChoose()
       await cloud.startCheckout()
     } catch (e) {
-      toast({ tone: "danger", text: failureText("open checkout", e) })
+      toast({ tone: "danger", text: failureText(t("errors.openCheckout"), e) })
     }
   }
   const portal = async () => {
     try {
       await cloud.openPortal()
-      toast({ tone: "component", icon: "external-link", text: "Billing opened in your browser" })
+      toast({
+        tone: "component",
+        icon: "external-link",
+        text: t("ui.multiplayer.ui.cloudplanbanner.billing-opened-in-your-browser"),
+      })
     } catch (e) {
-      toast({ tone: "danger", text: failureText("open billing", e) })
+      toast({ tone: "danger", text: failureText(t("errors.openBilling"), e) })
     }
   }
   const dismiss = () => {
@@ -129,11 +135,17 @@ function CloudPlanBanner({
         data-testid="mp-cloud-grace"
         data-pen="OnbnS"
         icon={<Icon name="cloud-alert" size={16} />}
-        title="Kimo Cloud plan ended"
-        body={`This file keeps syncing until ${plan.graceEndsAt ? shortDate(plan.graceEndsAt) : "the grace period ends"}, then turns read-only.`}
+        title={t("ui.multiplayer.ui.cloudplanbanner.3")}
+        body={t("ui.mp.cloudplan.graceBody", {
+          date: plan.graceEndsAt ? shortDate(plan.graceEndsAt) : t("ui.mp.cloudplan.graceEnds"),
+        })}
         actions={[
-          { id: "billing", label: "Manage billing", variant: "ghost" },
-          { id: "renew", label: "Renew plan", variant: "primary" },
+          { id: "billing", label: t("ui.multiplayer.ui.cloudsettings.5"), variant: "ghost" },
+          {
+            id: "renew",
+            label: t("ui.multiplayer.ui.cloudplanbanner.renew-plan"),
+            variant: "primary",
+          },
         ]}
         onAction={(id) => void (id === "renew" ? renew() : portal())}
         onDismiss={dismiss}
@@ -146,9 +158,15 @@ function CloudPlanBanner({
         data-testid="mp-cloud-read-only"
         data-pen="ybZM0"
         icon={<Icon name="lock" size={16} />}
-        title="Read-only"
+        title={t("ui.multiplayer.ui.cloudplanbanner.2")}
         body="The owner's Kimo Cloud plan ended. Everyone keeps their own copy."
-        actions={[{ id: "renew", label: "Renew plan", variant: "primary" }]}
+        actions={[
+          {
+            id: "renew",
+            label: t("ui.multiplayer.ui.cloudplanbanner.renew-plan"),
+            variant: "primary",
+          },
+        ]}
         onAction={() => void renew()}
       />
     )
@@ -157,9 +175,19 @@ function CloudPlanBanner({
       tone="warning"
       data-testid="mp-cloud-past-due"
       icon={<Icon name="credit-card" size={16} />}
-      title="Payment failed"
-      body={`Update your card${plan.paymentDueBy ? ` by ${shortDate(plan.paymentDueBy)}` : ""} to keep sharing new files. Nothing has stopped yet.`}
-      actions={[{ id: "portal", label: "Update payment", variant: "primary" }]}
+      title={t("ui.multiplayer.ui.cloudplanbanner.1")}
+      body={t("ui.mp.cloudplan.pastDueBody", {
+        by: plan.paymentDueBy
+          ? t("ui.mp.cloudplan.byDate", { date: shortDate(plan.paymentDueBy) })
+          : "",
+      })}
+      actions={[
+        {
+          id: "portal",
+          label: t("ui.multiplayer.ui.cloudplanbanner.update-payment"),
+          variant: "primary",
+        },
+      ]}
       onAction={() => void portal()}
       onDismiss={dismiss}
     />

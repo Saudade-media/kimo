@@ -20,7 +20,9 @@
  * is not lost. An IME composition is never re-rendered under the person: the session holds remote
  * changes until `compositionend`.
  */
+
 import { useEffect, useLayoutEffect, useRef } from "react"
+import { t } from "../../lib/i18n"
 import { matches } from "../../shortcuts/shortcuts"
 import type { Attrs, Run } from "./model"
 import type { RichTextSession, TextRange } from "./session"
@@ -216,7 +218,7 @@ export function RichTextEditor({
         ref={ref}
         role="textbox"
         tabIndex={0}
-        aria-label="Edit text"
+        aria-label={t("ui.canvas.rich.text.richtexteditor.1")}
         aria-multiline="true"
         contentEditable
         suppressContentEditableWarning

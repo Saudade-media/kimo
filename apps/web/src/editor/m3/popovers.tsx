@@ -3,6 +3,7 @@
  * Overrides (board 11 `P7Nxi`, 320), Library Manager (board 13 `KBZKl`, 600) and Library
  * Changes (board 13 `MuCtC`, 400).
  */
+
 import { splitQualified } from "@kimo/core-schema"
 import { relativeRefBetween } from "@kimo/platform"
 import {
@@ -15,6 +16,7 @@ import {
   StatusPill,
 } from "@kimo/ui"
 import { Fragment, useMemo, useState } from "react"
+import { t } from "../../lib/i18n"
 import { Icon } from "../../lib/icons"
 import { entriesOf, unlinkLibrary } from "./actions"
 import { brokenOfLibrary } from "./ComponentDialogs"
@@ -35,7 +37,7 @@ export function SwapPopover({
   instance,
   anchor,
   placement,
-  title = "Swap instance",
+  title,
   onPick,
   onClose,
 }: {
@@ -59,7 +61,11 @@ export function SwapPopover({
     return m
   }, [doc])
   const groups: { title: string; meta: string; items: ComponentItem[] }[] = [
-    { title: "This file", meta: "", items: listComponents(doc, m3.libraries(), null) },
+    {
+      title: t("ui.editor.m3.popovers.this-file"),
+      meta: "",
+      items: listComponents(doc, m3.libraries(), null),
+    },
     ...libs.map((l) => ({
       title: l.name,
       meta: l.alias,
@@ -74,19 +80,25 @@ export function SwapPopover({
     if (dropped.length)
       void m3
         .confirm({
-          title: "Swap instance?",
-          desc: "Overrides whose layers don't exist in the new component are dropped.",
+          title: t("ui.editor.m3.popovers.swap-instance"),
+          desc: t(
+            "ui.editor.m3.popovers.overrides-whose-layers-don-t-exist-in-the-new-component-are-dropped",
+          ),
           icon: "repeat",
           tone: "component",
           items: dropped.map((n) => ({ icon: "circle-dot", text: n.message })),
-          confirm: "Swap",
+          confirm: t("ui.editor.m3.popovers.swap"),
         })
-        .then((ok) => ok && m3.run({ cmd: "swapInstance", instance, of }, "Swap instance"))
-    else m3.run({ cmd: "swapInstance", instance, of }, "Swap instance")
+        .then(
+          (ok) =>
+            ok &&
+            m3.run({ cmd: "swapInstance", instance, of }, t("ui.editor.m3.popovers.swapInstance")),
+        )
+    else m3.run({ cmd: "swapInstance", instance, of }, t("ui.editor.m3.popovers.swapInstance"))
   }
   return (
     <Popover
-      title={title}
+      title={title ?? t("ui.editor.m3.popovers.swapInstance")}
       wide
       anchor={anchor}
       placement={placement}
@@ -98,15 +110,19 @@ export function SwapPopover({
       <div className="m3-swap-popover__search">
         <Input
           icon={<Icon name="search" size={16} />}
-          placeholder="Search components"
-          aria-label="Search components"
+          placeholder={t("ui.editor.m3.popovers.5")}
+          aria-label={t("ui.editor.m3.popovers.4")}
           value={query}
           autoFocus
           onChange={(e) => setQuery(e.currentTarget.value)}
           frameProps={{ className: "m3-search-30" }}
         />
       </div>
-      <div className="m3-swap-popover__list" role="listbox" aria-label="Components">
+      <div
+        className="m3-swap-popover__list"
+        role="listbox"
+        aria-label={t("ui.editor.m3.popovers.3")}
+      >
         {groups.map((g) => {
           const items = g.items.filter((i) => matches(i, query))
           if (!items.length) return null
@@ -140,9 +156,7 @@ export function SwapPopover({
         <span className="m3-popover-footer__icon">
           <Icon name="info" size={14} />
         </span>
-        <span className="m3-popover-footer__hint">
-          Overrides carry over to layers with matching ids.
-        </span>
+        <span className="m3-popover-footer__hint">{t("ui.editor.m3.popovers.6")}</span>
       </div>
     </Popover>
   )
@@ -176,7 +190,7 @@ export function OverridesPopover({
     >
       <div className="m3-overrides-popover__list">
         {entries.length === 0 && (
-          <div className="m3-overrides-popover__empty">No overrides. It matches the main.</div>
+          <div className="m3-overrides-popover__empty">{t("ui.editor.m3.popovers.t2")}</div>
         )}
         {entries.map((e) => (
           <div className="m3-override-entry" key={`${e.kind}:${e.path}`} data-entry={e.path}>
@@ -228,7 +242,7 @@ export function OverridesPopover({
           disabled={!entries.length}
           onClick={() => m3.run({ cmd: "resetAllOverrides", instance }, "Reset all overrides")}
         >
-          Reset all
+          {t("ui.editor.m3.popovers.7")}
         </M3Button>
       </div>
     </Popover>
@@ -261,7 +275,9 @@ export async function linkLibraryFlow(m3: M3Controller): Promise<string | null> 
   } catch (e) {
     m3.toast({
       tone: "danger",
-      text: `Could not read the library: ${e instanceof Error ? e.message : e}`,
+      text: t("ui.editor.m3.popovers.libraryReadFailed", {
+        message: e instanceof Error ? e.message : String(e),
+      }),
     })
     return null
   }
@@ -311,14 +327,14 @@ export function LibraryManager({ m3, onClose }: { m3: M3Controller; onClose(): v
       onPointerDown={(e) => e.target === e.currentTarget && onClose()}
     >
       <Popover
-        title="Libraries"
+        title={t("ui.editor.m3.popovers.2")}
         onClose={onClose}
         className="m3-library-manager"
         data-testid="library-manager"
         bodyProps={{ className: "m3-library-manager__body" }}
       >
         <div className="m3-library-manager__intro">
-          Linked libraries are read-only. Their components, variables and theme axes are referenced
+          {t("ui.editor.m3.popovers.8")}
           as alias:id.
         </div>
         <div className="m3-library-manager__list">
@@ -359,7 +375,7 @@ export function LibraryManager({ m3, onClose }: { m3: M3Controller; onClose(): v
             )
           })}
           {libs.length === 0 && (
-            <div className="m3-library-manager__empty">No libraries linked yet.</div>
+            <div className="m3-library-manager__empty">{t("ui.editor.m3.popovers.t1")}</div>
           )}
         </div>
         <div className="m3-popover-footer m3-popover-footer--12">
@@ -376,7 +392,7 @@ export function LibraryManager({ m3, onClose }: { m3: M3Controller; onClose(): v
             className="m3-library-manager__link"
             onClick={() => void linkLibraryFlow(m3)}
           >
-            Link library…
+            {t("ui.editor.m3.popovers.9")}
           </M3Button>
         </div>
       </Popover>
@@ -414,7 +430,7 @@ export function LibraryChanges({
           <span className="m3-changes__head">
             <M3IconButton
               icon="arrow-left"
-              label="Back to libraries"
+              label={t("ui.editor.m3.popovers.1")}
               onClick={() => m3.openPanel({ libraryChanges: null, libraryManager: true })}
             />
             <span className="m3-changes__title">{l.name}</span>
@@ -467,7 +483,7 @@ export function LibraryChanges({
               onClose()
             }}
           >
-            Fix broken overrides
+            {t("ui.editor.m3.popovers.10")}
           </M3Button>
           <span className="m3-popover-footer__spacer" />
           <M3Button
@@ -478,7 +494,7 @@ export function LibraryChanges({
               onClose()
             }}
           >
-            Got it
+            {t("ui.editor.m3.popovers.11")}
           </M3Button>
         </div>
       </Popover>

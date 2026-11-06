@@ -3,6 +3,7 @@
  * the persisted non-secret config (`kimo.ai` — keys never live here), CLI row copy, the default
  * precedence strip, usage-to-date aggregation and copy helpers. Pure: no DOM, no platform.
  */
+
 import {
   type CliDetection,
   cliIdOf,
@@ -17,6 +18,7 @@ import {
   type ProviderKind,
   pickDefaultSelection,
 } from "@kimo/ai-agent"
+import { t as tr } from "../lib/i18n"
 import {
   AGENT_USAGE_DEFAULTS,
   type AgentUsageSettings,
@@ -54,7 +56,7 @@ export interface StoredProvider {
   auth?: AuthScheme
   /** Custom endpoints: the origin the key was first sent to (board 25 rule "Origin pin"). */
   pinnedOrigin?: string
-  /** Added with "Add provider" and its first Test never passed ("Not verified"). */
+  /** Added with "Add provider" and its first Test never passed (tr("ai.status.notVerified")). */
   unverified?: boolean
 }
 
@@ -130,7 +132,7 @@ export interface AiConfig {
   version: 1
   /** Overrides of built-in rows + user-added custom endpoints, by id. */
   providers: Record<string, StoredProvider>
-  /** Rows whose key/config the user explicitly saved (built-in rows show "Not set" otherwise). */
+  /** Rows whose key/config the user explicitly saved (built-in rows show tr("ai.status.notSet") otherwise). */
   configured: string[]
   settings: AgentUsageSettings
   ledger: UsageEntry[]
@@ -286,12 +288,12 @@ const WIRE_LABEL = {
 
 /** The mono meta line under a provider name (board 23 YxpAP overrides). */
 export function providerMeta(p: StoredProvider, opts: { isApiDefault: boolean }): string {
-  if (isCloud(p.kind)) return "Signed credentials · routed through Rust-side HTTP"
+  if (isCloud(p.kind)) return tr("ai.cloudMeta")
   const url = hostOf(p.baseURL ?? defaultBaseURL(p))
   switch (p.kind) {
     case "anthropic":
       return opts.isApiDefault
-        ? `API default · ${p.models.agent} · used when no CLI is signed in`
+        ? tr("ai.apiDefaultMeta", { model: p.models.agent })
         : `${url} · ${p.models.agent}`
     case "openai":
       return `${url} · Chat Completions + Responses`
@@ -310,20 +312,20 @@ export type PillTone = "success" | "warning" | "neutral" | "danger"
 export function providerPill(status: string): { tone: PillTone; label: string } {
   switch (status) {
     case "connected":
-      return { tone: "success", label: "Connected" }
+      return { tone: "success", label: tr("ai.status.connected") }
     case "key-saved":
-      return { tone: "success", label: "Key saved" }
+      return { tone: "success", label: tr("ai.status.keySaved") }
     case "local":
-      return { tone: "success", label: "Local · no key" }
+      return { tone: "success", label: tr("ai.status.local") }
     case "desktop-only":
-      return { tone: "warning", label: "Desktop only" }
+      return { tone: "warning", label: tr("ai.status.desktopOnly") }
     case "failed":
-      return { tone: "danger", label: "Test failed" }
+      return { tone: "danger", label: tr("ai.status.testFailed") }
     case "unverified":
-      // Board 25 rule "Add provider": a failing first Test still adds it, "Not verified".
-      return { tone: "warning", label: "Not verified" }
+      // Board 25 rule "Add provider": a failing first Test still adds it, tr("ai.status.notVerified").
+      return { tone: "warning", label: tr("ai.status.notVerified") }
     default:
-      return { tone: "neutral", label: "Not set" }
+      return { tone: "neutral", label: tr("ai.status.notSet") }
   }
 }
 
@@ -354,7 +356,7 @@ export function keyPlaceholder(p: Pick<StoredProvider, "kind" | "label">): strin
     case "openrouter":
       return "Paste your OpenRouter key (sk-or-…)"
     default:
-      return `Paste your ${p.label} key`
+      return tr("ui.ai.settings.model.keyPhCustom", { provider: p.label })
   }
 }
 
@@ -370,7 +372,7 @@ export function storageLabel(
       : os === "linux"
         ? "Secret Service"
         : "macOS Keychain"
-  return `Stored in ${store} · service kimo, account provider.${providerId}`
+  return tr("ui.ai.settings.model.storedIn", { store, id: providerId })
 }
 
 /** Board 25 failed-test strip (c7lVl): tone, lucide icon name, label, mono detail. */
@@ -397,25 +399,30 @@ export function testStrip(
     return {
       tone: "success",
       icon: "circle-check",
-      label: "Connection OK",
+      label: tr("ai.test.ok"),
       detail: `${t.latencyMs} ms · ${t.detail}`,
     }
   switch (t.errorKind) {
     case "network":
     case "offline":
-      return { tone: "danger", icon: "wifi-off", label: "Can't reach endpoint", detail: t.detail }
+      return {
+        tone: "danger",
+        icon: "wifi-off",
+        label: tr("ai.test.unreachable"),
+        detail: t.detail,
+      }
     case "cors":
       return {
         tone: "danger",
         icon: "shield-x",
-        label: "Blocked by the browser",
+        label: tr("ai.test.blocked"),
         detail: "CORS · use desktop or a proxy",
       }
     case "timeout":
       return {
         tone: "danger",
         icon: "clock-alert",
-        label: "Timed out",
+        label: tr("ai.test.timeout"),
         detail: /^no response/.test(t.detail)
           ? t.detail
           : `no response in ${Math.round(TEST_TIMEOUT_MS / 1000)} s`,
@@ -425,18 +432,18 @@ export function testStrip(
       return {
         tone: "warning",
         icon: "triangle-alert",
-        label: "Reachable · model missing",
+        label: tr("ai.test.noModel"),
         detail: t.detail,
       }
     case "auth":
       return {
         tone: "danger",
         icon: "circle-x",
-        label: "Connection failed",
+        label: tr("ai.test.failed"),
         detail: `${t.status ?? 401} · invalid api key`,
       }
     default:
-      return { tone: "danger", icon: "circle-x", label: "Connection failed", detail: t.detail }
+      return { tone: "danger", icon: "circle-x", label: tr("ai.test.failed"), detail: t.detail }
   }
 }
 
@@ -479,13 +486,13 @@ export function cliState(d: CliDetection): CliState {
 export function cliPill(d: CliDetection): { tone: PillTone; label: string } {
   switch (cliState(d)) {
     case "signed-in":
-      return { tone: "success", label: "Signed in" }
+      return { tone: "success", label: tr("ai.cli.signedIn") }
     case "not-signed-in":
-      return { tone: "warning", label: "Not signed in" }
+      return { tone: "warning", label: tr("ai.cli.signedOut") }
     case "unknown":
-      return { tone: "warning", label: "Sign-in unknown" }
+      return { tone: "warning", label: tr("ai.cli.unknown") }
     default:
-      return { tone: "neutral", label: "Not found" }
+      return { tone: "neutral", label: tr("ai.cli.missing") }
   }
 }
 
@@ -520,12 +527,12 @@ export function cliMeta(d: CliDetection, command: string, home: string | null): 
 export function cliStatusText(d: CliDetection): string {
   switch (cliState(d)) {
     case "signed-in":
-      return ["Signed in", d.plan, d.account].filter(Boolean).join(" · ")
+      return [tr("ai.cli.signedIn"), d.plan, d.account].filter(Boolean).join(" · ")
     case "not-signed-in":
     case "unknown":
       return `Not signed in · run \`${CLI_SIGN_IN[d.id] ?? d.id}\``
     default:
-      return "Not found"
+      return tr("ai.cli.missing")
   }
 }
 
@@ -559,16 +566,25 @@ export function agentStatus(
   labelOf: (provider: string) => string,
   clis: readonly CliDetection[],
 ): { tone: PillTone; label: string } {
-  if (!sel) return { tone: "neutral", label: "Agent off · add a provider" }
+  if (!sel) return { tone: "neutral", label: tr("ai.agentOff") }
   if (isCliProvider(sel.provider)) {
     const d = clis.find((c) => c.id === cliIdOf(sel.provider))
-    const billing = d?.billing === "cli-api-key" ? "API key" : "subscription"
+    const billing =
+      d?.billing === "cli-api-key"
+        ? tr("ui.ai.settings.model.billingApiKey")
+        : tr("ui.ai.settings.model.billingSubscription")
     return {
       tone: "success",
-      label: `Agent ready · ${d?.label ?? labelOf(sel.provider)} (${billing})`,
+      label: tr("ui.ai.settings.model.agentReady", {
+        provider: d?.label ?? labelOf(sel.provider),
+        billing,
+      }),
     }
   }
-  return { tone: "success", label: `Agent ready · ${labelOf(sel.provider)} (API key)` }
+  return {
+    tone: "success",
+    label: tr("ui.ai.settings.model.agentReadyApi", { provider: labelOf(sel.provider) }),
+  }
 }
 
 /** Short model label for composers: "Opus 5.5", "gpt-4.1", "Claude Code". */

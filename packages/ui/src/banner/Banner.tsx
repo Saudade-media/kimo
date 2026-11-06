@@ -1,3 +1,4 @@
+import { t } from "@kimo/i18n"
 import { CircleCheck, CircleX, Info, TriangleAlert, X } from "lucide-react"
 import type { ComponentPropsWithRef, ReactNode } from "react"
 import { Button } from "../button/Button"
@@ -96,7 +97,7 @@ export function Banner({
       {onDismiss && (
         <IconButton
           className="kimo-banner__dismiss"
-          label="Dismiss"
+          label={t("ui.pkg.banner.banner.dismiss")}
           icon={<X />}
           size="sm"
           tone="quiet"

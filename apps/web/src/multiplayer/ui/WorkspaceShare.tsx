@@ -17,10 +17,12 @@
  * - F (no workspace yet, or New workspace) is the relay wizard's Subscribe step
  *   (`CloudWizardSteps`, `NewWorkspaceWizard`).
  */
+
 import { RelayHttpClient, type RelayInfo } from "@kimo/sync/mp"
 import { IconButton, StatusPill } from "@kimo/ui"
 import { useEffect, useMemo, useState } from "react"
 import { failureText } from "../../editor/errors"
+import { t } from "../../lib/i18n"
 import { Icon } from "../../lib/icons"
 import { useOptionalRuntime } from "../../platform/runtime"
 import type { CloudState, CloudStore } from "../cloud/store"
@@ -139,7 +141,13 @@ export function useShareableSession(docKey: string) {
 /** The plan pill of a workspace that can take files: Active, or Past due. */
 function PlanStatusPill({ plan, label }: { plan: CloudPlan; label?: string }) {
   if (plan.status === "past_due")
-    return <StatusPill status="changed" label="Past due" className="ws-pill" />
+    return (
+      <StatusPill
+        status="changed"
+        label={t("ui.multiplayer.ui.workspaceshare.8")}
+        className="ws-pill"
+      />
+    )
   return <StatusPill status="linked" label={label ?? "Active"} className="ws-pill" />
 }
 
@@ -220,13 +228,13 @@ export function WorkspaceSetupBody({
   const start = async () => {
     if (!chosen || starting) return
     const session = sessionOf()
-    if (!session) return toast({ tone: "danger", text: failureText("start sharing") })
+    if (!session) return toast({ tone: "danger", text: failureText(t("errors.startSharing")) })
     setStarting(true)
     try {
       await store.shareFile(session, { workspaceId: chosen.id })
       onStarted?.()
     } catch (e) {
-      toast({ tone: "danger", text: failureText("start sharing", e) })
+      toast({ tone: "danger", text: failureText(t("errors.startSharing"), e) })
     } finally {
       setStarting(false)
     }
@@ -244,7 +252,7 @@ export function WorkspaceSetupBody({
             <Intro
               icon="users"
               title={`Share to ${chosen.name}`}
-              desc={`Everyone in ${chosen.name} can edit it.`}
+              desc={t("ui.mp.wsshare.everyoneCanEdit", { name: chosen.name })}
             />
             <MembersRow
               emails={members.map((m) => m.email)}
@@ -254,8 +262,16 @@ export function WorkspaceSetupBody({
           </>
         ) : (
           <>
-            <Intro icon="users" title="Share to a workspace" desc="Pick who can edit it." />
-            <div className="ws-picker" role="radiogroup" aria-label="Workspace">
+            <Intro
+              icon="users"
+              title={t("ui.multiplayer.ui.workspaceshare.7")}
+              desc="Pick who can edit it."
+            />
+            <div
+              className="ws-picker"
+              role="radiogroup"
+              aria-label={t("ui.multiplayer.ui.workspaceshare.6")}
+            >
               {workspaces.map((w) => {
                 const on = w.id === chosen.id
                 return (
@@ -305,7 +321,9 @@ export function WorkspaceSetupBody({
                   <span className="ws-picker__new-icon" aria-hidden="true">
                     <Icon name="plus" size={14} />
                   </span>
-                  <span className="ws-picker__new-label">New workspace</span>
+                  <span className="ws-picker__new-label">
+                    {t("ui.multiplayer.ui.workspaceshare.t2")}
+                  </span>
                 </button>
               )}
             </div>
@@ -398,7 +416,7 @@ export function WorkspaceLiveBody({
         text: linkCopiedText({ role: "view", expiresAt: null }, Date.now()),
       })
     } catch (e) {
-      toast({ tone: "danger", text: failureText("create the link", e) })
+      toast({ tone: "danger", text: failureText(t("errors.createLink"), e) })
     } finally {
       setBusy(false)
     }
@@ -412,7 +430,7 @@ export function WorkspaceLiveBody({
         text: linkCopiedText({ role: "view", expiresAt: null }, Date.now()),
       })
     } catch (e) {
-      toast({ tone: "danger", text: failureText("copy the link", e) })
+      toast({ tone: "danger", text: failureText(t("errors.copyLink"), e) })
     }
   }
   const revoke = async (link: ViewLink) => {
@@ -422,21 +440,25 @@ export function WorkspaceLiveBody({
       setLinks((l) => l.filter((x) => x.jti !== link.jti))
       toast({ tone: "component", icon: "link-2-off", text: linkRevokedText("view") })
     } catch (e) {
-      toast({ tone: "danger", text: failureText("revoke the link", e) })
+      toast({ tone: "danger", text: failureText(t("errors.revokeLink"), e) })
     }
   }
   const stop = async () => {
     try {
       await store.closeFile(room)
     } catch (e) {
-      toast({ tone: "danger", text: failureText("stop sharing", e) })
+      toast({ tone: "danger", text: failureText(t("errors.stopSharing"), e) })
     }
   }
 
   return (
     <>
       <div className="mp-body" data-workspace="live">
-        <Intro icon="users" title={`In ${w.name}`} desc={`Everyone in ${w.name} can edit it.`} />
+        <Intro
+          icon="users"
+          title={t("ui.mp.wsshare.inWorkspace", { name: w.name })}
+          desc={t("ui.mp.wsshare.everyoneCanEdit", { name: w.name })}
+        />
         <MembersRow
           emails={members.map((m) => m.email)}
           names={
@@ -444,11 +466,17 @@ export function WorkspaceLiveBody({
               ? hereLine(others.map((p) => p.label))
               : namesLine(members.map((m) => firstName(m.email)))
           }
-          pill={<StatusPill status="linked" label="Live" className="ws-pill mp-live" />}
+          pill={
+            <StatusPill
+              status="linked"
+              label={t("ui.multiplayer.ui.workspaceshare.5")}
+              className="ws-pill mp-live"
+            />
+          }
         />
         {links.length > 0 && (
           <div className="ws-links">
-            <span className="ws-label">View links</span>
+            <span className="ws-label">{t("ui.multiplayer.ui.workspaceshare.t1")}</span>
             <div className="ws-list">
               {links.map((l) => {
                 const url = madeHere.get(l.jti)
@@ -460,14 +488,14 @@ export function WorkspaceLiveBody({
                     <span className="ws-link__meta">{linkMeta(l, self?.email ?? null)}</span>
                     {url && (
                       <WsIconButton
-                        label="Copy view link"
+                        label={t("ui.multiplayer.ui.workspaceshare.4")}
                         icon="copy"
                         onClick={() => void copy(url)}
                       />
                     )}
                     {(admin || l.createdBy === self?.email) && (
                       <WsIconButton
-                        label="Revoke view link"
+                        label={t("ui.multiplayer.ui.workspaceshare.3")}
                         icon="trash-2"
                         danger
                         onClick={() => void revoke(l)}
@@ -481,20 +509,22 @@ export function WorkspaceLiveBody({
         )}
         <div className="ws-actions">
           <WsButton variant="secondary" icon="link" disabled={busy} onClick={() => void copyNew()}>
-            Copy view link
+            {t("ui.multiplayer.ui.workspaceshare.9")}
           </WsButton>
           {admin && onInvite && (
             <WsButton variant="ghost" icon="user-plus" onClick={onInvite}>
-              Invite people
+              {t("ui.multiplayer.ui.workspaceshare.10")}
             </WsButton>
           )}
         </div>
       </div>
       <div className="mp-footer">
-        <span className="mp-footnote ws-footnote">{`Editing is for ${w.name}'s members`}</span>
+        <span className="mp-footnote ws-footnote">
+          {t("ui.mp.wsshare.editingForMembers", { name: w.name })}
+        </span>
         {admin && (
           <WsButton variant="ghost" className="mp-stop" icon="square" onClick={() => void stop()}>
-            Stop sharing
+            {t("ui.multiplayer.ui.workspaceshare.11")}
           </WsButton>
         )}
       </div>
@@ -571,7 +601,7 @@ export function WorkspaceGuestBody({
       if (e instanceof Error && "code" in e && e.code === "ALREADY_MEMBER") {
         await cloud?.refresh().catch(() => undefined)
         await store.openFile(room).catch(() => undefined)
-      } else toast({ tone: "danger", text: failureText("send the request", e) })
+      } else toast({ tone: "danger", text: failureText(t("errors.sendRequest"), e) })
     } finally {
       setBusy(false)
     }
@@ -583,16 +613,22 @@ export function WorkspaceGuestBody({
       <div className="mp-body" data-workspace={sent ? "requested" : "viewer"}>
         <Intro
           icon="eye"
-          title="You can view this file"
+          title={t("ui.multiplayer.ui.workspaceshare.2")}
           desc={
             sent
               ? "Your edit request was sent."
-              : `Ask ${name ? `${name}'s` : "the workspace's"} admins to let you edit.`
+              : name
+                ? t("ui.mp.wsshare.askNamedAdmins", { name })
+                : t("ui.mp.wsshare.askAdmins")
           }
         />
         {sent && request ? (
           <div className="ws-request">
-            <StatusPill status="changed" label="Requested" className="ws-pill" />
+            <StatusPill
+              status="changed"
+              label={t("ui.multiplayer.ui.workspaceshare.1")}
+              className="ws-pill"
+            />
             <span className="ws-request__meta">
               {today ? "Sent today" : `Sent ${shortDate(request.createdAt)}`}
             </span>
@@ -606,7 +642,7 @@ export function WorkspaceGuestBody({
               disabled={busy}
               onClick={() => void ask()}
             >
-              Request edit access
+              {t("ui.multiplayer.ui.workspaceshare.12")}
             </WsButton>
             <p className="mp-price">{`${name ?? "The workspace"} pays for its editors`}</p>
           </>

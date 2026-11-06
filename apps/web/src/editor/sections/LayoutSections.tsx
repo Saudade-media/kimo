@@ -2,6 +2,7 @@
  * Layer (`cmbN4`), Position (`Z72l9N`) and Auto layout (`S3QTvG`) sections of board 08.
  * Section bodies follow the nodes: Body = column gap 8; Row = row gap 8, center, children fill.
  */
+
 import type { NodeData, Op } from "@kimo/editor-state"
 import {
   AlignmentGrid,
@@ -22,6 +23,7 @@ import { flipOps, groupOps, isFlowChild } from "../../canvas/commands"
 import { gapPreviewStore } from "../../canvas/gap-preview"
 import { featureOps } from "../../lib/header"
 import { useBus } from "../../lib/hooks"
+import { type MessageKey, t } from "../../lib/i18n"
 import { Icon } from "../../lib/icons"
 import {
   Bindable,
@@ -91,7 +93,9 @@ export function LayerSection({ sel }: { sel: readonly Sel[] }) {
     editor.apply(setOps(ids, "blend", blendValue(b)), "Set blend mode")
   }
   return (
-    <PropSection title={<SectionTitle label="Layer" fields={["opacity", "blend", "visible"]} />}>
+    <PropSection
+      title={<SectionTitle label={t("insp.layer")} fields={["opacity", "blend", "visible"]} />}
+    >
       <div className="rp-body">
         <PropRow className="rp-row">
           {/* Blend mode (rx2Qn): Select look; opens BlendModeMenu (board 09 EdigD) */}
@@ -99,7 +103,7 @@ export function LayerSection({ sel }: { sel: readonly Sel[] }) {
             ref={trigger}
             type="button"
             className="rp-select"
-            aria-label="Blend mode"
+            aria-label={t("insp.blendMode")}
             aria-haspopup="menu"
             aria-expanded={open}
             onClick={() => setOpen((o) => !o)}
@@ -141,7 +145,7 @@ export function LayerSection({ sel }: { sel: readonly Sel[] }) {
             className="rp-bind--w96"
             spec={{
               type: "number",
-              label: "Opacity",
+              label: t("insp.opacity"),
               prefix: "Op",
               get: (n) => n.opacity ?? 1,
               put: (s, v) => setOps([s.id], "opacity", v === 1 ? undefined : v),
@@ -152,7 +156,7 @@ export function LayerSection({ sel }: { sel: readonly Sel[] }) {
             {(bind) => (
               <NumberField
                 icon="blend"
-                label="Opacity"
+                label={t("insp.opacity")}
                 bind={bind}
                 className="rp-field--w96"
                 value={opacity === MIXED ? MIXED : `${Math.round(opacity * 100)}%`}
@@ -195,14 +199,14 @@ function VisibleRow({ sel }: { sel: readonly Sel[] }) {
     (n) => n.visible !== false,
   )
   return (
-    <BindRow label="Visible">
+    <BindRow label={t("insp.visible")}>
       <Bindable
         sel={sel}
         defaultOpen={requested && !bound}
         onPickerClose={clear}
         spec={{
           type: "boolean",
-          label: "Visibility",
+          label: t("ui.editor.sections.layoutsections.visibility"),
           get: (n) => n.visible ?? true,
           put: (s, v) => setOps([s.id], "visible", v === true ? undefined : v),
           current: () => (visible === MIXED ? null : visible),
@@ -314,7 +318,7 @@ export function PositionSection({ sel }: { sel: readonly Sel[] }) {
     <PropSection
       title={
         <SectionTitle
-          label="Position"
+          label={t("insp.position")}
           fields={["x", "y", "w", "h", "rotation", "position", "flipX", "flipY"]}
         />
       }
@@ -351,7 +355,7 @@ export function PositionSection({ sel }: { sel: readonly Sel[] }) {
             <NumberField
               className="rp-rotate-flip__field"
               icon="rotate-cw"
-              label="Rotation"
+              label={t("insp.rotation")}
               value={rotation === MIXED ? MIXED : `${formatNumber(rotation)}°`}
               editor={editor}
               onNumber={rotationOps}
@@ -374,13 +378,13 @@ export function PositionSection({ sel }: { sel: readonly Sel[] }) {
             {flippable && (
               <>
                 <PanelIconToggle
-                  label="Flip horizontal"
+                  label={t("insp.flipH")}
                   icon={<Icon name="flip-horizontal-2" size={14} />}
                   pressed={flipX === true}
                   onClick={() => editor.apply(flipOps(session.store, ids, "x"), "Flip horizontal")}
                 />
                 <PanelIconToggle
-                  label="Flip vertical"
+                  label={t("insp.flipV")}
                   icon={<Icon name="flip-vertical-2" size={14} />}
                   pressed={flipY === true}
                   onClick={() => editor.apply(flipOps(session.store, ids, "y"), "Flip vertical")}
@@ -396,7 +400,7 @@ export function PositionSection({ sel }: { sel: readonly Sel[] }) {
               sel={sel}
               spec={{
                 type: "number",
-                label: "Corner radius",
+                label: t("insp.radius"),
                 prefix: "R",
                 get: (n) => n.radius ?? 0,
                 put: (s, v) => setOps([s.id], "radius", v === 0 ? undefined : v),
@@ -407,7 +411,7 @@ export function PositionSection({ sel }: { sel: readonly Sel[] }) {
               {(bind) => (
                 <NumberField
                   icon="square-dashed"
-                  label="Corner radius"
+                  label={t("insp.radius")}
                   bind={bind}
                   value={rValue}
                   editor={editor}
@@ -422,7 +426,7 @@ export function PositionSection({ sel }: { sel: readonly Sel[] }) {
               )}
             </Bindable>
             <PanelIconToggle
-              label="Individual corners"
+              label={t("insp.corners")}
               icon={<Icon name="scan" size={14} />}
               pressed={individualCorners === true}
               onClick={() => {
@@ -449,7 +453,7 @@ export function PositionSection({ sel }: { sel: readonly Sel[] }) {
                 <NumberField
                   key={name}
                   prefix={name}
-                  label={`Corner radius ${name}`}
+                  label={t("ui.editor.sections.cornerRadius", { name })}
                   value={v}
                   editor={editor}
                   min={0}
@@ -467,7 +471,7 @@ export function PositionSection({ sel }: { sel: readonly Sel[] }) {
         )}
         {inLayout && (
           <ToggleRow
-            label="Absolute position"
+            label={t("insp.absolute")}
             checked={absolute}
             onChange={(on) =>
               editor.apply(
@@ -501,7 +505,7 @@ function ClipRow({ sel, clip }: { sel: readonly Sel[]; clip: boolean | Mixed }) 
   const ids = sel.map((s) => s.id)
   const spec: BindSpec = {
     type: "boolean",
-    label: "Clip content",
+    label: t("insp.clip"),
     get: (n) => n.clip ?? false,
     put: (s, v) => setOps([s.id], "clip", v === false ? undefined : v),
     current: () => (clip === MIXED ? null : clip),
@@ -509,7 +513,7 @@ function ClipRow({ sel, clip }: { sel: readonly Sel[]; clip: boolean | Mixed }) 
   }
   if (sharedRef(sel.map((s) => s.node.clip)) !== null)
     return (
-      <BindRow label="Clip content">
+      <BindRow label={t("insp.clip")}>
         <Bindable sel={sel} spec={spec}>
           {() => null}
         </Bindable>
@@ -521,7 +525,7 @@ function ClipRow({ sel, clip }: { sel: readonly Sel[]; clip: boolean | Mixed }) 
         <div className={`rp-clip-row ${bind.className}`}>
           <PanelCheckbox
             className="rp-clip"
-            label="Clip content"
+            label={t("insp.clip")}
             checked={clip === MIXED ? "mixed" : clip}
             onChange={(on) =>
               editor.apply(setOps(ids, "clip", on ? true : undefined), "Set clip content")
@@ -687,11 +691,11 @@ type Justify = "start" | "center" | "end" | "between" | "around" | "evenly"
 type Align3 = "start" | "center" | "end"
 type Distribution = "packed" | "between" | "around" | "evenly"
 
-const DISTRIBUTION: readonly { value: Distribution; label: string }[] = [
-  { value: "packed", label: "Packed" },
-  { value: "between", label: "Space between" },
-  { value: "around", label: "Space around" },
-  { value: "evenly", label: "Space evenly" },
+const DISTRIBUTION: readonly { value: Distribution; label: MessageKey }[] = [
+  { value: "packed", label: "insp.dist.packed" },
+  { value: "between", label: "insp.dist.between" },
+  { value: "around", label: "insp.dist.around" },
+  { value: "evenly", label: "insp.dist.evenly" },
 ]
 
 const layoutObj = (n: NodeData): Record<string, unknown> | null =>
@@ -756,7 +760,7 @@ export function AutoLayoutSection({ sel }: { sel: readonly Sel[] }) {
     }
     return (
       <PropSection
-        title={<SectionTitle label="Auto layout" fields={["layout"]} />}
+        title={<SectionTitle label={t("insp.autoLayout")} fields={["layout"]} />}
         action={{
           label: mixed ? "Add auto layout to all" : "Add auto layout",
           icon: <Icon name="plus" size={14} />,
@@ -853,9 +857,9 @@ export function AutoLayoutSection({ sel }: { sel: readonly Sel[] }) {
 
   return (
     <PropSection
-      title={<SectionTitle label="Auto layout" fields={["layout"]} />}
+      title={<SectionTitle label={t("insp.autoLayout")} fields={["layout"]} />}
       action={{
-        label: "Remove auto layout",
+        label: t("ui.shortcuts.remove-auto-layout"),
         icon: <Icon name="minus" size={14} />,
         onClick: () =>
           editor.apply(
@@ -878,7 +882,7 @@ export function AutoLayoutSection({ sel }: { sel: readonly Sel[] }) {
           />
           {dir === "row" && (
             <PanelIconToggle
-              label="Wrap"
+              label={t("insp.wrap")}
               icon={<Icon name="text-wrap" size={14} />}
               pressed={wrap === true}
               onClick={() => set({ wrap: wrap === true ? undefined : true }, "Set wrap")}
@@ -911,7 +915,7 @@ export function AutoLayoutSection({ sel }: { sel: readonly Sel[] }) {
                     {(bind) => (
                       <NumberField
                         prefix="↔"
-                        label="Gap"
+                        label={t("insp.gap")}
                         bind={bind}
                         value={num(gap)}
                         editor={editor}
@@ -927,7 +931,7 @@ export function AutoLayoutSection({ sel }: { sel: readonly Sel[] }) {
                     {(bind) => (
                       <NumberField
                         prefix="↕"
-                        label="Row gap"
+                        label={t("insp.rowGap")}
                         bind={bind}
                         value={num(crossGap)}
                         editor={editor}
@@ -945,7 +949,7 @@ export function AutoLayoutSection({ sel }: { sel: readonly Sel[] }) {
                   {(bind) => (
                     <NumberField
                       prefix="Gap"
-                      label="Gap"
+                      label={t("insp.gap")}
                       bind={bind}
                       value={num(gap)}
                       editor={editor}
@@ -959,9 +963,9 @@ export function AutoLayoutSection({ sel }: { sel: readonly Sel[] }) {
             )}
             <Select<Distribution>
               dense
-              label="Distribution"
+              label={t("insp.distribution")}
               className="rp-select-fill"
-              options={DISTRIBUTION}
+              options={DISTRIBUTION.map((x) => ({ value: x.value, label: t(x.label) }))}
               value={distribution === MIXED ? null : distribution}
               placeholder={MIXED_LABEL}
               onChange={(d) =>
@@ -997,7 +1001,7 @@ export function AutoLayoutSection({ sel }: { sel: readonly Sel[] }) {
               {(bind) => (
                 <NumberField
                   icon="arrow-left-right"
-                  label="Horizontal padding"
+                  label={t("insp.paddingX")}
                   bind={bind}
                   value={
                     pads === MIXED || individual === MIXED
@@ -1022,7 +1026,7 @@ export function AutoLayoutSection({ sel }: { sel: readonly Sel[] }) {
               {(bind) => (
                 <NumberField
                   icon="arrow-up-down"
-                  label="Vertical padding"
+                  label={t("insp.paddingY")}
                   bind={bind}
                   value={
                     pads === MIXED || individual === MIXED
@@ -1038,7 +1042,7 @@ export function AutoLayoutSection({ sel }: { sel: readonly Sel[] }) {
           </PropRow>
         )}
         <ToggleRow
-          label="Individual padding"
+          label={t("insp.paddingEach")}
           checked={individual}
           onChange={(on) =>
             editor.apply(

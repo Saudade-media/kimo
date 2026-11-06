@@ -8,6 +8,7 @@
  * One controller per window ({@link getAiProviders} in `runtime.ts`); other windows see
  * changes through `onExternalChange` (the `storage` event).
  */
+
 import {
   availableOn,
   BROWSER_SUPPORT,
@@ -29,6 +30,7 @@ import {
   TITLE_SCHEMA,
 } from "@kimo/ai-agent"
 import { type KeyValueStorage, providerAccount, type SecretsApi } from "@kimo/platform"
+import { t } from "../lib/i18n"
 import type {
   AgentUsageSettings,
   AiProvidersController,
@@ -204,7 +206,9 @@ async function cloudTest(
     await complete(provider, {
       model,
       system: { stable: "Connection test. Reply with OK." },
-      messages: [{ role: "user", content: [{ type: "text", text: "OK?" }] }],
+      messages: [
+        { role: "user", content: [{ type: "text", text: t("ui.ai.settings.controller.ok") }] },
+      ],
       tools: [],
       thinking: "low",
       maxTokens: 16,
@@ -827,7 +831,7 @@ export function createAiSettingsController(deps: AiSettingsDeps): AiSettingsCont
       const prev: StoredProvider = providers[kind] ?? {
         id: kind,
         kind,
-        label: "Bedrock · Vertex · Foundry",
+        label: t("ui.ai.settings.controller.bedrock-vertex-foundry"),
         models: (BUILTIN_PROVIDERS.find((b) => b.id === "bedrock") as StoredProvider).models,
       }
       const next: StoredProvider = { ...prev, id: kind, kind }

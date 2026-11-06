@@ -7,6 +7,7 @@
  *   Thread (aCRfC) fill, column, gap 12, padding 16 — or the Session List (zJTW2)
  *   Composer Wrap (mt5k9) padding [0, 12, 12, 12] › Composer/Agent (Bry8p) + its menus
  */
+
 import type { CliDetection } from "@kimo/ai-agent"
 import {
   AgentErrorCard,
@@ -62,6 +63,7 @@ import {
   useRef,
   useState,
 } from "react"
+import { t } from "../lib/i18n"
 import type { AgentMessageView, AttachmentChipView } from "../platform/contract"
 import { inTauri } from "../platform/runtime"
 import { AreaBusyCard, type AreaBusyEnv, useAreaWaitStatus } from "./AreaBusyCard"
@@ -281,13 +283,13 @@ export function AgentPanel({
             )}
             <span className="agent-panel__spacer" aria-hidden="true" />
             <IconButton
-              label="History"
+              label={t("ui.agent.panel.agentpanel.9")}
               icon={<History />}
               active={state.sessionsOpen}
               onClick={() => controller.toggleHistory()}
             />
             <IconButton
-              label="New session"
+              label={t("ui.agent.panel.agentpanel.8")}
               icon={<SquarePen />}
               onClick={() => controller.newSession()}
             />
@@ -326,7 +328,7 @@ export function AgentPanel({
                   key={a.request.id}
                   data-testid="agent-approval"
                   data-pen="OlhpU"
-                  title="Kimo wants to"
+                  title={t("ui.agent.panel.agentpanel.7")}
                   ops={approvalOps(a.request, {
                     ...(nodeNameOf ? { nodeName: nodeNameOf } : {}),
                     ...(parentNameOf ? { parentName: parentNameOf } : {}),
@@ -358,7 +360,7 @@ export function AgentPanel({
                   <button
                     type="button"
                     className="agent-panel__queued-bubble"
-                    title="Edit"
+                    title={t("ui.agent.panel.agentpanel.6")}
                     onClick={() => editQueued(i)}
                   >
                     {q}
@@ -368,7 +370,7 @@ export function AgentPanel({
                     <IconButton
                       size="sm"
                       tone="quiet"
-                      label="Edit queued message"
+                      label={t("ui.agent.panel.agentpanel.5")}
                       icon={<Pencil />}
                       data-testid="agent-queued-edit"
                       onClick={() => editQueued(i)}
@@ -376,7 +378,7 @@ export function AgentPanel({
                     <IconButton
                       size="sm"
                       tone="quiet"
-                      label="Remove queued message"
+                      label={t("ui.agent.panel.agentpanel.4")}
                       icon={<X />}
                       data-testid="agent-queued-remove"
                       onClick={() => controller.removeQueued(i)}
@@ -479,7 +481,7 @@ export function AgentPanel({
                   key={a.id}
                   type="button"
                   className="agent-panel__thumb-button"
-                  aria-label="Remove image"
+                  aria-label={t("ui.agent.panel.agentpanel.3")}
                   onClick={() => controller.removeAttachment(a.id)}
                 >
                   <AttachmentThumb
@@ -618,7 +620,9 @@ function ThreadItem({
           </div>
         )}
         <Message from="user">{m.text}</Message>
-        {m.fromHome && <span className="agent-panel__from-home">From Home</span>}
+        {m.fromHome && (
+          <span className="agent-panel__from-home">{t("ui.agent.panel.agentpanel.t1")}</span>
+        )}
         {m.skills.some((s) => s !== "kimo-design") && (
           <div className="agent-panel__skill-used" data-testid="agent-skill-used">
             <BookOpen className="agent-panel__skill-used-icon" aria-hidden="true" />
@@ -756,7 +760,7 @@ function ThreadItem({
             <RefusalCard
               data-testid="agent-error-card"
               data-pen="dIkT6"
-              title="Kimo won't do this one"
+              title={t("ui.agent.panel.agentpanel.2")}
               reason={stripMarkdown(m.text) || card.body}
               onEditRequest={() => onEditRequest(m.turnId)}
             />
@@ -767,7 +771,7 @@ function ThreadItem({
               data-kind="error"
               data-pen="u8mh7l"
               icon={<CircleX />}
-              title="Something went wrong"
+              title={t("ui.agent.panel.agentpanel.1")}
               description={genericBody(card)}
               actions={[
                 ...actions.slice(0, 1).map((a) => ({
@@ -776,7 +780,7 @@ function ThreadItem({
                 })),
                 {
                   id: "copy_error",
-                  label: "Copy error",
+                  label: t("ui.agent.panel.agentpanel.copy-error"),
                   icon: <Copy />,
                   onClick: () => onCopy(`${card.title}\n${card.body}`),
                 },
@@ -836,7 +840,7 @@ function AutoApprovedLines({ lines }: { lines: readonly string[] | undefined }) 
 function genericBody(card: { body: string; opsApplied: number }): string {
   const body = card.body.trim()
   if (card.opsApplied > 0 || /canvas|kept/i.test(body)) return body
-  return `${body}${/[.!?]$/.test(body) ? "" : "."} Nothing was changed on the canvas.`
+  return `${body}${/[.!?]$/.test(body) ? "" : "."} ${t("ui.agent.panel.agentpanel.noCanvasChange")}`
 }
 
 function switchLabel(state: AgentPanelViewState): string {

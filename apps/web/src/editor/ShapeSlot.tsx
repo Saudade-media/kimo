@@ -9,10 +9,12 @@
  * text-secondary; the current tool's row bg-hover + icon text-primary) and its shortcut as
  * Meta (R · O · L · ⇧L · — · ⇧S; Polygon has no key: the design's ⇧P stays Prompt's). Shortcuts work regardless of the slot.
  */
+
 import { MenuDense, MenuItemDense, ToolButton, Tooltip } from "@kimo/ui"
 import { useEffect, useRef, useState } from "react"
 import { createPortal } from "react-dom"
 import { type CanvasToolId, SHAPE_SLOT_TOOLS } from "../canvas/contract"
+import { t } from "../lib/i18n"
 import { Icon } from "../lib/icons"
 import { toolHint } from "./kbd"
 import "./shape-slot.css"
@@ -94,7 +96,7 @@ export function ShapeSlot({
       <button
         type="button"
         className="shape-slot__caret"
-        aria-label="Shapes"
+        aria-label={t("ui.editor.shapeslot.2")}
         aria-haspopup="menu"
         aria-expanded={open}
         data-pen="XELvA"
@@ -111,7 +113,7 @@ export function ShapeSlot({
           <MenuDense
             className="shape-flyout"
             data-pen="MBxVC"
-            label="Shapes"
+            label={t("ui.editor.shapeslot.1")}
             width={200}
             anchor={anchorRect}
             placement={{ side: "top", align: "center", offset: FLYOUT_GAP }}

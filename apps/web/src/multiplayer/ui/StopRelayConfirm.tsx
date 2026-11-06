@@ -2,8 +2,10 @@
  * Board 42 rule "This computer": the relay stops when Kimo quits, after a confirm when people are
  * connected through it. Shown over the window that runs it; Cancel keeps Kimo open.
  */
+
 import { Dialog, DialogScrim } from "@kimo/ui"
 import { createRoot } from "react-dom/client"
+import { t } from "../../lib/i18n"
 import { Icon } from "../../lib/icons"
 import "./relay-wizard.css"
 
@@ -43,7 +45,7 @@ export function confirmStopRelay(impact: DisconnectImpact): Promise<boolean> {
           className="rw-stop-dialog"
           size="sm"
           icon={<Icon name="power" size={16} />}
-          title="Quit and stop the relay?"
+          title={t("ui.multiplayer.ui.stoprelayconfirm.1")}
           description={stopRelayDescription(impact)}
           confirmLabel="Quit"
           onCancel={() => done(false)}

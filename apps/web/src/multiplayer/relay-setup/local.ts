@@ -4,6 +4,7 @@
  * cloudflared arguments and the quick tunnel's address in its output, and the Bun installer's
  * progress read from its output.
  */
+import { t } from "../../lib/i18n"
 import { RELAY_PORT } from "./commands"
 
 /** How many ports past 8787 are tried before giving up. */
@@ -108,9 +109,21 @@ export function bunInstallLines(os: string, arch: string): InstallLine[] {
   }.zip`
   return [
     { id: "download", label: `Downloading ${target}`, status: "running" },
-    { id: "extract", label: "Extracting to ~/.bun/bin", status: "pending" },
-    { id: "profile", label: "Adding ~/.bun/bin to your shell profile", status: "pending" },
-    { id: "check", label: "Checking bun --version", status: "pending" },
+    {
+      id: "extract",
+      label: t("ui.multiplayer.relay.setup.local.extracting-to-bun-bin"),
+      status: "pending",
+    },
+    {
+      id: "profile",
+      label: t("ui.multiplayer.relay.setup.local.adding-bun-bin-to-your-shell-profile"),
+      status: "pending",
+    },
+    {
+      id: "check",
+      label: t("ui.multiplayer.relay.setup.local.checking-bun-version"),
+      status: "pending",
+    },
   ]
 }
 

@@ -6,6 +6,7 @@
  * the vignette). The "…" menu (board 40 d5ZDH) sits 4 above the composer on its left edge, 232
  * wide.
  */
+
 import type { EffortLevel, ModelSelection } from "@kimo/ai-agent"
 import {
   AgentMark,
@@ -44,6 +45,7 @@ import {
   useRef,
   useState,
 } from "react"
+import { t } from "../lib/i18n"
 import type { AgentPanelControllerExt, AgentPanelViewState } from "./controller"
 import { modelLabel } from "./format"
 import {
@@ -366,7 +368,7 @@ export function ModelMenu({
   return (
     <MenuFrame
       className="agent-menu--model agent-chooser"
-      label="Model"
+      label={t("ui.agent.panel.menus.19")}
       testId="agent-model-menu"
       rootRef={root}
       onKeyDown={onKeyDown}
@@ -380,8 +382,8 @@ export function ModelMenu({
             ref={search}
             className="agent-chooser__search-input"
             type="text"
-            placeholder="Search models"
-            aria-label="Search models"
+            placeholder={t("ui.agent.panel.menus.18")}
+            aria-label={t("ui.agent.panel.menus.17")}
             value={cs.query}
             spellCheck={false}
             onChange={(e) => {
@@ -405,7 +407,7 @@ export function ModelMenu({
         <>
           {view.recent.length > 0 && (
             <>
-              <GroupHeader label="Recent" />
+              <GroupHeader label={t("ui.agent.panel.menus.16")} />
               {view.recent.map((r, i) => rowItem(r, i))}
               <MenuDivider />
             </>
@@ -428,7 +430,7 @@ export function ModelMenu({
                 </span>
               </div>
               <MenuItemDense
-                label="Sign in…"
+                label={t("ui.agent.panel.menus.15")}
                 className="agent-chooser__sign-in"
                 onSelect={manage}
               />
@@ -442,7 +444,7 @@ export function ModelMenu({
                 <span className="agent-menu__spacer" aria-hidden="true" />
                 <SegmentedText
                   className="agent-seg-sm"
-                  label="Effort"
+                  label={t("ui.agent.panel.menus.14")}
                   options={view.efforts.map((l) => ({ value: l, label: EFFORT_LABEL[l] }))}
                   value={view.effort ?? "high"}
                   onChange={(v) => controller.setThinking(v)}
@@ -455,13 +457,13 @@ export function ModelMenu({
       {view.kind === "empty" && (
         <div className="agent-chooser__empty">
           <Plug className="agent-chooser__empty-icon" aria-hidden="true" />
-          <span className="agent-chooser__empty-title">No provider connected</span>
-          <span className="agent-chooser__empty-hint">Sign in to a CLI or add an API key.</span>
+          <span className="agent-chooser__empty-title">{t("ui.agent.panel.menus.t3")}</span>
+          <span className="agent-chooser__empty-hint">{t("ui.agent.panel.menus.t2")}</span>
         </div>
       )}
       <MenuDivider />
       <MenuItemDense
-        label="Connect a provider…"
+        label={t("ui.agent.panel.menus.13")}
         icon={<Plus />}
         meta="⌘,"
         className="agent-menu__manage"
@@ -498,11 +500,11 @@ export function SkillsMenu({
   return (
     <MenuFrame
       className="agent-menu--skills"
-      label="Skills"
+      label={t("ui.agent.panel.menus.12")}
       testId="agent-skills-menu"
       onClose={() => controller.openMenu(null)}
     >
-      <GroupHeader label="Built-in" status="MIT" mono />
+      <GroupHeader label={t("ui.agent.panel.menus.11")} status="MIT" mono />
       {builtin.map((s) => (
         <SkillRow
           key={s.name}
@@ -513,7 +515,7 @@ export function SkillsMenu({
           onInsert={() => controller.insertSkill(s.name)}
         />
       ))}
-      <GroupHeader label="Yours" status="~/.kimo/skills" mono />
+      <GroupHeader label={t("ui.agent.panel.menus.10")} status="~/.kimo/skills" mono />
       {user.map((s) => (
         <SkillRow
           key={s.name}
@@ -541,7 +543,7 @@ export function SkillsMenu({
             icon={<FolderOpen />}
             onClick={() => onOpenFolder()}
           >
-            Open skills folder
+            {t("ui.agent.panel.menus.20")}
           </CompactButton>
         )}
         <span className="agent-menu__spacer" aria-hidden="true" />
@@ -554,32 +556,30 @@ export function SkillsMenu({
 const MODES = [
   {
     mode: "single" as const,
-    name: "Single",
-    description: "One agent, scoped to the selection (or the page when nothing is selected).",
+    name: "ui.agent.panel.menus.modeSingle",
+    description: "ui.agent.panel.menus.modeSingleDesc",
   },
   {
     mode: "side-by-side" as const,
-    name: "Side by side",
-    description: "N agents draft variants next to the original. Each owns one new frame.",
+    name: "ui.agent.panel.menus.modeSideBySide",
+    description: "ui.agent.panel.menus.modeSideBySideDesc",
   },
   {
     mode: "split" as const,
-    name: "Split",
-    description:
-      "The lead splits the work into placeholder frames; one agent per frame, in parallel.",
+    name: "ui.agent.panel.menus.modeSplit",
+    description: "ui.agent.panel.menus.modeSplitDesc",
   },
   {
     mode: "iterate" as const,
-    name: "Iterate",
-    description:
-      "Refines the selected frame in place, pass by pass, with a review step between passes.",
+    name: "ui.agent.panel.menus.modeIterate",
+    description: "ui.agent.panel.menus.modeIterateDesc",
   },
-]
+] as const
 
 /** Board 38 reasons, one text-xs line under the blocked Web access row (board 40 F / G). */
 const WEB_BLOCK_REASON = {
-  privacy: "No third-party fetch is on",
-  model: "This model can't use the web",
+  privacy: "ui.agent.panel.menus.webBlockPrivacy",
+  model: "ui.agent.panel.menus.webBlockModel",
 } as const
 
 const MORE_ITEMS =
@@ -634,7 +634,7 @@ export function MoreMenu({
   return (
     <MenuFrame
       className="agent-menu--more"
-      label="More options"
+      label={t("ui.agent.panel.menus.9")}
       testId="agent-more-menu"
       data-pen="c79jYX"
       rootRef={root}
@@ -642,7 +642,7 @@ export function MoreMenu({
       onKeyDown={onKeyDown}
     >
       <MenuItemDense
-        label="Skills"
+        label={t("ui.agent.panel.menus.8")}
         icon={<BookOpen />}
         meta={String(state.skills.enabled.length)}
         aria-haspopup="menu"
@@ -651,14 +651,14 @@ export function MoreMenu({
       />
       <MenuDivider />
       <MenuItemDense
-        label="Ask before changes"
+        label={t("ui.agent.panel.menus.7")}
         icon={state.autoApprove ? <Shield /> : <ShieldCheck />}
         switchOn={!state.autoApprove}
         data-testid="agent-more-auto"
         onSelect={onAutoApprove}
       />
       <MenuItemDense
-        label="Web access"
+        label={t("ui.agent.panel.menus.6")}
         icon={blocked === "privacy" ? <GlobeLock /> : web.on && !blocked ? <Globe /> : <GlobeX />}
         switchOn={web.on && !blocked}
         disabled={!!blocked}
@@ -673,7 +673,7 @@ export function MoreMenu({
           className="agent-more__reason"
           data-testid="agent-more-reason"
         >
-          {WEB_BLOCK_REASON[blocked]}
+          {t(WEB_BLOCK_REASON[blocked])}
         </p>
       )}
     </MenuFrame>
@@ -740,7 +740,7 @@ export function ModeMenu({
   return (
     <MenuFrame
       className="agent-menu--mode"
-      label="Mode"
+      label={t("ui.agent.panel.menus.5")}
       testId="agent-mode-menu"
       onClose={() => controller.openMenu(null)}
     >
@@ -748,8 +748,8 @@ export function ModeMenu({
         <ModeOption
           key={x.mode}
           mode={x.mode}
-          name={x.name}
-          description={x.description}
+          name={t(x.name)}
+          description={t(x.description)}
           checked={m.mode === x.mode}
           onClick={() => controller.setMode({ ...m, mode: x.mode })}
         />
@@ -760,7 +760,7 @@ export function ModeMenu({
           <span className="agent-menu__config-label">Agents</span>
           <span className="agent-menu__spacer" aria-hidden="true" />
           <Stepper
-            label="Agents"
+            label={t("ui.agent.panel.menus.4")}
             value={m.agents}
             min={1}
             max={6}
@@ -789,7 +789,7 @@ export function ModeMenu({
           <span className="agent-menu__config-label">Passes</span>
           <span className="agent-menu__spacer" aria-hidden="true" />
           <Stepper
-            label="Passes"
+            label={t("ui.agent.panel.menus.3")}
             value={m.passes}
             min={1}
             max={9}
@@ -799,16 +799,16 @@ export function ModeMenu({
       )}
       {multi && (
         <div className="agent-menu__config">
-          <span className="agent-menu__config-label">Model per agent</span>
+          <span className="agent-menu__config-label">{t("ui.agent.panel.menus.t1")}</span>
           <span className="agent-menu__spacer" aria-hidden="true" />
           <Select
             dense
             className="agent-menu__select"
-            label="Model per agent"
+            label={t("ui.agent.panel.menus.2")}
             value={same ? "same" : "per"}
             options={[
               { value: "same", label: `Same · ${label}` },
-              { value: "per", label: "Per agent" },
+              { value: "per", label: t("ui.agent.panel.menus.per-agent") },
             ]}
             onChange={(v) =>
               controller.setMode({
@@ -860,11 +860,11 @@ export function ModeMenu({
           <span className="agent-menu__spacer" aria-hidden="true" />
           <SegmentedText
             className="agent-seg-sm"
-            label="Explore"
+            label={t("ui.agent.panel.menus.1")}
             options={[
-              { value: "layout", label: "Layout" },
-              { value: "style", label: "Style" },
-              { value: "both", label: "Both" },
+              { value: "layout", label: t("ui.agent.panel.menus.layout") },
+              { value: "style", label: t("insp.style") },
+              { value: "both", label: t("ui.agent.panel.menus.both") },
             ]}
             value={m.explore}
             onChange={(v) => controller.setMode({ ...m, explore: v })}

@@ -1,3 +1,4 @@
+import { t } from "@kimo/i18n"
 import type { ComponentPropsWithRef } from "react"
 import { cx } from "../internal/util"
 import { PropField } from "../prop-field/PropField"
@@ -37,7 +38,7 @@ export function StrokeSideFields({
   onScrubStart,
   onScrubEnd,
   min = 0,
-  label = "Stroke",
+  label = t("ui.pkg.stroke.side.fields.strokesidefields.stroke"),
   className,
   ...rest
 }: StrokeSideFieldsProps) {

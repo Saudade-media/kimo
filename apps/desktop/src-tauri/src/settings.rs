@@ -30,6 +30,7 @@ pub fn defaults() -> Map<String, Value> {
         "fonts.extraFolders": [],
         "fonts.embedInKimoz": true,
         "general.appearance": "system",
+        "general.language": "en",
         "general.onLaunch": "last-files",
         "general.canvasZoom": "trackpad",
         "general.duplicateMain": "ask",
@@ -98,6 +99,7 @@ pub fn validate(key: &str, v: &Value) -> Option<bool> {
                 })
         }),
         "general.appearance" => one_of(v, &["system", "light", "dark"]),
+        "general.language" => one_of(v, &["en", "zh-Hans"]),
         "general.onLaunch" => one_of(v, &["last-files", "home"]),
         "general.canvasZoom" => one_of(v, &["trackpad", "mouse"]),
         "general.duplicateMain" => one_of(v, &["ask", "instance", "component"]),

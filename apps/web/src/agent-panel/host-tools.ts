@@ -26,6 +26,7 @@ import {
   type ToolResult,
 } from "@kimo/mcp-server"
 import type { HostClient } from "../host/client"
+import { t } from "../lib/i18n"
 import type { ToolHostFactory } from "./tools"
 
 export interface HostToolsOptions {
@@ -144,7 +145,10 @@ export function createHostTools(o: HostToolsOptions): HostTools {
           return {
             result: failure({
               code: /restarted|did not answer|disposed/.test(message) ? "TIMEOUT" : "INTERNAL",
-              message: `The document host could not run ${call.name}: ${message}`,
+              message: t("ui.agent.panel.hosttools.failed", {
+                tool: call.name,
+                message,
+              }),
               retryable: true,
             }),
           }

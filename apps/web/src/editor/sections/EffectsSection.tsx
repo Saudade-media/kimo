@@ -3,8 +3,10 @@
  * followed by its details (`eq3UU`, column gap 8): shadows Row X · Y, Row Blur · Spread and
  * the shadow ColorField; blurs a single Blur field.
  */
+
 import { ColorField, type EffectKind, EffectRow, PropRow, PropSection } from "@kimo/ui"
 import { Fragment, useRef, useState } from "react"
+import { t } from "../../lib/i18n"
 import { Icon } from "../../lib/icons"
 import { Bindable } from "../bind"
 import { NumberField } from "../fields"
@@ -107,8 +109,12 @@ export function EffectsSection({ sel }: { sel: readonly Sel[] }) {
 
   return (
     <PropSection
-      title={<SectionTitle label="Effects" fields={["effects"]} />}
-      action={{ label: "Add effect", icon: <Icon name="plus" size={14} />, onClick: add }}
+      title={<SectionTitle label={t("insp.effects")} fields={["effects"]} />}
+      action={{
+        label: t("ui.editor.sections.effectssection.add-effect"),
+        icon: <Icon name="plus" size={14} />,
+        onClick: add,
+      }}
     >
       {(effects === MIXED || isRef(effects) || list.length > 0) && (
         <div className="rp-body">

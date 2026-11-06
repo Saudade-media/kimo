@@ -32,6 +32,7 @@
  * of their own get an OpenTypeFeatureRow (LFdEa) marked "not in font" when the face lacks them —
  * checked against the face's GSUB / GPOS FeatureList (`fonts/font-features.ts`).
  */
+
 import type { LayoutResult } from "@kimo/layout"
 import {
   CustomTagField,
@@ -49,6 +50,7 @@ import {
   WarningDot,
 } from "@kimo/ui"
 import { type ReactNode, useEffect, useMemo, useRef, useState } from "react"
+import { type MessageKey, t } from "../../lib/i18n"
 import "./text-more.css"
 import { realId } from "../../canvas/rich-text/panel-bridge"
 import type { RichTextSession } from "../../canvas/rich-text/session"
@@ -97,41 +99,41 @@ import {
   weightOf,
 } from "../text"
 
-const ALIGN: { value: TextAlign; label: string; icon: string }[] = [
-  { value: "left", label: "Align left", icon: "text-align-start" },
-  { value: "center", label: "Align center", icon: "text-align-center" },
-  { value: "right", label: "Align right", icon: "text-align-end" },
-  { value: "justify", label: "Justify", icon: "text-align-justify" },
+const ALIGN: { value: TextAlign; label: MessageKey; icon: string }[] = [
+  { value: "left", label: "ui.text.align.left", icon: "text-align-start" },
+  { value: "center", label: "ui.text.align.center", icon: "text-align-center" },
+  { value: "right", label: "ui.text.align.right", icon: "text-align-end" },
+  { value: "justify", label: "ui.text.align.justify", icon: "text-align-justify" },
 ]
-const VALIGN: { value: TextVAlign; label: string; icon: string }[] = [
-  { value: "top", label: "Align top", icon: "arrow-up-to-line" },
-  { value: "middle", label: "Align middle", icon: "fold-vertical" },
-  { value: "bottom", label: "Align bottom", icon: "arrow-down-to-line" },
+const VALIGN: { value: TextVAlign; label: MessageKey; icon: string }[] = [
+  { value: "top", label: "ui.text.valign.top", icon: "arrow-up-to-line" },
+  { value: "middle", label: "ui.text.valign.middle", icon: "fold-vertical" },
+  { value: "bottom", label: "ui.text.valign.bottom", icon: "arrow-down-to-line" },
 ]
-const GROW: { value: TextGrow; label: string; icon: string }[] = [
-  { value: "auto", label: "Auto width", icon: "move-horizontal" },
-  { value: "fixed-width", label: "Auto height", icon: "text-wrap" },
-  { value: "fixed", label: "Fixed size", icon: "square-dashed" },
+const GROW: { value: TextGrow; label: MessageKey; icon: string }[] = [
+  { value: "auto", label: "ui.text.grow.auto", icon: "move-horizontal" },
+  { value: "fixed-width", label: "ui.text.grow.fixedWidth", icon: "text-wrap" },
+  { value: "fixed", label: "ui.text.grow.fixed", icon: "square-dashed" },
 ]
-const DECORATION: { value: TextDecoration; label: string; icon: string }[] = [
-  { value: "none", label: "No decoration", icon: "minus" },
-  { value: "underline", label: "Underline", icon: "underline" },
-  { value: "strike", label: "Strikethrough", icon: "strikethrough" },
+const DECORATION: { value: TextDecoration; label: MessageKey; icon: string }[] = [
+  { value: "none", label: "ui.text.decoration.none", icon: "minus" },
+  { value: "underline", label: "ui.text.decoration.underline", icon: "underline" },
+  { value: "strike", label: "ui.text.decoration.strike", icon: "strikethrough" },
 ]
-const CASE: { value: TextCase; label: string; icon: string }[] = [
-  { value: "none", label: "As typed", icon: "minus" },
-  { value: "upper", label: "Uppercase", icon: "case-upper" },
-  { value: "lower", label: "Lowercase", icon: "case-lower" },
-  { value: "title", label: "Title case", icon: "case-sensitive" },
+const CASE: { value: TextCase; label: MessageKey; icon: string }[] = [
+  { value: "none", label: "ui.text.case.none", icon: "minus" },
+  { value: "upper", label: "ui.text.case.upper", icon: "case-upper" },
+  { value: "lower", label: "ui.text.case.lower", icon: "case-lower" },
+  { value: "title", label: "ui.text.case.title", icon: "case-sensitive" },
 ]
 
 const options = <V extends string>(
-  list: { value: V; label: string; icon: string }[],
+  list: { value: V; label: MessageKey; icon: string }[],
   disabled = false,
 ) =>
   list.map((o) => ({
     value: o.value,
-    label: o.label,
+    label: t(o.label),
     icon: <Icon name={o.icon} size={14} />,
     disabled,
   }))
@@ -180,7 +182,7 @@ export function TextSection({
     if (runtime)
       await runtime.platform.files
         .openExternalUrl(url)
-        .catch((e: unknown) => fail("open the link", e))
+        .catch((e: unknown) => fail(t("errors.openLink"), e))
     else window.open(url, "_blank", "noopener,noreferrer")
   }
   const family = font === MIXED ? null : font
@@ -239,9 +241,9 @@ export function TextSection({
   return (
     <PropSection
       className={moreOpen ? "rp-text-section rp-text-section--more-open" : "rp-text-section"}
-      title={<SectionTitle label="Text" fields={["style", "grow", "content"]} />}
+      title={<SectionTitle label={t("insp.text")} fields={["style", "grow", "content"]} />}
       action={{
-        label: "More text options",
+        label: t("ui.text.moreOptions"),
         icon: (
           <span ref={moreAnchor} className="rp-text__more">
             <Icon name="ellipsis" size={14} />
@@ -260,7 +262,7 @@ export function TextSection({
             sel={sel}
             spec={{
               type: "string",
-              label: "Font family",
+              label: t("ui.text.family"),
               get: (n) => styleOf(n).font ?? TEXT_DEFAULTS.font,
               put: (s, v) => styleOps([s], "font", () => v),
               current: () => (font === MIXED || font.startsWith("$") ? null : font),
@@ -273,7 +275,7 @@ export function TextSection({
                   ref={fontTrigger}
                   type="button"
                   className={fontOpen ? "rp-select rp-select--open" : "rp-select"}
-                  aria-label="Font family"
+                  aria-label={t("insp.fontFamily")}
                   aria-haspopup="dialog"
                   aria-expanded={fontOpen}
                   onClick={() => setFontOpen((o) => !o)}
@@ -295,7 +297,7 @@ export function TextSection({
             sel={sel}
             spec={{
               type: "number",
-              label: "Font weight",
+              label: t("ui.text.weight"),
               prefix: "Wt",
               get: (n) => styleOf(n).weight ?? TEXT_DEFAULTS.weight,
               put: (s, v) => styleOps([s], "weight", () => v),
@@ -315,7 +317,7 @@ export function TextSection({
                   ]
                     .filter(Boolean)
                     .join(" ")}
-                  aria-label="Font weight"
+                  aria-label={t("insp.fontWeight")}
                   aria-haspopup="menu"
                   aria-expanded={weightOpen}
                   aria-description={weightWarning ? weightWarning.title : undefined}
@@ -358,7 +360,7 @@ export function TextSection({
             className="rp-bind--w96"
             spec={{
               type: "number",
-              label: "Font size",
+              label: t("ui.text.size"),
               prefix: "Sz",
               get: (n) => styleOf(n).size ?? TEXT_DEFAULTS.size,
               put: (s, v) => styleOps([s], "size", () => v),
@@ -369,7 +371,7 @@ export function TextSection({
             {(bind) => (
               <NumberField
                 icon="a-large-small"
-                label="Font size"
+                label={t("insp.fontSize")}
                 bind={bind}
                 className="rp-field--w96"
                 value={size}
@@ -394,7 +396,7 @@ export function TextSection({
             sel={sel}
             spec={{
               type: "number",
-              label: "Line height",
+              label: t("ui.text.lineHeight"),
               prefix: "LH",
               get: (n) => styleOf(n).lineHeight ?? null,
               put: (s, v) => styleOps([s], "lineHeight", () => v),
@@ -411,7 +413,7 @@ export function TextSection({
               <NumberField
                 bind={bind}
                 icon="unfold-vertical"
-                label="Line height"
+                label={t("insp.lineHeight")}
                 value={lineHeight}
                 editor={editor}
                 min={0}
@@ -438,7 +440,7 @@ export function TextSection({
             sel={sel}
             spec={{
               type: "number",
-              label: "Letter spacing",
+              label: t("ui.text.letterSpacing"),
               prefix: "LS",
               get: (n) => styleOf(n).letterSpacing ?? 0,
               put: (s, v) => styleOps([s], "letterSpacing", () => (v === 0 ? undefined : v)),
@@ -455,7 +457,7 @@ export function TextSection({
               <NumberField
                 bind={bind}
                 icon="unfold-horizontal"
-                label="Letter spacing"
+                label={t("insp.letterSpacing")}
                 value={letterSpacing}
                 editor={editor}
                 step={0.1}
@@ -497,7 +499,7 @@ export function TextSection({
         {/* Align Row (Z6F9a9): space-between */}
         <div className="rp-text__align-row">
           <Segmented
-            label="Text align"
+            label={t("insp.textAlign")}
             options={options(ALIGN)}
             value={one(align)}
             onChange={(v) =>
@@ -508,7 +510,7 @@ export function TextSection({
             }
           />
           <Segmented
-            label="Vertical align"
+            label={t("insp.verticalAlign")}
             options={options(VALIGN, grow !== "fixed")}
             value={one(valign)}
             onChange={(v) =>
@@ -520,13 +522,13 @@ export function TextSection({
           />
         </div>
         <SegmentedRow
-          label="Resizing"
+          label={t("insp.resizing")}
           options={options(GROW)}
           value={one(grow)}
           onChange={(v) => editor.apply(growOps(sel, v, laid), "Set text resizing")}
         />
         <SegmentedRow
-          label="Decoration"
+          label={t("insp.decoration")}
           options={options(DECORATION)}
           value={decoration === MIXED ? null : decoration}
           onChange={(v) =>
@@ -537,7 +539,7 @@ export function TextSection({
           }
         />
         <SegmentedRow
-          label="Case"
+          label={t("insp.case")}
           options={options(CASE)}
           value={one(textCase)}
           onChange={(v) =>
@@ -550,11 +552,11 @@ export function TextSection({
         {/* Italic Row (G0AWh7): only while italic is on */}
         {italic !== false && (
           <div className="rp-toggle-row" data-testid="text-italic-row">
-            <span className="rp-toggle-row__label">Italic</span>
+            <span className="rp-toggle-row__label">{t("insp.italic")}</span>
             <span className="rp-spacer" />
             <Toggle
               checked={italic === true}
-              label="Italic"
+              label={t("insp.italic")}
               onChange={(on) =>
                 editor.apply(
                   styleOps(sel, "italic", () => (on ? true : undefined)),
@@ -567,7 +569,7 @@ export function TextSection({
         {/* Features Row (SE1Ap): active non-default tags as removable chips */}
         {activeFeatures(features).length > 0 && (
           <div className="rp-toggle-row" data-testid="text-features-row">
-            <span className="rp-toggle-row__label">Features</span>
+            <span className="rp-toggle-row__label">{t("insp.features")}</span>
             <span className="rp-spacer" />
             {activeFeatures(features).map(([tag, v]) => (
               <span key={tag} className="rp-feature-chip" data-tag={tag}>
@@ -585,7 +587,7 @@ export function TextSection({
             <IconButton
               className="rp-feature-add"
               tone="quiet"
-              label="Add feature"
+              label={t("insp.addFeature")}
               icon={<Icon name="plus" size={12} />}
               onClick={() => setMoreOpen(true)}
             />
@@ -708,7 +710,7 @@ function ContentRow({ sel }: { sel: readonly Sel[] }) {
       onPickerClose={clear}
       spec={{
         type: "string",
-        label: "Text",
+        label: t("ui.text.section"),
         get: (n) => n.content,
         put: (s, v) => [{ op: "update", id: s.id, set: { content: v } }],
         format: (v) => `\u201c${String(v)}\u201d`,
@@ -840,7 +842,7 @@ function WeightMenu({
     <MenuDense
       anchor={anchor}
       width={anchor.getBoundingClientRect().width}
-      label="Font weight"
+      label={t("insp.fontWeight")}
       autoFocus
       onClose={onClose}
     >
@@ -900,13 +902,13 @@ type Features = Readonly<Record<string, FeatureValue>>
 const DEFAULT_ON = new Set(["liga", "calt"])
 
 /** The OpenType rows of the menu (ndO4D), in board order. */
-const FEATURE_ITEMS: readonly { tag: string; label: string }[] = [
-  { tag: "liga", label: "Standard ligatures" },
-  { tag: "calt", label: "Contextual alternates" },
-  { tag: "tnum", label: "Tabular numbers" },
-  { tag: "zero", label: "Slashed zero" },
-  { tag: "smcp", label: "Small caps" },
-  { tag: "frac", label: "Fractions" },
+const FEATURE_ITEMS: readonly { tag: string; label: MessageKey }[] = [
+  { tag: "liga", label: "ui.text.feature.liga" },
+  { tag: "calt", label: "ui.text.feature.calt" },
+  { tag: "tnum", label: "ui.text.feature.tnum" },
+  { tag: "zero", label: "ui.text.feature.zero" },
+  { tag: "smcp", label: "ui.text.feature.smcp" },
+  { tag: "frac", label: "ui.text.feature.frac" },
 ]
 
 /** ss01 … ss20. */
@@ -1061,7 +1063,7 @@ function TextMoreMenu({
         anchor={anchor}
         placement={{ side: "bottom", align: "end" }}
         width={256}
-        label="More text options"
+        label={t("insp.moreText")}
         className="rp-text-menu"
         data-testid="text-more-menu"
         onClose={() => {
@@ -1069,10 +1071,10 @@ function TextMoreMenu({
         }}
       >
         <div className="rp-text-menu__group" role="presentation">
-          <span className="rp-text-menu__group-label">Style</span>
+          <span className="rp-text-menu__group-label">{t("insp.style")}</span>
         </div>
         <MenuItemDense
-          label="Italic"
+          label={t("insp.italic")}
           checked={italic}
           meta={keyHint("italic", "⌘I")}
           className={
@@ -1082,7 +1084,7 @@ function TextMoreMenu({
           onSelect={onItalic}
         />
         <MenuItemDense
-          label="Link…"
+          label={t("insp.link")}
           checked={linked}
           meta={keyHint("link", "⌘K")}
           className="rp-text-menu__item"
@@ -1090,12 +1092,12 @@ function TextMoreMenu({
         />
         <MenuDivider />
         <div className="rp-text-menu__group" role="presentation">
-          <span className="rp-text-menu__group-label">OpenType features</span>
+          <span className="rp-text-menu__group-label">{t("insp.opentype")}</span>
         </div>
         {FEATURE_ITEMS.map((f) => (
           <MenuItemDense
             key={f.tag}
-            label={f.label}
+            label={t(f.label)}
             checked={featureOn(features, f.tag)}
             meta={f.tag}
             data-tag={f.tag}
@@ -1104,7 +1106,7 @@ function TextMoreMenu({
           />
         ))}
         <MenuItemDense
-          label="Stylistic sets"
+          label={t("insp.stylisticSets")}
           checked={STYLISTIC_SETS.some((t) => featureOn(features, t))}
           meta="ss01–20 ›"
           aria-haspopup="menu"
@@ -1140,7 +1142,7 @@ function TextMoreMenu({
           </div>
         ) : (
           <MenuItemDense
-            label="Custom tag…"
+            label={t("insp.customTag")}
             checked={false}
             meta="tag = n"
             className="rp-text-menu__item"
@@ -1149,7 +1151,7 @@ function TextMoreMenu({
         )}
         <MenuDivider />
         <MenuItemDense
-          label="Reset text style"
+          label={t("insp.resetText")}
           checked={false}
           className="rp-text-menu__item"
           onSelect={onReset}
@@ -1160,7 +1162,7 @@ function TextMoreMenu({
           anchor={sets}
           placement={{ side: "left", align: "start" }}
           width={120}
-          label="Stylistic sets"
+          label={t("insp.stylisticSets")}
           className="rp-text-menu"
           data-testid="text-sets-menu"
           autoFocus

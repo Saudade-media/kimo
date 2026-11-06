@@ -3,9 +3,11 @@
  * error and plan fragments (6 D payment failed, 6 E offline, 6 F storage full), the storage bar,
  * the plan pill, the device rows and the sign out dialogs (5 B, 5 C).
  */
+
 import { Badge, Button, Dialog, DialogScrim, IconButton } from "@kimo/ui"
 import { useEffect, useRef, useState } from "react"
 import { createPortal } from "react-dom"
+import { t } from "../../lib/i18n"
 import { Icon } from "../../lib/icons"
 import type { CloudAccount, CloudDevice } from "../cloud/types"
 import {
@@ -44,29 +46,36 @@ export function CloudNotice({
       ? {
           icon: "credit-card",
           label: account?.account.email ?? "",
-          pill: { tone: "warning" as const, label: "Past due" },
-          title: "Payment failed",
+          pill: { tone: "warning" as const, label: t("ui.multiplayer.ui.workspaceshare.8") },
+          title: t("ui.multiplayer.ui.cloudplanbanner.1"),
           desc: account
             ? paymentFailedDesc(account.plan)
             : "We could not charge your card. Nothing has stopped yet.",
-          action: { icon: "external-link", label: "Update payment" },
+          action: {
+            icon: "external-link",
+            label: t("ui.multiplayer.ui.cloud.parts.update-payment"),
+          },
         }
       : kind === "offline"
         ? {
             icon: "cloud",
-            label: "Kimo Cloud",
-            pill: { tone: "danger" as const, label: "Offline" },
-            title: "Can't reach Kimo Cloud",
-            desc: "Check your connection. Files already shared sync again as soon as you are back online.",
-            action: { icon: "refresh-cw", label: "Try again" },
+            label: t("ui.multiplayer.ui.cloudwizardsteps.2"),
+            pill: { tone: "danger" as const, label: t("ui.multiplayer.ui.cloudsettings.2") },
+            title: t("ui.multiplayer.ui.cloud.parts.can-t-reach-kimo-cloud"),
+            desc: t(
+              "ui.multiplayer.ui.cloud.parts.check-your-connection-files-already-shared-sync-again-as-soon-as-you-are-back-online",
+            ),
+            action: { icon: "refresh-cw", label: t("ui.multiplayer.ui.cloud.parts.try-again") },
           }
         : {
             icon: "hard-drive",
             label: account ? storageText(account.usage) : "Storage",
-            pill: { tone: "danger" as const, label: "Full" },
-            title: "Kimo Cloud storage is full",
-            desc: "New images and fonts will not sync, but edits still do. Stop sharing files you don't need to free space.",
-            action: { icon: "external-link", label: "Manage billing" },
+            pill: { tone: "danger" as const, label: t("ui.multiplayer.ui.cloud.parts.full") },
+            title: t("ui.multiplayer.ui.cloud.parts.kimo-cloud-storage-is-full"),
+            desc: t(
+              "ui.multiplayer.ui.cloud.parts.new-images-and-fonts-will-not-sync-but-edits-still-do-stop-sharing-files-you-don-t-need-to-free-space",
+            ),
+            action: { icon: "external-link", label: t("ui.multiplayer.ui.cloudsettings.5") },
           }
   return (
     <div
@@ -158,7 +167,9 @@ export function CloudDeviceRow({
           ) : (
             <span className="mp-device__name">{device.name}</span>
           )}
-          {device.self && <Badge className="mp-device__self">This device</Badge>}
+          {device.self && (
+            <Badge className="mp-device__self">{t("ui.multiplayer.ui.cloud.parts.t1")}</Badge>
+          )}
         </span>
         <span className="mp-device__meta">{deviceMeta(device.linkedAt, now)}</span>
       </span>
@@ -177,7 +188,7 @@ export function CloudDeviceRow({
           {onSignOut && (
             <IconButton
               className="mp-device__sign-out"
-              label={`Sign out ${device.name}`}
+              label={t("ui.mp.cloudparts.signOut", { name: device.name })}
               icon={<Icon name="log-out" size={14} />}
               size="sm"
               tone="ghost"
@@ -210,7 +221,7 @@ function NameField({
     <input
       ref={ref}
       className="mp-device__name-field"
-      aria-label="Device name"
+      aria-label={t("ui.multiplayer.ui.cloud.parts.1")}
       value={value}
       maxLength={64}
       spellCheck={false}
@@ -253,7 +264,11 @@ export function CloudSignOutDialog({
       className="mp-cloud-sign-out"
       data-device={device ? "other" : "self"}
       icon={<Icon name="log-out" size={16} />}
-      title={device ? `Sign out ${device.name}?` : "Sign out of Kimo Cloud?"}
+      title={
+        device
+          ? t("ui.mp.cloudparts.signOutConfirm", { name: device.name })
+          : t("ui.mp.cloudparts.signOutCloud")
+      }
       description={
         device
           ? "It can no longer start sharing on Kimo Cloud. Files it already shared keep syncing."

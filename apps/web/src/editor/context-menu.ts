@@ -18,7 +18,9 @@
  *   Ungroup · Wrap in frame ─ Add / Remove auto layout ─ Create component · Bring to front ·
  *   Send to back · Lock ─ Delete; the same list as the layer-row menu (identical order).
  */
+
 import { isOrphanPlaceholder, placeholderOwner } from "@kimo/ai-agent"
+import { t, tn } from "../lib/i18n"
 
 interface MenuNodeReader {
   getNode(id: string): Readonly<Record<string, unknown>> | undefined
@@ -177,7 +179,7 @@ function agentRows(i: CanvasMenuInput): CanvasMenuRow[] {
     return [
       {
         id: "convert",
-        label: sel.length === 1 ? "Convert to prompt" : `Convert ${sel.length} to prompts`,
+        label: tn("ui.editor.contextmenu.convertOne", "ui.editor.contextmenu.convert", sel.length),
         icon: "sparkles",
         tone: "agent",
         action: { kind: "convert", ids: [...sel] },
@@ -190,7 +192,7 @@ function agentRows(i: CanvasMenuInput): CanvasMenuRow[] {
     if (i.agent)
       rows.push({
         id: "run",
-        label: sel.length === 1 ? "Run prompt" : `Run ${sel.length} prompts`,
+        label: tn("ui.editor.contextmenu.runOne", "ui.editor.contextmenu.run", sel.length),
         icon: "play",
         tone: "agent",
         action: { kind: "run", ids: [...sel] },
@@ -199,7 +201,7 @@ function agentRows(i: CanvasMenuInput): CanvasMenuRow[] {
       const target = str(nodes[0]?.target)
       rows.push({
         id: "target",
-        label: "Set as target",
+        label: t("ui.editor.context.menu.set-as-target"),
         icon: "crosshair",
         tone: "agent",
         meta: (target && menuNodeName(doc, target)) || "—",
@@ -217,7 +219,7 @@ function agentRows(i: CanvasMenuInput): CanvasMenuRow[] {
   const rows: CanvasMenuRow[] = []
   const clear: CanvasMenuRow = {
     id: "clear",
-    label: "Clear flag",
+    label: t("ui.editor.context.menu.clear-flag"),
     icon: "flag-off",
     tone: "agent",
     action: { kind: "clear", ids: [...sel] },
@@ -229,7 +231,7 @@ function agentRows(i: CanvasMenuInput): CanvasMenuRow[] {
     if (owner && owner.ordinal !== null)
       rows.push({
         id: "resume",
-        label: "Resume agent",
+        label: t("ui.editor.context.menu.resume-agent"),
         icon: "agent-mark",
         meta: `session ${owner.ordinal}`,
         metaFont: "sans",
@@ -239,7 +241,7 @@ function agentRows(i: CanvasMenuInput): CanvasMenuRow[] {
     else
       rows.push({
         id: "ask",
-        label: "Ask Kimo to finish",
+        label: t("ui.editor.context.menu.ask-kimo-to-finish"),
         icon: "agent-mark",
         tone: "agent",
         action: { kind: "ask", frame },
@@ -256,7 +258,9 @@ export function canvasMenuModel(i: CanvasMenuInput): CanvasMenuModel | null {
   const kbd = i.kbd ?? ((id: string) => DEFAULT_KBD[id] ?? "")
   return {
     agent: [],
-    standard: [{ id: "copy", label: "Copy", meta: kbd("copy"), action: { kind: "copy" } }],
+    standard: [
+      { id: "copy", label: t("ui.shortcuts.copy"), meta: kbd("copy"), action: { kind: "copy" } },
+    ],
     structure: [],
     danger: [],
   }
@@ -276,7 +280,7 @@ function fullCanvasMenuModel(i: CanvasMenuInput): CanvasMenuModel | null {
   const danger: CanvasMenuRow[] = [
     {
       id: "delete",
-      label: "Delete",
+      label: t("ui.editor.m3.variablesdialog.17"),
       meta: kbd("delete"),
       tone: "danger",
       action: { kind: "delete" },
@@ -285,7 +289,16 @@ function fullCanvasMenuModel(i: CanvasMenuInput): CanvasMenuModel | null {
   const vars = variableRows(i.variables, real)
   // Board 47 §2: Export… as its own group before Delete.
   const exportGroup: CanvasMenuRow[][] = i.canExport
-    ? [[{ id: "export", label: "Export…", meta: kbd("exportDialog"), action: { kind: "export" } }]]
+    ? [
+        [
+          {
+            id: "export",
+            label: t("editor.exportEllipsis"),
+            meta: kbd("exportDialog"),
+            action: { kind: "export" },
+          },
+        ],
+      ]
     : []
   const st = i.structure
   if (st) {
@@ -367,8 +380,13 @@ function fullCanvasMenuModel(i: CanvasMenuInput): CanvasMenuModel | null {
     }
   }
   const standard: CanvasMenuRow[] = [
-    { id: "duplicate", label: "Duplicate", meta: kbd("duplicate"), action: { kind: "duplicate" } },
-    { id: "front", label: "Bring to front", action: { kind: "front", ids: real } },
+    {
+      id: "duplicate",
+      label: t("ui.editor.m3.componentdialogs.1"),
+      meta: kbd("duplicate"),
+      action: { kind: "duplicate" },
+    },
+    { id: "front", label: t("ui.shortcuts.bring-to-front"), action: { kind: "front", ids: real } },
     lock,
   ]
   return {
@@ -386,19 +404,19 @@ function variableRows(v: VariableMenuState | undefined, real: string[]): CanvasM
   if (v.bindVisible)
     out.push({
       id: "bindVisible",
-      label: "Bind visibility to variable…",
+      label: t("ui.editor.context.menu.bind-visibility-to-variable"),
       action: { kind: "bindVariable", field: "visible" },
     })
   if (v.bindText)
     out.push({
       id: "bindText",
-      label: "Bind text to variable…",
+      label: t("ui.editor.context.menu.bind-text-to-variable"),
       action: { kind: "bindVariable", field: "content" },
     })
   if (v.bound)
     out.push({
       id: "detachVariables",
-      label: "Detach all variables",
+      label: t("ui.editor.context.menu.detach-all-variables"),
       action: { kind: "detachVariables", ids: real },
     })
   return out

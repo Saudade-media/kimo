@@ -4,6 +4,7 @@
  * `finishMerge`) and applies the difference as ONE `store.apply` op group, so each choice is one
  * undo step, applies live on canvas, and syncs like any edit.
  */
+
 import {
   applyAllConflicts,
   applyConflictSide,
@@ -17,6 +18,7 @@ import {
   type MergeInfo,
 } from "@kimo/core-schema"
 import type { DocStore, LocalOrigin } from "@kimo/editor-state"
+import { type MessageKey, t } from "../lib/i18n"
 import type { ConflictRowView, ConflictSession, Toast } from "../platform/contract"
 import { diffOps } from "./ops"
 import { conflictNode, conflictRows, displayName } from "./rows"
@@ -79,7 +81,11 @@ function reopenConflict(doc: KimoDocument, id: string): KimoDocument {
   return { ...d, conflicts: { ...table, [id]: open as Conflict } } as unknown as KimoDocument
 }
 
-const LABELS: Record<ConflictSide, string> = { ours: "ours", theirs: "theirs", base: "base" }
+const LABEL: Record<ConflictSide, [MessageKey, MessageKey]> = {
+  ours: ["ui.conflicts.session.takeOurs", "ui.conflicts.session.takeAllOurs"],
+  theirs: ["ui.conflicts.session.takeTheirs", "ui.conflicts.session.takeAllTheirs"],
+  base: ["ui.conflicts.session.takeBase", "ui.conflicts.session.takeAllBase"],
+}
 
 /** Creates the session for a store that holds stored conflicts (spec §21). */
 export function createConflictSession(host: ConflictHost): EditorConflictSession {
@@ -179,10 +185,10 @@ export function createConflictSession(host: ConflictHost): EditorConflictSession
     },
     rows,
     choose(id, side) {
-      commit((d) => applyConflictSide(d, id, side), `Take ${LABELS[side]}`)
+      commit((d) => applyConflictSide(d, id, side), t(LABEL[side][0]))
     },
     chooseAll(side) {
-      commit((d) => applyAllConflicts(d, side), `Take all ${LABELS[side]}`)
+      commit((d) => applyAllConflicts(d, side), t(LABEL[side][1]))
     },
     reopen(id) {
       commit((d) => reopenConflict(d, id), "Reopen conflict")

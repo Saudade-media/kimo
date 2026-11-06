@@ -13,8 +13,10 @@
  *   │   Write config (primary h 28)
  *   └ Footnote (v3QurW) sans 11 text-tertiary "Backup → <path>.kimo-<date>.bak"
  */
+
 import { Banner, CompactButton, DialogScrim, useDismiss } from "@kimo/ui"
 import { useEffect, useRef } from "react"
+import { t } from "../lib/i18n"
 import { AgentIcon } from "./icons"
 
 export interface DiffRow {
@@ -102,10 +104,10 @@ export function ConfigDiffDialog(p: ConfigDiffDialogProps) {
   }, [])
   const title =
     p.action === "remove"
-      ? `Remove Kimo from ${p.label}?`
+      ? t("ui.agents.configdiff.remove", { tool: p.label })
       : p.action === "update"
-        ? `Update ${p.label} config?`
-        : `Add Kimo to ${p.label}?`
+        ? t("ui.agents.configdiff.update", { tool: p.label })
+        : t("ui.agents.configdiff.add", { tool: p.label })
   let marked = false
   return (
     <DialogScrim>
@@ -168,11 +170,11 @@ export function ConfigDiffDialog(p: ConfigDiffDialogProps) {
             icon={<AgentIcon name="copy" size={14} />}
             onClick={() => p.onCopy(unifiedDiffText(rows))}
           >
-            Copy diff
+            {t("ui.agents.configdiffdialog.1")}
           </CompactButton>
           <span className="agents-spacer" />
           <CompactButton variant="ghost" height={28} padX={10} onClick={p.onCancel}>
-            Cancel
+            {t("ui.agents.configdiffdialog.2")}
           </CompactButton>
           <CompactButton
             variant="primary"

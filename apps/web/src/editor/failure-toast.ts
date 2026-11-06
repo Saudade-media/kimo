@@ -2,7 +2,9 @@
  * A failed action as a Toast/Danger (board 37 `ra5wy`, audit A5): "Couldn't <what>. <cause>."
  * Outside an editor (no M3 controller) the text goes to the console.
  */
+
 import { useCallback, useContext } from "react"
+import { t } from "../lib/i18n"
 import { failureText } from "./errors"
 import { M3Context } from "./m3/controller"
 
@@ -21,5 +23,5 @@ export function useFailureToast(): (what: string, e?: unknown) => void {
 /** Image fill pick / Replace (E6): "Couldn't add the image. <cause>". */
 export function useImageError(): (e: unknown) => void {
   const fail = useFailureToast()
-  return useCallback((e: unknown) => fail("add the image", e), [fail])
+  return useCallback((e: unknown) => fail(t("errors.addImage"), e), [fail])
 }

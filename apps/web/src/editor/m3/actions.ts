@@ -3,9 +3,11 @@
  * Each runs ONE M3 command through the controller (one undo step); destructive ones confirm
  * first (board 15 `i8PfIC` Detach, `ysXyK` slot off, `fmB2B` Unlink).
  */
+
 import { instancesOf, type KimoDocument, libraryUsage, splitQualified } from "@kimo/core-schema"
 import { type Op, planCommand } from "@kimo/editor-state"
 import type { LayoutResult } from "@kimo/layout"
+import { t, tn } from "../../lib/i18n"
 import type { M3Controller } from "./controller"
 import { componentName, nameOf, overrideEntries } from "./model"
 
@@ -45,8 +47,8 @@ export async function detachInstance(m3: M3Controller, id: string): Promise<bool
   ].filter(([, c]) => (c as number) > 0)
   const slots = entries.filter((e) => e.kind === "slot" || e.kind === "replace")
   const ok = await m3.confirm({
-    title: `Detach ${nameOf(n)}?`,
-    desc: `It becomes a plain frame and stops receiving changes from ${main}.`,
+    title: t("ui.editor.m3.actions.detachTitle", { name: nameOf(n) }),
+    desc: t("ui.editor.m3.actions.detachDesc", { main }),
     icon: "unlink",
     tone: "component",
     items: [
@@ -65,7 +67,9 @@ export async function detachInstance(m3: M3Controller, id: string): Promise<bool
             },
           ]
         : []),
-      ...(count("args") ? [{ icon: "list", text: "Props are dropped, values stay" }] : []),
+      ...(count("args")
+        ? [{ icon: "list", text: t("ui.editor.m3.actions.props-are-dropped-values-stay") }]
+        : []),
     ],
     confirm: "Detach",
     dontAskKey: "detach",
@@ -110,8 +114,13 @@ export function selectAllInstances(m3: M3Controller, id: string): void {
 function toastCreated(m3: M3Controller, id: string) {
   m3.toast({
     tone: "component",
-    text: `Created component ${nameOf(m3.session.store.getNode(id))}`,
-    action: { label: "Undo", run: () => m3.session.store.undo("user") },
+    text: t("ui.editor.m3.actions.createdComponent", {
+      name: nameOf(m3.session.store.getNode(id)),
+    }),
+    action: {
+      label: t("ui.undo.label"),
+      run: () => m3.session.store.undo("user"),
+    },
     duration: 4000,
   })
 }
@@ -127,14 +136,17 @@ export function createComponent(
 ): boolean {
   const real = ids.filter((id) => !id.includes("/"))
   if (real.length === 0) {
-    m3.toast({ tone: "danger", text: "Select layers to make a component" })
+    m3.toast({ tone: "danger", text: t("ui.editor.m3.actions.select-layers-to-make-a-component") })
     return false
   }
   let options: { wrap?: { x: number; y: number; w: number; h: number } } | undefined
   if (real.length > 1) {
     const boxes = real.map((id) => layout?.nodes.get(id)?.local).filter((b) => !!b)
     if (boxes.length !== real.length) {
-      m3.toast({ tone: "danger", text: "Can't measure the selection yet. Try again" })
+      m3.toast({
+        tone: "danger",
+        text: t("ui.editor.m3.actions.can-t-measure-the-selection-yet-try-again"),
+      })
       return false
     }
     const x = Math.min(...boxes.map((b) => b.x))
@@ -163,15 +175,18 @@ export async function setSlotOff(m3: M3Controller, frame: string): Promise<boole
   }
   const name = nameOf(m3.session.store.getNode(frame))
   const ok = await m3.confirm({
-    title: `Turn off slot on ${name}?`,
-    desc: "Instances fill this slot with their own layers. Turning it off deletes that content.",
+    title: t("ui.editor.m3.actions.slotOffTitle", { name }),
+    desc: t("ui.editor.m3.actions.slotOffDesc"),
     icon: "square-dashed",
     tone: "danger",
     items: [{ icon: "circle-dot", text: dry.error.message }],
-    confirm: "Turn off & delete content",
+    confirm: t("ui.editor.m3.actions.slotOffConfirm"),
   })
   if (!ok) return false
-  return m3.run({ cmd: "setSlot", frame, slot: null, deleteContent: true }, "Turn off slot").ok
+  return m3.run(
+    { cmd: "setSlot", frame, slot: null, deleteContent: true },
+    t("ui.editor.m3.actions.slotOffRun"),
+  ).ok
 }
 
 /** Board 15 `fmB2B` Unlink confirm (detach all & unlink; needs the cached library). */
@@ -181,25 +196,27 @@ export async function unlinkLibrary(m3: M3Controller, alias: string): Promise<bo
   const cached = !!entry?.doc
   const n = usage.instances.length
   const ok = await m3.confirm({
-    title: `Unlink the ${entry?.name ?? alias} library?`,
-    desc: `Removes ${alias} from imports.${
-      n
-        ? ` ${n} instance${n === 1 ? "" : "s"} still reference ${alias}: components and would fail validation (ALIAS_UNKNOWN).`
-        : ""
-    }`,
+    title: t("ui.editor.m3.actions.unlinkTitle", { library: entry?.name ?? alias }),
+    desc: n
+      ? t("ui.editor.m3.actions.unlinkDescInUse", { alias, n: String(n) })
+      : t("ui.editor.m3.actions.unlinkDesc", { alias }),
     icon: "unlink",
     tone: "danger",
     items: [
       {
         icon: "circle-dot",
         accent: true,
-        text: `Detach all: ${n} instance${n === 1 ? "" : "s"} become plain layers${cached ? " from the cached preview" : ""}`,
+        text: cached
+          ? tn("ui.editor.m3.actions.detachAllOneCached", "ui.editor.m3.actions.detachAllCached", n)
+          : tn("ui.editor.m3.actions.detachAllOne", "ui.editor.m3.actions.detachAll", n),
       },
       {
         icon: "square-dashed",
-        text: "Without a cache (fresh clone), detach isn't available. Locate the file instead",
+        text: t(
+          "ui.editor.m3.actions.without-a-cache-fresh-clone-detach-isn-t-available-locate-the-file-instead",
+        ),
       },
-      { icon: "list", text: "Undo restores the import and the instances" },
+      { icon: "list", text: t("ui.editor.m3.actions.undo-restores-the-import-and-the-instances") },
     ],
     confirm: n || usage.bindings ? "Detach all & unlink" : "Unlink",
   })
@@ -281,7 +298,7 @@ export function addSlotProp(
   }
   const r = m3.session.store.apply([...ops, ...(declare.ops as unknown as Op[])], {
     origin: "user",
-    label: "Add slot prop",
+    label: t("ui.editor.m3.actions.add-slot-prop"),
   })
   if (!r.ok) m3.toastRejected("Add slot prop", r.errors)
   return r.ok

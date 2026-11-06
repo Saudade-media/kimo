@@ -18,6 +18,7 @@
  * A missing image that comes into view is fetched (`ensureAsset`) when Settings › Multiplayer ›
  * Fetch images and fonts is on.
  */
+
 import type { DocStore } from "@kimo/editor-state"
 import type { LayoutResult } from "@kimo/layout"
 import {
@@ -31,6 +32,7 @@ import {
 import type { UiStore } from "../canvas/contract"
 import { cssRadius } from "../editor/props"
 import type { Bus } from "../lib/hooks"
+import { t } from "../lib/i18n"
 import { Icon } from "../lib/icons"
 import type { AssetTransfers } from "../multiplayer/backend"
 import {
@@ -278,7 +280,7 @@ function AssetPlaceholderView({ p, fetching }: { p: Placeholder; fetching: boole
         {state === "unavailable" && (
           <div className="mp-asset__status mp-asset__status--muted" data-testid="mp-asset-status">
             <Icon name="image-off" size={12} />
-            <span className="mp-asset__label">Waiting for someone who has it</span>
+            <span className="mp-asset__label">{t("ui.multiplayer.canvas.assetlayer.t1")}</span>
           </div>
         )}
         {state === "uploading" && (

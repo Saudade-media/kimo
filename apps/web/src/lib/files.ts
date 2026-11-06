@@ -20,6 +20,7 @@ import {
 } from "@kimo/editor-state"
 import { readFontInfo } from "@kimo/renderer"
 import { IndexedDbProvider } from "@kimo/sync/indexeddb"
+import { t } from "../lib/i18n"
 import { copyThumbnail, libraryThumbnails } from "../thumbnails/store"
 import { assetRefs } from "./asset-manifest"
 import {
@@ -266,11 +267,19 @@ export async function importKimoFile(
   try {
     result = openDocument(text)
   } catch (e) {
-    throw new OpenFileError(`Could not read ${fileName}: ${e instanceof Error ? e.message : e}`)
+    throw new OpenFileError(
+      t("ui.lib.files.readFailed", {
+        file: fileName,
+        message: e instanceof Error ? e.message : String(e),
+      }),
+    )
   }
   if (result.readOnly)
     throw new OpenFileError(
-      `${fileName} can't be edited here: ${result.readOnlyReasons.map((r) => r.message).join("; ")}`,
+      t("ui.lib.files.readOnlyHere", {
+        file: fileName,
+        reasons: result.readOnlyReasons.map((r) => r.message).join("; "),
+      }),
     )
   const name = result.doc.meta?.name ?? fileName.replace(/\.kimoz?$/i, "")
   const store = createDocStore(result.doc)
@@ -341,11 +350,16 @@ export async function importFile(file: File): Promise<ImportResult> {
   try {
     entries = await readZip(bytes)
   } catch (e) {
-    throw new OpenFileError(`Could not read ${file.name}: ${e instanceof Error ? e.message : e}`)
+    throw new OpenFileError(
+      t("ui.lib.files.readFailed", {
+        file: file.name,
+        message: e instanceof Error ? e.message : String(e),
+      }),
+    )
   }
   const docs = entries.filter((e) => /\.kimo$/i.test(e.name))
   const main = docs.find((e) => !e.name.includes("/")) ?? docs[0]
-  if (!main) throw new OpenFileError(`${file.name} has no .kimo document`)
+  if (!main) throw new OpenFileError(t("ui.lib.files.noDocument", { file: file.name }))
   const base = main.name.includes("/") ? main.name.slice(0, main.name.lastIndexOf("/") + 1) : ""
   const packaged = new Map<string, Uint8Array>()
   for (const e of entries) {
@@ -490,20 +504,24 @@ interface PickerWindow {
   }>
 }
 
-const KIMO_TYPES = [
-  {
-    description: "Kimo document",
-    accept: { "application/json": [".kimo", ".pen"], "application/zip": [".kimoz"] },
-  },
-]
-const KIMOZ_TYPES = [{ description: "Kimo package", accept: { "application/zip": [".kimoz"] } }]
+function kimoTypes() {
+  return [
+    {
+      description: t("ui.files.kimoDocument"),
+      accept: { "application/json": [".kimo", ".pen"], "application/zip": [".kimoz"] },
+    },
+  ]
+}
+function kimozTypes() {
+  return [{ description: t("ui.lib.files.kimoPackage"), accept: { "application/zip": [".kimoz"] } }]
+}
 
 /** Lets the user pick a `.kimo`, `.kimoz` or `.pen` file. Resolves null on cancel. */
 export async function pickKimoFile(): Promise<File | null> {
   const w = window as unknown as PickerWindow
   if (w.showOpenFilePicker) {
     try {
-      const [handle] = await w.showOpenFilePicker({ types: KIMO_TYPES, multiple: false })
+      const [handle] = await w.showOpenFilePicker({ types: kimoTypes(), multiple: false })
       return handle ? await handle.getFile() : null
     } catch (e) {
       if (e instanceof DOMException && e.name === "AbortError") return null
@@ -541,7 +559,7 @@ export async function saveFile(file: ExportedFile): Promise<void> {
     try {
       const handle = await w.showSaveFilePicker({
         suggestedName: file.fileName,
-        types: file.fileName.endsWith(".kimoz") ? KIMOZ_TYPES : KIMO_TYPES.slice(0, 1),
+        types: file.fileName.endsWith(".kimoz") ? kimozTypes() : kimoTypes().slice(0, 1),
       })
       const out = await handle.createWritable()
       await out.write(file.data)

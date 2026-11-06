@@ -4,8 +4,10 @@
  * Image fills and the canvas Image tool reference them as `./assets/<hash>.<ext>`; the
  * renderer reads them through {@link AssetStore.source}.
  */
+
 import { dirnameOf, type FileRef, type KimoPlatform, resolveAgainstFile } from "@kimo/platform"
 import type { AssetSource } from "@kimo/renderer"
+import { t } from "../lib/i18n"
 
 /** What a stored asset carries besides its bytes (the spec's manifest entry). */
 export interface AssetInfo {
@@ -422,14 +424,19 @@ function assetStoreOver(rows: RowBackend): AssetStore {
     async put(file) {
       if (file.size > MAX_ASSET_BYTES)
         throw new AssetError(
-          `Image is too large (${Math.round(file.size / 1048576)} MB; the limit is ${MAX_ASSET_BYTES / 1048576} MB)`,
+          t("ui.lib.assets.tooLarge", {
+            size: String(Math.round(file.size / 1048576)),
+            limit: String(MAX_ASSET_BYTES / 1048576),
+          }),
         )
       const bytes = new Uint8Array(await file.arrayBuffer())
       const mime = sniffImage(bytes)
       const ext = mime ? extensionFor(mime) : null
       if (!mime || !ext)
         throw new AssetError(
-          `Unsupported image format${file.name ? ` (${file.name})` : ""}: use PNG, JPEG, GIF, WebP or AVIF`,
+          t("ui.lib.assets.unsupported", {
+            name: file.name ? t("ui.lib.assets.nameInParens", { name: file.name }) : "",
+          }),
         )
       const sha256 = await contentDigest(bytes)
       const key = `${sha256.slice(0, 16)}.${ext}`
@@ -438,9 +445,18 @@ function assetStoreOver(rows: RowBackend): AssetStore {
       const data = new Blob([bytes], { type: mime })
       const size = await imageSize(data)
       if (!size)
-        throw new AssetError(`The image${file.name ? ` ${file.name}` : ""} could not be decoded`)
+        throw new AssetError(
+          t("ui.lib.assets.decodeFailed", {
+            name: file.name ? t("ui.lib.assets.nameInParens", { name: file.name }) : "",
+          }),
+        )
       if (size.width * size.height > MAX_ASSET_PIXELS)
-        throw new AssetError(`Image is too large (${size.width} × ${size.height} px)`)
+        throw new AssetError(
+          t("ui.lib.assets.tooLargePx", {
+            w: String(size.width),
+            h: String(size.height),
+          }),
+        )
       return store({
         key,
         src: `./assets/${key}`,

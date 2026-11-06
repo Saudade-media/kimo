@@ -35,6 +35,7 @@ import {
   type RecentView,
   useNow,
 } from "../files"
+import { t, t as tr } from "../lib/i18n"
 import { Icon } from "../lib/icons"
 import { useHomeCommands } from "../lib/native-menu"
 import { revealLabel } from "../platform/contract"
@@ -131,7 +132,7 @@ function useDesktopLists(platform: KimoPlatform) {
   useEffect(() => {
     let live = true
     const load = () =>
-      void reload().catch((e: unknown) => live && setError(failure("list your files", e)))
+      void reload().catch((e: unknown) => live && setError(failure(t("errors.listFiles"), e)))
     load()
     const off = platform.recents.onChange(load)
     // Files can move or vanish while Kimo is in the background: re-list on focus.
@@ -227,10 +228,13 @@ export function DesktopHomeView({
 
   const openPicked = useCallback(async () => {
     try {
-      const [ref] = await platform.dialogs.openFile({ title: "Open", filters: [KIMO_OPEN_FILTER] })
+      const [ref] = await platform.dialogs.openFile({
+        title: t("ui.home.desktophomeview.open"),
+        filters: [KIMO_OPEN_FILTER],
+      })
       if (ref) navigate(diskPath(ref))
     } catch (e) {
-      fail(failure("open the file", e))
+      fail(failure(t("errors.openTheFile"), e))
     }
   }, [platform, fail])
   const newFile = useCallback(async () => {
@@ -239,11 +243,13 @@ export function DesktopHomeView({
     try {
       navigate(diskPath((await manager.newUntitled()).ref))
     } catch (e) {
-      fail(failure("create a file", e))
+      fail(failure(t("errors.createFile"), e))
     }
   }, [manager, fail])
   const addFolder = useCallback(() => {
-    void addWatchedFolder(platform).catch((e: unknown) => fail(failure("add the folder", e)))
+    void addWatchedFolder(platform).catch((e: unknown) =>
+      fail(failure(t("errors.addTheFolder"), e)),
+    )
   }, [platform, fail])
   // B9: ⌘N / ⌘O and File › New file / Open… (menu.rs); Edit items act on Home's text fields.
   useHomeCommands(platform, { newFile: () => void newFile(), openFile: () => void openPicked() })
@@ -263,46 +269,50 @@ export function DesktopHomeView({
       show({
         tone: "warning",
         kind: "missing",
-        text: `Couldn't find ${f.name}. It was moved or deleted.`,
+        text: t("ui.home.missing", { name: f.name }),
         action: {
-          label: "Remove from Recents",
+          label: t("home.removeFromRecents"),
           run: () =>
             void platform.recents
               .removeFile(f.ref)
-              .catch((e: unknown) => fail(failure(`remove ${f.name} from Recents`, e))),
+              .catch((e: unknown) =>
+                fail(failure(t("errors.removeFromRecents", { name: f.name }), e)),
+              ),
         },
       })
     },
     [platform, show, fail],
   )
   const reveal = (ref: FileRef, name: string) =>
-    void platform.files.reveal(ref).catch((e: unknown) => fail(failure(`reveal ${name}`, e)))
+    void platform.files
+      .reveal(ref)
+      .catch((e: unknown) => fail(failure(t("errors.reveal", { file: name }), e)))
   const moveToTrash = async (f: RecentFile) => {
     const trash = platform.trash
-    if (!trash) return fail(`Couldn't move ${f.name} to the Trash. This host has no Trash.`)
+    if (!trash) return fail(t("ui.home.noTrash", { name: f.name }))
     try {
       await release(f.ref)
       const entry = await trash.move(f.ref)
       show({
         tone: "success",
         kind: "trashed",
-        text: `Moved ${f.name} to the Trash`,
+        text: t("ui.home.movedToTrash", { name: f.name }),
         action: {
-          label: "Undo",
+          label: t("ui.editor.clipboard.undo"),
           run: () =>
             void trash
               .restore(entry.id)
-              .catch((e: unknown) => fail(failure(`restore ${f.name}`, e))),
+              .catch((e: unknown) => fail(failure(t("errors.restore", { name: f.name }), e))),
         },
       })
     } catch (e) {
-      fail(failure(`move ${f.name} to the Trash`, e))
+      fail(failure(t("errors.moveToTrash", { name: f.name }), e))
     }
   }
   const rename = async (f: RecentFile, next: string) => {
     const ext = f.name.match(/\.kimoz?$/i)?.[0] ?? ".kimo"
     const name = /\.kimoz?$/i.test(next) ? next : `${next}${ext}`
-    if (/[\\/]/.test(name)) return fail(`Couldn't rename ${f.name}. A name can't contain / or \\.`)
+    if (/[\\/]/.test(name)) return fail(t("ui.home.badName", { name: f.name }))
     const to = joinPath(dirnameOf(f.ref), name)
     if (to === f.ref) return
     try {
@@ -316,7 +326,7 @@ export function DesktopHomeView({
       }
       await reload().catch(() => {})
     } catch (e) {
-      fail(failure(`rename ${f.name}`, e, name), "rename")
+      fail(failure(t("errors.rename", { name: f.name }), e, name), "rename")
     }
   }
   const duplicate = async (f: RecentFile) => {
@@ -331,24 +341,24 @@ export function DesktopHomeView({
       await copyThumbnail(thumbnails, f.ref, to)
       await platform.recents.noteOpened(to)
     } catch (e) {
-      fail(failure(`duplicate ${f.name}`, e))
+      fail(failure(t("errors.duplicate", { name: f.name }), e))
     }
   }
   const fileMenuItems = (f: RecentFile): FileMenuEntry[] => {
     const removeRecent: FileMenuEntry = {
       id: "remove-recent",
-      label: "Remove from Recents",
+      label: t("home.removeFromRecents"),
       icon: MENU_ICONS.removeRecent,
       run: () =>
         void platform.recents
           .removeFile(f.ref)
-          .catch((e: unknown) => fail(failure(`remove ${f.name} from Recents`, e))),
+          .catch((e: unknown) => fail(failure(t("errors.removeFromRecents", { name: f.name }), e))),
     }
     if (f.missing)
       return [
         {
           id: "locate",
-          label: "Locate…",
+          label: t("ui.editor.m3.assetstab.9"),
           icon: MENU_ICONS.reveal,
           run: () =>
             void (async () => {
@@ -359,11 +369,11 @@ export function DesktopHomeView({
               if (!ref) return
               await platform.recents.removeFile(f.ref).catch(() => {})
               navigate(diskPath(ref))
-            })().catch((e: unknown) => fail(failure(`locate ${f.name}`, e))),
+            })().catch((e: unknown) => fail(failure(t("errors.locate", { name: f.name }), e))),
         },
         {
           id: "reveal-folder",
-          label: "Reveal folder",
+          label: t("ui.home.desktophomeview.reveal-folder"),
           icon: MENU_ICONS.open,
           run: () => reveal(f.folder, basenameOf(f.folder)),
         },
@@ -371,7 +381,13 @@ export function DesktopHomeView({
         removeRecent,
       ]
     return [
-      { id: "open", label: "Open", icon: MENU_ICONS.open, meta: "↵", run: () => openFile(f) },
+      {
+        id: "open",
+        label: t("ui.home.desktophomeview.open"),
+        icon: MENU_ICONS.open,
+        meta: "↵",
+        run: () => openFile(f),
+      },
       {
         id: "reveal",
         label: revealLabel(platform.os),
@@ -381,7 +397,7 @@ export function DesktopHomeView({
       "divider",
       {
         id: "rename",
-        label: "Rename",
+        label: t("ui.editor.pages.pagesstrip.6"),
         icon: MENU_ICONS.rename,
         run: () => {
           // Rename happens in a list row: switch the view this section uses.
@@ -392,7 +408,7 @@ export function DesktopHomeView({
       },
       {
         id: "duplicate",
-        label: "Duplicate",
+        label: t("ui.editor.m3.componentdialogs.1"),
         icon: MENU_ICONS.duplicate,
         run: () => void duplicate(f),
       },
@@ -400,7 +416,7 @@ export function DesktopHomeView({
       ...(f.openedAt !== null ? [removeRecent] : []),
       {
         id: "trash",
-        label: "Move to Trash",
+        label: t("ui.home.desktophomeview.move-to-trash"),
         icon: MENU_ICONS.trash,
         meta: platform.os === "macos" ? "⌘⌫" : "Ctrl+Del",
         danger: true,
@@ -430,7 +446,7 @@ export function DesktopHomeView({
     "divider",
     {
       id: "remove-folder",
-      label: "Remove from Kimo",
+      label: t("ui.home.desktophomeview.remove-from-kimo"),
       icon: MENU_ICONS.removeFolder,
       run: () =>
         void (async () => {
@@ -439,16 +455,18 @@ export function DesktopHomeView({
           show({
             tone: "success",
             kind: "folder-removed",
-            text: `Removed ${f.label} from Kimo`,
+            text: t("ui.home.folderRemoved", { name: f.label }),
             action: {
-              label: "Undo",
+              label: t("ui.editor.clipboard.undo"),
               run: () =>
                 void platform.recents
                   .addFolder(f.ref)
-                  .catch((e: unknown) => fail(failure(`add ${f.label} back`, e))),
+                  .catch((e: unknown) =>
+                    fail(failure(t("errors.addNamedBack", { name: f.label }), e)),
+                  ),
             },
           })
-        })().catch((e: unknown) => fail(failure(`remove ${f.label} from Kimo`, e))),
+        })().catch((e: unknown) => fail(failure(t("errors.removeFromKimo", { name: f.label }), e))),
     },
   ]
 
@@ -458,12 +476,14 @@ export function DesktopHomeView({
     try {
       navigate(diskPath(await createTemplateOnDisk(platform, t)))
     } catch (e) {
-      fail(failure(`create ${t.file}`, e), "template", {
-        label: "Choose folder…",
+      fail(failure(tr("errors.createNamed", { name: t.file }), e), "template", {
+        label: tr("ui.home.desktophomeview.choose-folder"),
         run: () =>
           void createTemplateWithSaveAs(platform, t)
             .then((ref) => ref && navigate(diskPath(ref)))
-            .catch((err: unknown) => fail(failure(`create ${t.file}`, err), "template")),
+            .catch((err: unknown) =>
+              fail(failure(tr("errors.createNamed", { name: t.file }), err), "template"),
+            ),
       })
     } finally {
       setBusy(null)
@@ -477,7 +497,7 @@ export function DesktopHomeView({
       ? (folder?.label ?? basenameOf(section.ref))
       : section.kind === "workspace"
         ? (workspaceTitle ?? "")
-        : SECTION_TITLE[section.kind]
+        : t(SECTION_TITLE[section.kind])
   const sectionFiles: RecentFile[] | null = !lists
     ? null
     : section.kind === "recents"
@@ -504,25 +524,25 @@ export function DesktopHomeView({
   const headerButtons = (
     <>
       <Button variant="secondary" icon={<FolderOpen size={16} />} onClick={() => void openPicked()}>
-        Open…
+        {t("home.open")}
       </Button>
       <Button
         variant="primary"
         icon={<Icon name="plus" size={16} />}
         onClick={() => void newFile()}
       >
-        New file
+        {t("home.newFile")}
       </Button>
     </>
   )
   const searchPlaceholder =
     section.kind === "templates"
-      ? "Search templates"
+      ? t("home.searchTemplates")
       : section.kind === "libraries"
         ? "Search design systems"
         : section.kind === "trash"
           ? "Search trash"
-          : "Search files"
+          : t("home.search")
 
   // The inline rename field for the row being renamed, in whichever list shows it.
   const renamingRow = (rows: RecentFile[]) =>
@@ -578,7 +598,7 @@ export function DesktopHomeView({
       <>
         <RecentFilesHeader
           folderCount={folderCount}
-          title={countLabel(libFiles?.length ?? 0, "library", "libraries")}
+          title={countLabel(libFiles?.length ?? 0, "library")}
           note="files that other files import, or that publish components"
           view={libView}
           onViewChange={setLibView}
@@ -587,8 +607,8 @@ export function DesktopHomeView({
           <HomeEmpty
             kind="libraries"
             icon={<SwatchBook />}
-            title="No design systems yet"
-            description="A file shows up here when another file imports it or it publishes components."
+            title={t("home.empty.designSystems.title")}
+            description={t("home.empty.designSystems.desc")}
           />
         ) : libFiles && libShown.length === 0 ? (
           <NoMatch query={query} onClear={() => setQuery("")} />
@@ -628,8 +648,8 @@ export function DesktopHomeView({
           <HomeEmpty
             kind="folder"
             icon={<Folder />}
-            title={`No .kimo files in ${folder.label}`}
-            description="Files you save in this folder or its subfolders show up here."
+            title={t("ui.home.noFilesIn", { folder: folder.label })}
+            description={t("home.empty.folder.desc")}
             actions={[
               {
                 label: revealLabel(platform.os),
@@ -643,27 +663,36 @@ export function DesktopHomeView({
           <HomeEmpty
             kind="no-recents"
             icon={<History />}
-            title="Nothing opened yet"
-            description="Files you open show up here."
+            title={t("home.empty.opened.title")}
+            description={t("home.empty.opened.desc")}
             actions={[
-              { label: "Show all files", variant: "secondary", onClick: () => navigate("/all") },
+              {
+                label: t("ui.home.desktophomeview.show-all-files"),
+                variant: "secondary",
+                onClick: () => navigate("/all"),
+              },
             ]}
           />
         ) : empty ? (
           <HomeEmpty
             kind="no-files"
             icon={<FilePlus />}
-            title="No files yet"
-            description="Create a file, open one from disk, or add a folder to list its .kimo files here."
+            title={t("home.empty.files.title")}
+            description={t("home.empty.files.desc")}
             actions={[
-              { label: "New file", variant: "primary", onClick: () => void newFile() },
+              { label: t("file.new"), variant: "primary", onClick: () => void newFile() },
               {
-                label: "Open…",
+                label: t("file.open"),
                 variant: "secondary",
                 icon: <FolderOpen />,
                 onClick: () => void openPicked(),
               },
-              { label: "Add folder…", variant: "ghost", icon: <FolderPlus />, onClick: addFolder },
+              {
+                label: t("home.addFolder"),
+                variant: "ghost",
+                icon: <FolderPlus />,
+                onClick: addFolder,
+              },
             ]}
           />
         ) : sectionFiles && shown.length === 0 ? (
@@ -791,9 +820,9 @@ export function NoMatch({ query, onClear }: { query: string; onClear: () => void
     <HomeEmpty
       kind="no-match"
       icon={<SearchX />}
-      title="No matches"
-      description={`No files match “${query.trim()}”. Check the spelling or clear the search.`}
-      actions={[{ label: "Clear search", variant: "secondary", onClick: onClear }]}
+      title={t("home.empty.noMatch.title")}
+      description={t("home.empty.noMatch.desc", { query: query.trim() })}
+      actions={[{ label: t("home.clearSearch"), variant: "secondary", onClick: onClear }]}
     />
   )
 }
@@ -857,10 +886,13 @@ function EmptyTrashButton({
           const n = entries.length
           if (n === 0) throw new Error("It's already empty.")
           onConfirm({
-            title: "Empty the Trash?",
-            description: `Kimo deletes the ${countLabel(n)} it moved to ${osTrashName(platform.os)}, and you can't restore them. Other items in the Trash stay.`,
-            confirmLabel: "Empty trash",
-            failTitle: "Couldn't empty the Trash",
+            title: t("ui.home.emptyTrashTitle"),
+            description: t("home.emptyTrash.desc", {
+              files: countLabel(n),
+              trash: osTrashName(platform.os),
+            }),
+            confirmLabel: t("ui.home.emptyTrashConfirm"),
+            failTitle: t("ui.home.emptyTrashFailed"),
             run: async () => {
               try {
                 await trash.empty()
@@ -874,10 +906,10 @@ function EmptyTrashButton({
               }
             },
           })
-        })().catch((e: unknown) => onFail(failure("empty the Trash", e)))
+        })().catch((e: unknown) => onFail(failure(t("errors.emptyTrash"), e)))
       }
     >
-      Empty trash…
+      {t("home.emptyTrash")}
     </Button>
   )
 }
@@ -912,7 +944,7 @@ function DesktopTrash({
   }, [platform])
   // biome-ignore lint/correctness/useExhaustiveDependencies: `tick` re-lists after Empty trash
   useEffect(() => {
-    const run = () => void load().catch((e: unknown) => setError(failure("list the Trash", e)))
+    const run = () => void load().catch((e: unknown) => setError(failure(t("errors.listTrash"), e)))
     run()
     return platform.recents.onChange(run)
   }, [platform, load, tick])
@@ -924,11 +956,15 @@ function DesktopTrash({
     try {
       const ref = await trash.restore(t.id, to)
       if (ref !== t.originalRef) await copyThumbnail(diskThumbnails(platform), t.originalRef, ref)
-      onToast({ tone: "success", kind: "restored", text: `Restored ${basenameOf(ref)}` })
+      onToast({
+        tone: "success",
+        kind: "restored",
+        text: tr("ui.home.restored", { name: basenameOf(ref) }),
+      })
     } catch (e) {
       if (isExists(e))
-        onFail(`Couldn't restore ${t.name}. A file with that name exists.`, "restore", {
-          label: "Restore as copy",
+        onFail(tr("ui.home.restoreExists", { name: t.name }), "restore", {
+          label: tr("ui.home.desktophomeview.restore-as-copy"),
           run: () =>
             void (async () => {
               const dir = dirnameOf(t.originalRef)
@@ -940,9 +976,11 @@ function DesktopTrash({
                   copyName(t.name, (n) => taken.has(n)),
                 ),
               )
-            })().catch((err: unknown) => onFail(failure(`restore ${t.name}`, err), "restore")),
+            })().catch((err: unknown) =>
+              onFail(failure(tr("errors.restore", { name: t.name }), err), "restore"),
+            ),
         })
-      else onFail(failure(`restore ${t.name}`, e), "restore")
+      else onFail(failure(tr("errors.restore", { name: t.name }), e), "restore")
     } finally {
       setBusy(null)
       await load().catch(() => {})
@@ -955,7 +993,7 @@ function DesktopTrash({
       <RecentFilesHeader
         folderCount={0}
         title={countLabel(entries?.length ?? 0)}
-        note={`in ${osTrashName(platform.os)} · Restore puts a file back where it was`}
+        note={t("ui.home.trashNote", { trash: osTrashName(platform.os) })}
       />
       {error && (
         <p className="home-error" role="alert">
@@ -966,14 +1004,14 @@ function DesktopTrash({
         <HomeEmpty
           kind="trash"
           icon={<Trash2 />}
-          title="Trash is empty"
-          description="Files you move to the Trash from Kimo show up here until you empty the Trash."
+          title={t("home.empty.trash.title")}
+          description={t("home.empty.trash.desc")}
         />
       ) : entries && shown.length === 0 ? (
         <NoMatch query={query} onClear={onClearSearch} />
       ) : (
         <div className="home-trash-list">
-          <TrashRowHeader locationLabel="ORIGINAL LOCATION" />
+          <TrashRowHeader locationLabel={t("ui.home.originalLocation")} />
           {shown.map((t) => (
             <TrashRow
               key={t.id}
@@ -984,10 +1022,10 @@ function DesktopTrash({
               onRestore={() => void restore(t)}
               onDelete={() =>
                 onConfirm({
-                  title: `Delete “${t.name}” forever?`,
-                  description: "You can't restore it after this.",
-                  confirmLabel: "Delete forever",
-                  failTitle: `Couldn't delete ${t.name}`,
+                  title: tr("ui.home.deleteForeverTitle", { name: t.name }),
+                  description: tr("ui.home.deleteForeverDesc"),
+                  confirmLabel: tr("ui.home.deleteForeverConfirm"),
+                  failTitle: tr("ui.home.deleteFailed", { name: t.name }),
                   run: async () => {
                     await platform.trash?.remove(t.id)
                     await forgetThumbnails(diskThumbnails(platform), [t.originalRef])

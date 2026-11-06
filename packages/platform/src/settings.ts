@@ -7,6 +7,8 @@
 
 export type UpdateChannel = "stable" | "beta"
 export type Appearance = "system" | "light" | "dark"
+/** The chrome's language: English, or Simplified Chinese. */
+export type Language = "en" | "zh-Hans"
 /**
  * Settings › Canvas › Nudge (board 27 Lwg6P): arrow-key step / ⇧ step in px, as
  * `"<step>/<big step>"`.
@@ -95,6 +97,8 @@ export interface SettingsSchema {
   "fonts.embedInKimoz": boolean
   /** General › Appearance. */
   "general.appearance": Appearance
+  /** General › Language. */
+  "general.language": Language
   /** General › On launch. */
   "general.onLaunch": "last-files" | "home"
   /** General › Canvas zoom. */
@@ -147,6 +151,7 @@ export const SETTINGS_DEFAULTS: Readonly<Settings> = Object.freeze({
   "fonts.extraFolders": [],
   "fonts.embedInKimoz": true,
   "general.appearance": "system",
+  "general.language": "en",
   "general.onLaunch": "last-files",
   "general.canvasZoom": "trackpad",
   "general.duplicateMain": "ask",
@@ -210,6 +215,7 @@ const VALIDATORS: { [K in SettingKey]: (v: unknown) => v is SettingsSchema[K] } 
     Array.isArray(v) && v.every((x) => typeof x === "string" && x !== ""),
   "fonts.embedInKimoz": (v): v is boolean => typeof v === "boolean",
   "general.appearance": oneOf("system", "light", "dark"),
+  "general.language": oneOf("en", "zh-Hans"),
   "general.onLaunch": oneOf("last-files", "home"),
   "general.canvasZoom": oneOf("trackpad", "mouse"),
   "general.duplicateMain": oneOf("ask", "instance", "component"),

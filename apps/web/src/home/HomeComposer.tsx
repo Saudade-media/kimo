@@ -38,12 +38,21 @@ import type { AiSettingsController } from "../ai-settings/controller"
 import { OLLAMA_ID, shortModelLabel } from "../ai-settings/model"
 import { useAiProviders, useAiSettingsState } from "../ai-settings/runtime"
 import { createFile, listFiles } from "../lib/files"
+import { type MessageKey, t } from "../lib/i18n"
 import { useOpenSettings, useRuntime } from "../platform/runtime"
 import { diskPath, navigate } from "../router"
 import { stashHomeHandoff } from "./handoff"
 import { emptyDocument, HOME_PRESETS, type HomePreset, submitHomePrompt } from "./submit"
 import "../ai-settings/ai-settings.css"
 import "./home-ai.css"
+
+const CHIP_LABEL: Record<HomePreset, MessageKey> = {
+  "Landing page": "home.preset.landing",
+  "Mobile app": "home.preset.mobile",
+  Dashboard: "home.preset.dashboard",
+  "Design system": "home.preset.designSystem",
+  Slides: "home.preset.slides",
+}
 
 const CHIP_ICONS: Record<HomePreset, ReactNode> = {
   "Landing page": <Monitor />,
@@ -70,12 +79,12 @@ const KEY_URLS: Record<string, string> = {
   [OLLAMA_ID]: "https://ollama.com/download",
 }
 
-const PLACEHOLDERS: Record<string, string> = {
-  anthropic: "Paste your Anthropic key (sk-ant-…)",
-  openai: "Paste your OpenAI key (sk-…)",
-  gemini: "Paste your Gemini key (AIza…)",
-  openrouter: "Paste your OpenRouter key (sk-or-…)",
-  [OLLAMA_ID]: "http://localhost:11434/v1",
+const PLACEHOLDERS: Record<string, MessageKey> = {
+  anthropic: "home.composer.keyPhAnthropic",
+  openai: "home.composer.keyPhOpenai",
+  gemini: "home.composer.keyPhGemini",
+  openrouter: "home.composer.keyPhOpenrouter",
+  [OLLAMA_ID]: "home.composer.keyPhOllama",
 }
 
 type Phase =
@@ -198,19 +207,15 @@ export function HomeComposer({ platform, controller, onOpen, dwellMs = 450 }: Ho
           <div className="home-ai__title-row" data-pen="r8BkUL">
             <AgentMark size={32} state={submitting ? "thinking" : "listening"} />
             <h2 id="home-ai-title" className="home-ai__title">
-              What do you want to design?
+              {t("home.composer.title")}
             </h2>
           </div>
         ) : (
           <h2 id="home-ai-title" className="home-ai__title">
-            What do you want to design?
+            {t("home.composer.title")}
           </h2>
         )}
-        {!showCard && (
-          <p className="home-ai__desc">
-            Describe it and the agent drafts it on a new canvas. Every change is a reviewable diff.
-          </p>
-        )}
+        {!showCard && <p className="home-ai__desc">{t("home.composer.desc")}</p>}
       </div>
 
       {showCard && ctl && s && (
@@ -240,11 +245,9 @@ export function HomeComposer({ platform, controller, onOpen, dwellMs = 450 }: Ho
           ref={input}
           className="kimo-composer__input"
           rows={1}
-          aria-label="Describe what to design"
+          aria-label={t("home.composer.aria")}
           placeholder={
-            showCard
-              ? "A pricing page for a calm budgeting app…"
-              : "A pricing page for a calm budgeting app, three tiers, soft greens…"
+            showCard ? t("home.composer.placeholderShort") : t("home.composer.placeholder")
           }
           value={text}
           readOnly={submitting}
@@ -262,7 +265,7 @@ export function HomeComposer({ platform, controller, onOpen, dwellMs = 450 }: Ho
           <button
             type="button"
             className="kimo-composer__model"
-            title="Models and providers"
+            title={t("home.composer.models")}
             onClick={() => openSettings("ai-providers")}
           >
             <span className="kimo-composer__model-label">{modelLabel}</span>
@@ -327,11 +330,11 @@ export function HomeComposer({ platform, controller, onOpen, dwellMs = 450 }: Ho
               Opening the editor · agent starting with {phase.model}
             </span>
             <span className="home-ai__spacer" />
-            <span className="home-ai__step-meta">Single · scope: page</span>
+            <span className="home-ai__step-meta">{t("home.composer.stepMeta")}</span>
           </div>
           <div className="home-ai__step home-ai__step--pending" data-pen="s65NC">
             <Circle className="home-ai__step-icon" aria-hidden="true" />
-            <span className="home-ai__step-label">Kimo drafts the first frame (placeholder)</span>
+            <span className="home-ai__step-label">{t("home.composer.stepLabel")}</span>
             <span className="home-ai__spacer" />
           </div>
         </div>
@@ -353,7 +356,7 @@ export function HomeComposer({ platform, controller, onOpen, dwellMs = 450 }: Ho
                 }}
               >
                 <span className="home-chip__icon">{CHIP_ICONS[label]}</span>
-                <span className="home-chip__label">{label}</span>
+                <span className="home-chip__label">{t(CHIP_LABEL[label])}</span>
               </button>
             ))}
           </div>
@@ -432,18 +435,16 @@ function FirstRunCard({
           <KeyRound />
         </span>
         <div className="home-ai-card__text">
-          <h3 className="home-ai-card__title">Add an API key to use the agent</h3>
+          <h3 className="home-ai-card__title">{t("home.composer.addKey")}</h3>
           <p className="home-ai-card__desc">
-            {web
-              ? "Kimo doesn't sell models: bring your own key. It stays in this browser, and requests go straight to the provider."
-              : `Kimo doesn't sell models: bring your own key. Your ${store} keeps it; requests go straight to the provider.`}
+            {web ? t("home.composer.keyDescWeb") : t("home.composer.keyDescStore", { store })}
           </p>
         </div>
       </div>
       <div
         className="home-ai-card__providers"
         role="radiogroup"
-        aria-label="Provider"
+        aria-label={t("home.composer.provider")}
         data-pen="TVv9O"
       >
         {FIRST_RUN_PROVIDERS.map((x) => (
@@ -473,8 +474,10 @@ function FirstRunCard({
             type={local ? "url" : "password"}
             autoComplete="off"
             spellCheck={false}
-            aria-label={local ? "Local endpoint URL" : `${p.label} API key`}
-            placeholder={PLACEHOLDERS[selected]}
+            aria-label={
+              local ? t("ui.home.localEndpoint") : t("ui.home.apiKeyFor", { provider: p.label })
+            }
+            placeholder={t(PLACEHOLDERS[selected] ?? "home.composer.keyPhAnthropic")}
             value={value}
             disabled={busy}
             onChange={(e) => setValue(e.currentTarget.value)}
@@ -491,7 +494,7 @@ function FirstRunCard({
           aria-busy={busy || undefined}
           onClick={() => void save()}
         >
-          {busy ? "Testing…" : "Test & save"}
+          {busy ? t("home.composer.testing") : t("home.composer.testSave")}
         </Button>
       </div>
       {web && selected === "anthropic" && (
@@ -503,12 +506,9 @@ function FirstRunCard({
           />
           <span className="ai-optin__text">
             <span className="ai-optin__label" id="home-optin-label">
-              Allow Anthropic calls from the browser
+              {t("home.composer.allowBrowser")}
             </span>
-            <span className="ai-optin__desc">
-              Required by Anthropic for direct browser access. Off = the agent is unavailable on web
-              for this provider.
-            </span>
+            <span className="ai-optin__desc">{t("home.composer.allowBrowserDesc")}</span>
           </span>
         </div>
       )}
@@ -523,11 +523,13 @@ function FirstRunCard({
           className="home-ai-card__link"
           onClick={() => onOpenUrl(KEY_URLS[selected] ?? "")}
         >
-          {local ? `Get Ollama at ${p.site} ↗` : `Get a key at ${p.site} ↗`}
+          {local
+            ? t("home.composer.getOllama", { site: p.site })
+            : t("home.composer.getKey", { site: p.site })}
         </button>
         <span className="home-ai__spacer" />
         <button type="button" className="home-ai-card__skip" onClick={onDesignByHand}>
-          Design by hand instead
+          {t("home.composer.byHand")}
         </button>
       </div>
     </div>

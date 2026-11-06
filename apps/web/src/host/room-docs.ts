@@ -15,6 +15,7 @@
  *   renders and stores the images agents add (#89). It never takes an update or an image from
  *   the host while the room is read-only.
  */
+
 import { type ClaimRecord, claimsFor, createDocStore, type DocStore } from "@kimo/editor-state"
 import {
   type AssetEntry,
@@ -34,6 +35,7 @@ import {
 } from "@kimo/sync"
 import { isRoomId } from "@kimo/sync/mp"
 import { MAX_ASSET_BYTES, sniffImage } from "../lib/assets"
+import { t } from "../lib/i18n"
 import { roomKeyOf } from "../multiplayer/backend"
 import type { JoinedRoom } from "../multiplayer/model"
 import { HOST_EVENTS, HOST_LABEL, type HostBridge } from "./bridge"
@@ -100,7 +102,10 @@ function assetPutError(reason: unknown): HostResult<never> {
     case "read-only":
       return error("READ_ONLY", "This room is read-only.")
     case "too-large":
-      return error("INVALID_INPUT", `Images over ${MAX_ASSET_BYTES / 2 ** 20} MB can't be added.`)
+      return error(
+        "INVALID_INPUT",
+        t("ui.host.roomdocs.tooLarge", { size: String(MAX_ASSET_BYTES / 2 ** 20) }),
+      )
     case "rejected":
       return error("INVALID_INPUT", "The room refused the image: it is too large or unreadable.")
     case "gone":

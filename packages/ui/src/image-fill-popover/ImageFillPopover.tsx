@@ -1,3 +1,4 @@
+import { t } from "@kimo/i18n"
 import { Trash2, Upload } from "lucide-react"
 import { type CSSProperties, type DragEvent, useEffect, useRef, useState } from "react"
 import { Button } from "../button/Button"
@@ -130,7 +131,7 @@ export function ImageFillPopover({
 
   return (
     <Popover
-      title="Image"
+      title={t("ui.pkg.image.fill.popover.imagefillpopover.image")}
       onClose={onClose}
       anchor={anchor}
       placement={placement}
@@ -168,7 +169,7 @@ export function ImageFillPopover({
         <Select
           dense
           className="kimo-image-fill__mode"
-          label="Image mode"
+          label={t("ui.pkg.image.fill.popover.imagefillpopover.image-mode")}
           options={options}
           value={mode}
           onChange={(m) => onModeChange?.(m)}

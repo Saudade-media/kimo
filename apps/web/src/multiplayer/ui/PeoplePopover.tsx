@@ -7,8 +7,10 @@
  * pan, zoom or Esc stops); idle people show "idle" and a 0.5 avatar. The list scrolls past 8 rows
  * under the header. Opens below the stack, on its left edge, shifted to stay in the window.
  */
+
 import { AgentMark, Badge, IconButton, Popover, type PopoverAnchor, personaVar } from "@kimo/ui"
 import { type CSSProperties, useEffect, useRef } from "react"
+import { t } from "../../lib/i18n"
 import { Icon } from "../../lib/icons"
 import { useCollaborators, useFollow } from "../hooks"
 import type { MultiplayerModel } from "../model"
@@ -30,7 +32,7 @@ export function PeoplePopover({ model, docKey, agents, anchor, onClose }: People
   const people = useCollaborators(model, docKey)
   const follow = useFollow(model, docKey)
   const doc = model.document(docKey)
-  const title = `In this file · ${agents.length + people.length}`
+  const title = t("ui.mp.people.title", { n: String(agents.length + people.length) })
   return (
     <Popover
       className="mp-people"
@@ -39,7 +41,7 @@ export function PeoplePopover({ model, docKey, agents, anchor, onClose }: People
       actions={
         <IconButton
           className="mp-close"
-          label="Close"
+          label={t("ui.multiplayer.ui.peoplepopover.1")}
           icon={<Icon name="x" size={14} />}
           size="sm"
           tone="ghost"
@@ -85,7 +87,11 @@ export function PeoplePopover({ model, docKey, agents, anchor, onClose }: People
               ) : (
                 <IconButton
                   className="mp-follow"
-                  label={following ? `Stop following ${p.label}` : `Follow ${p.label}`}
+                  label={
+                    following
+                      ? t("ui.mp.people.stopFollowing", { name: p.label })
+                      : t("ui.mp.people.follow", { name: p.label })
+                  }
                   icon={<Icon name="eye" size={14} />}
                   size="sm"
                   tone="ghost"
@@ -168,7 +174,7 @@ function AgentRow({ agent: a, onClose }: { agent: StackAgent; onClose(): void })
       )}
       <IconButton
         className="mp-follow"
-        label={`Show what ${a.label} is editing`}
+        label={t("ui.mp.people.showEditing", { name: a.label })}
         icon={<Icon name="eye" size={14} />}
         size="sm"
         tone="ghost"

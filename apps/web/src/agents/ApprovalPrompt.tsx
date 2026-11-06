@@ -3,9 +3,11 @@
  * the agent's call blocks until Deny / Always for this session / Allow once, or the 2-minute
  * timeout denies it. Prompts queue oldest first (rule "Approval"); Esc = Deny.
  */
+
 import { AgentMark, AgentOpRow, Button, floating, useAnchoredPosition } from "@kimo/ui"
 import { ChevronDown, ChevronUp } from "lucide-react"
 import { useEffect, useRef, useState } from "react"
+import { t } from "../lib/i18n"
 import type { AgentsControllerExt } from "./controller"
 import { useAgentsState, useNow } from "./hooks"
 import {
@@ -169,7 +171,11 @@ export function ApprovalPrompt({ controller, anchor }: ApprovalPromptProps) {
               onClick={() => setShowAll((v) => !v)}
             >
               {showAll ? <ChevronUp aria-hidden="true" /> : <ChevronDown aria-hidden="true" />}
-              <span>{showAll ? "Show fewer" : `Show all ${total}`}</span>
+              <span>
+                {showAll
+                  ? t("ui.agents.approvalprompt.showFewer")
+                  : t("ui.agents.approvalprompt.showAll", { n: String(total) })}
+              </span>
             </button>
           )}
         </div>
@@ -187,7 +193,7 @@ export function ApprovalPrompt({ controller, anchor }: ApprovalPromptProps) {
           data-choice="deny"
           onClick={() => answer("deny")}
         >
-          Deny
+          {t("ui.agents.approvalprompt.1")}
         </Button>
         <span className="agents-spacer" />
         {prompt.choices.includes("session") && (
@@ -198,7 +204,7 @@ export function ApprovalPrompt({ controller, anchor }: ApprovalPromptProps) {
             data-choice="session"
             onClick={() => answer("session")}
           >
-            Always for this session
+            {t("ui.agents.approvalprompt.2")}
           </Button>
         )}
         <Button
@@ -208,7 +214,7 @@ export function ApprovalPrompt({ controller, anchor }: ApprovalPromptProps) {
           data-choice="once"
           onClick={() => answer("once")}
         >
-          Allow once
+          {t("ui.agents.approvalprompt.3")}
         </Button>
       </div>
       <span className="agents-approval__footnote" data-testid="agent-approval-footnote">

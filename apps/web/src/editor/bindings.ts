@@ -16,6 +16,7 @@
  * widths and icon names (agents / files; rendered and exported).
  * Not bindable in format 1.0 (no affordance): X / Y, rotation, wrap, polygon sides, image URL.
  */
+
 import {
   type KimoDocument,
   type Libraries,
@@ -24,6 +25,7 @@ import {
   type Theme,
 } from "@kimo/core-schema"
 import type { DocHeader } from "../lib/header"
+import { t } from "../lib/i18n"
 import { formatNumber } from "./props"
 
 export type BindType = "number" | "string" | "boolean"
@@ -179,7 +181,12 @@ export function pickerGroups(
     (n) => n,
   )
   if (local.length)
-    out.push({ key: "", title: "This file", meta: String(local.length), items: local })
+    out.push({
+      key: "",
+      title: t("ui.editor.bindings.this-file"),
+      meta: String(local.length),
+      items: local,
+    })
   const imports = (header.imports ?? {}) as Record<string, string>
   for (const alias of Object.keys(imports).sort()) {
     const lib = libraries[alias]

@@ -9,6 +9,7 @@
  */
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs"
 import { dirname, join } from "node:path"
+import { t } from "../src/lib/i18n"
 import {
   formatShortcut,
   SHORTCUT_GROUPS,
@@ -35,7 +36,7 @@ function rows(list: readonly Shortcut[]): string {
   const out = ["| Action | macOS | Windows · Linux |", "|---|---|---|"]
   for (const s of list) {
     out.push(
-      `| ${s.label.replace(/\|/g, "\\|")} | ${kbd(formatShortcut(s, "mac"))} | ${kbd(formatShortcut(s, "other"))} |`,
+      `| ${t(s.label).replace(/\|/g, "\\|")} | ${kbd(formatShortcut(s, "mac"))} | ${kbd(formatShortcut(s, "other"))} |`,
     )
   }
   return out.join("\n")
@@ -55,7 +56,7 @@ function shortcutsMarkdown(): string {
   for (const g of SHORTCUT_GROUPS) {
     const list = SHORTCUT_LIST.filter((s) => s.group === g.id)
     if (list.length === 0) continue
-    parts.push("", `## ${g.title}`, "", rows(list))
+    parts.push("", `## ${t(g.title)}`, "", rows(list))
   }
   const local = SHORTCUT_LIST.filter((s) => !s.group)
   if (local.length) {

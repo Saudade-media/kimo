@@ -15,10 +15,12 @@
  *
  * The component's Footnote (POSht) is hidden on the board, so none is shown.
  */
+
 import { Dialog, DialogScrim, Input, Select } from "@kimo/ui"
 import { type ReactNode, useEffect, useRef, useState } from "react"
 import { createPortal } from "react-dom"
 import { failureText } from "../../editor/errors"
+import { t, t as tr } from "../../lib/i18n"
 import { Icon } from "../../lib/icons"
 import type { InvitePeek, Member, MemberRole, PlanPrice, WorkspaceSummary } from "../cloud/types"
 import {
@@ -32,9 +34,9 @@ import {
 import type { WorkspaceStore } from "../cloud/workspaces"
 import { useWsToast } from "./workspace-parts"
 
-const ROLE_OPTIONS = [
-  { value: "editor" as const, label: "Editor" },
-  { value: "admin" as const, label: "Admin" },
+const roleOptions = () => [
+  { value: "editor" as const, label: t("ui.ws.role.editor") },
+  { value: "admin" as const, label: t("ui.ws.role.admin") },
 ]
 
 const onBody = (node: ReactNode) =>
@@ -66,7 +68,7 @@ export function InviteDialog({
       await store.invite(workspace.id, email.trim(), role)
       onClose()
     } catch (e) {
-      toast({ tone: "danger", text: failureText("send the invite", e) })
+      toast({ tone: "danger", text: failureText(t("errors.sendInvite"), e) })
     } finally {
       setBusy(false)
     }
@@ -77,7 +79,7 @@ export function InviteDialog({
       data-dialog="invite"
       icon={<Icon name="user-plus" size={16} />}
       title={`Invite to ${workspace.name}`}
-      description="We'll email them an invite."
+      description={t("ui.multiplayer.ui.workspacedialogs.7")}
       confirmLabel="Send invite"
       confirmDisabled={!ok || busy}
       onCancel={onClose}
@@ -85,7 +87,7 @@ export function InviteDialog({
     >
       <div className="ws-dialog__body">
         <Input
-          aria-label="Email"
+          aria-label={t("ui.multiplayer.ui.workspacedialogs.6")}
           type="email"
           icon={<Icon name="mail" size={16} />}
           autoComplete="off"
@@ -100,8 +102,8 @@ export function InviteDialog({
           <span className="ws-dialog__row-label">Role</span>
           <Select
             className="ws-select ws-select--140"
-            label="Role"
-            options={ROLE_OPTIONS}
+            label={t("ui.multiplayer.ui.workspacedialogs.5")}
+            options={roleOptions()}
             value={role}
             onChange={setRole}
           />
@@ -158,8 +160,11 @@ export function JoinWorkspaceDialog({
         !switching
           ? `${firstName(peek.invitedBy)} invited ${peek.email} to edit ${peek.workspaceName}'s files.`
           : switchFrom
-            ? `This invite is for ${peek.email}. You're signed in as ${switchFrom}.`
-            : `This invite is for ${peek.email}.`
+            ? t("ui.mp.wsdialogs.inviteForSwitch", {
+                email: peek.email,
+                who: switchFrom,
+              })
+            : t("ui.mp.wsdialogs.inviteFor", { email: peek.email })
       }
       cancelLabel="Not now"
       confirmLabel={switching ? "Sign out" : "Join"}
@@ -214,7 +219,7 @@ export function RemoveMemberDialog({
       toast({ tone: "success", text: `${name} removed` })
     } catch (e) {
       setBusy(false)
-      toast({ tone: "danger", text: failureText(`remove ${name}`, e) })
+      toast({ tone: "danger", text: failureText(t("errors.removeNamed", { name }), e) })
     }
   }
   return onBody(
@@ -232,7 +237,9 @@ export function RemoveMemberDialog({
     >
       {links.length > 0 ? (
         <div className="ws-dialog__body">
-          <span className="ws-label">{`View links ${firstName(member.email)} made will stop working:`}</span>
+          <span className="ws-label">
+            {t("ui.mp.wsdialogs.viewLinksStop", { name: firstName(member.email) })}
+          </span>
           <ul className="ws-list ws-ended-links">
             {links.map((label, i) => (
               // biome-ignore lint/suspicious/noArrayIndexKey: two links may share a file name
@@ -274,7 +281,7 @@ export function TransferDialog({
       onClose()
     } catch (e) {
       setBusy(false)
-      toast({ tone: "danger", text: failureText("send the request", e) })
+      toast({ tone: "danger", text: failureText(t("errors.sendRequest"), e) })
     }
   }
   return onBody(
@@ -283,7 +290,7 @@ export function TransferDialog({
       data-dialog="transfer"
       icon={<Icon name="crown" size={16} />}
       title={`Transfer ${workspace.name}`}
-      description={`The new Owner pays for ${workspace.name}. Your plan ends once they subscribe.`}
+      description={t("ui.mp.wsdialogs.newOwnerPays", { name: workspace.name })}
       confirmLabel="Send request"
       confirmDisabled={!to || busy}
       onCancel={onClose}
@@ -291,10 +298,10 @@ export function TransferDialog({
     >
       <div className="ws-dialog__body">
         <div className="ws-dialog__row">
-          <span className="ws-dialog__row-label">New owner</span>
+          <span className="ws-dialog__row-label">{t("ui.multiplayer.ui.workspacedialogs.t1")}</span>
           <Select
             className="ws-select ws-select--160"
-            label="New owner"
+            label={t("ui.multiplayer.ui.workspacedialogs.4")}
             options={admins.map((a) => ({ value: a.account, label: personName(a.email) }))}
             value={to}
             onChange={setTo}
@@ -337,7 +344,7 @@ export function AcceptTransferDialog({
     } catch (e) {
       toast({
         tone: "danger",
-        text: failureText(what === "accept" ? "open checkout" : "decline", e),
+        text: failureText(what === "accept" ? tr("errors.openCheckout") : tr("errors.decline"), e),
       })
     } finally {
       setBusy(false)
@@ -401,7 +408,10 @@ export function DeleteWorkspaceDialog({
       onDeleted?.()
     } catch (e) {
       setBusy(false)
-      toast({ tone: "danger", text: failureText(`delete ${workspace.name}`, e) })
+      toast({
+        tone: "danger",
+        text: failureText(t("errors.deleteNamed", { name: workspace.name }), e),
+      })
     }
   }
   return onBody(
@@ -410,7 +420,7 @@ export function DeleteWorkspaceDialog({
       data-dialog="delete-workspace"
       icon={<Icon name="trash-2" size={16} />}
       title={`Delete ${workspace.name}?`}
-      description="Files close for everyone now. Members keep read-only copies."
+      description={t("ui.multiplayer.ui.workspacedialogs.3")}
       confirmLabel="Delete workspace"
       confirmTone="danger"
       confirmDisabled={!match || busy}
@@ -419,9 +429,9 @@ export function DeleteWorkspaceDialog({
     >
       <div className="ws-dialog__body">
         <Input
-          aria-label="Workspace name"
+          aria-label={t("ui.multiplayer.ui.workspacedialogs.2")}
           icon={<Icon name="type" size={16} />}
-          placeholder={`Type ${workspace.name} to confirm`}
+          placeholder={t("ui.mp.wsdialogs.typeToConfirm", { name: workspace.name })}
           autoComplete="off"
           spellCheck={false}
           value={typed}
@@ -459,7 +469,10 @@ export function LeaveDialog({
       onLeft?.()
     } catch (e) {
       setBusy(false)
-      toast({ tone: "danger", text: failureText(`leave ${workspace.name}`, e) })
+      toast({
+        tone: "danger",
+        text: failureText(t("errors.leaveNamed", { name: workspace.name }), e),
+      })
     }
   }
   return onBody(
@@ -468,7 +481,7 @@ export function LeaveDialog({
       data-dialog="leave"
       icon={<Icon name="log-out" size={16} />}
       title={`Leave ${workspace.name}?`}
-      description="You lose access to its files. Your local copies stay read-only."
+      description={t("ui.multiplayer.ui.workspacedialogs.1")}
       confirmLabel="Leave"
       confirmTone="danger"
       confirmDisabled={busy}

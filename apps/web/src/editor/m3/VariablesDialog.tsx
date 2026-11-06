@@ -5,6 +5,7 @@
  * Axis Row 24, Column Row 32, VariableRows, open Entries · Footer: info note, Export DTCG, Done).
  * Every edit is one M3 command (one undo step).
  */
+
 import { axisDisplayOrder, isRef, type KimoDocument, type Variable } from "@kimo/core-schema"
 import {
   AxisGroupHeader,
@@ -24,6 +25,7 @@ import {
 import { Fragment, useMemo, useRef, useState } from "react"
 import { downloadBlob } from "../../lib/files"
 import { useDocHeader } from "../../lib/header"
+import { t } from "../../lib/i18n"
 import { Icon } from "../../lib/icons"
 import type { FileSession } from "../session"
 import { type M3Controller, useBusValue, useLibraries } from "./controller"
@@ -387,7 +389,7 @@ export function VariablesDialog({
         <div className="m3-vd__header">
           <div className="m3-vd__titles">
             <h2 className="m3-vd__title" id="m3-vd-title">
-              Variables
+              {t("ui.editor.m3.variablesdialog.33")}
             </h2>
             <p className="m3-vd__desc">
               {`${header.meta?.name ?? "This file"} · ${Object.keys(vars).length} variables · ${axes.length} theme axes · ${libsList.length} libraries`}
@@ -395,7 +397,7 @@ export function VariablesDialog({
           </div>
           <M3IconButton
             icon="x"
-            label="Close"
+            label={t("ui.editor.m3.variablesdialog.32")}
             size={32}
             iconSize={16}
             className="m3-vd__close"
@@ -403,11 +405,11 @@ export function VariablesDialog({
           />
         </div>
         <div className="m3-vd__body">
-          <nav className="m3-vd__sidebar" aria-label="Variable groups">
+          <nav className="m3-vd__sidebar" aria-label={t("ui.editor.m3.variablesdialog.31")}>
             <div className="m3-vd__section">Groups</div>
             <SideNav
               icon="layers"
-              label="All"
+              label={t("ui.editor.m3.variablesdialog.30")}
               count={Object.keys(vars).length}
               active={group === null && library === null}
               onClick={() => {
@@ -429,7 +431,7 @@ export function VariablesDialog({
                 }}
               />
             ))}
-            <div className="m3-vd__section">Theme axes</div>
+            <div className="m3-vd__section">{t("ui.editor.m3.variablesdialog.t3")}</div>
             {axes.map((a) => (
               <SideNav
                 key={a}
@@ -446,7 +448,7 @@ export function VariablesDialog({
               className="m3-vd__add-axis"
               onClick={(e) => setPop({ kind: "axis", anchor: e.currentTarget, axis: null })}
             >
-              Add axis
+              {t("ui.editor.m3.variablesdialog.34")}
             </M3Button>
             {libsList.length > 0 && <div className="m3-vd__section">Libraries</div>}
             {libsList.map((l) => (
@@ -473,8 +475,8 @@ export function VariablesDialog({
             <div className="m3-vd__toolbar">
               <Input
                 icon={<Icon name="search" size={16} />}
-                placeholder="Search variables"
-                aria-label="Search variables"
+                placeholder={t("ui.editor.m3.variablesdialog.29")}
+                aria-label={t("ui.editor.m3.variablesdialog.28")}
                 value={query}
                 onChange={(e) => setQuery(e.currentTarget.value)}
                 frameProps={{ className: "m3-vd__search" }}
@@ -500,7 +502,7 @@ export function VariablesDialog({
                 disabled={readOnly}
                 onClick={(e) => setPop({ kind: "new", anchor: e.currentTarget })}
               >
-                New variable
+                {t("ui.editor.m3.variablesdialog.35")}
               </M3Button>
             </div>
             {/* A grid (one Tab stop): arrows move between cells, Enter / F2 edits, Escape
@@ -509,7 +511,7 @@ export function VariablesDialog({
             <div
               className="m3-vd__table"
               role="grid"
-              aria-label="Variables by theme"
+              aria-label={t("ui.editor.m3.variablesdialog.27")}
               aria-rowcount={names.length + 1}
               aria-colcount={columns.length + 1}
               tabIndex={0}
@@ -539,7 +541,7 @@ export function VariablesDialog({
                 {/* biome-ignore lint/a11y/useSemanticElements: a CSS grid of sticky flex rows; a <table> cannot keep that layout */}
                 {/* biome-ignore lint/a11y/useFocusableInteractive: headers are not focus stops */}
                 <span className="m3-vd__name-header" role="columnheader" style={{ width: NAME_W }}>
-                  Name
+                  {t("ui.editor.m3.variablesdialog.36")}
                 </span>
                 {columns.map((c) => (
                   <ModeColumnHeader
@@ -557,7 +559,9 @@ export function VariablesDialog({
                   />
                 ))}
               </div>
-              {names.length === 0 && <div className="m3-vd__none">No variables match.</div>}
+              {names.length === 0 && (
+                <div className="m3-vd__none">{t("ui.editor.m3.variablesdialog.t2")}</div>
+              )}
               {names.map((name) => {
                 const v = source[name]
                 if (!v) return null
@@ -613,7 +617,7 @@ export function VariablesDialog({
                         {lint && (
                           <span
                             className="m3-var-row__lint"
-                            title="THEME_NO_MATCH: no entry matches the previewed theme"
+                            title={t("ui.editor.m3.variablesdialog.26")}
                           >
                             <Icon name="triangle-alert" size={12} />
                           </span>
@@ -726,7 +730,7 @@ export function VariablesDialog({
                                 )
                               }}
                             >
-                              Add entry
+                              {t("ui.editor.m3.variablesdialog.37")}
                             </M3Button>
                             <M3Button
                               variant="ghost"
@@ -751,7 +755,7 @@ export function VariablesDialog({
                                 )
                               }
                             >
-                              Add fallback
+                              {t("ui.editor.m3.variablesdialog.38")}
                             </M3Button>
                           </div>
                         )}
@@ -782,14 +786,14 @@ export function VariablesDialog({
                   )
                 }
               >
-                Export DTCG
+                {t("ui.editor.m3.variablesdialog.39")}
               </M3Button>
               <M3Button
                 variant="primary"
                 className="m3-vd__footer-button m3-vd__done"
                 onClick={onClose}
               >
-                Done
+                {t("ui.editor.m3.variablesdialog.40")}
               </M3Button>
             </div>
           </div>
@@ -894,7 +898,7 @@ function DialogPopovers({
       return (
         <MenuDense
           width={200}
-          label="New variable"
+          label={t("ui.editor.m3.variablesdialog.25")}
           anchor={pop.anchor}
           placement={{ side: "bottom", align: "end", offset: 4 }}
           onClose={onClose}
@@ -916,7 +920,7 @@ function DialogPopovers({
           <MenuDivider />
           <M3MenuItem
             icon="folder-plus"
-            label="Group…"
+            label={t("ui.editor.m3.variablesdialog.24")}
             onSelect={() => {
               const g = prompt("Group for the next variable (DTCG path)")
               onClose()
@@ -925,7 +929,7 @@ function DialogPopovers({
           />
           <M3MenuItem
             icon="sun-moon"
-            label="Theme axis…"
+            label={t("ui.editor.m3.variablesdialog.23")}
             onSelect={() => setPop({ kind: "axis", anchor: pop.anchor, axis: null })}
           />
         </MenuDense>
@@ -936,7 +940,7 @@ function DialogPopovers({
       return (
         <MenuDense
           width={220}
-          label="Variable"
+          label={t("ui.editor.m3.variablesdialog.22")}
           anchor={pop.anchor}
           placement={{ side: "bottom", align: "end", offset: 4 }}
           onClose={onClose}
@@ -945,12 +949,12 @@ function DialogPopovers({
         >
           <M3MenuItem
             icon="pencil"
-            label="Edit details…"
+            label={t("ui.editor.m3.variablesdialog.21")}
             onSelect={() => onDetails(pop.name, pop.anchor)}
           />
           <M3MenuItem
             icon="list-ordered"
-            label="Show entries"
+            label={t("ui.editor.m3.variablesdialog.20")}
             meta={String(n)}
             onSelect={() => {
               onClose()
@@ -959,13 +963,13 @@ function DialogPopovers({
           />
           <M3MenuItem
             icon="folder-input"
-            label="Move to group…"
+            label={t("ui.editor.m3.variablesdialog.19")}
             onSelect={() => onDetails(pop.name, pop.anchor)}
           />
           <MenuDivider />
           <M3MenuItem
             icon="copy"
-            label="Duplicate"
+            label={t("ui.editor.m3.variablesdialog.18")}
             onSelect={() => {
               onClose()
               run(
@@ -980,7 +984,7 @@ function DialogPopovers({
           />
           <M3MenuItem
             icon="trash-2"
-            label="Delete"
+            label={t("ui.editor.m3.variablesdialog.17")}
             danger
             onSelect={() => {
               onClose()
@@ -990,7 +994,9 @@ function DialogPopovers({
                 void m3
                   .confirm({
                     title: `Delete ${pop.name}?`,
-                    desc: "It is still used. Bindings keep their current value as a literal.",
+                    desc: t(
+                      "ui.editor.m3.variablesdialog.it-is-still-used-bindings-keep-their-current-value-as-a-literal",
+                    ),
                     icon: "trash-2",
                     tone: "danger",
                     items: [{ icon: "circle-dot", text: dry.error.message }],
@@ -1014,7 +1020,7 @@ function DialogPopovers({
       return (
         <MenuDense
           width={220}
-          label="Column"
+          label={t("ui.editor.m3.variablesdialog.16")}
           anchor={pop.anchor}
           placement={{ side: "bottom", align: "end", offset: 4 }}
           onClose={onClose}
@@ -1023,7 +1029,7 @@ function DialogPopovers({
         >
           <M3MenuItem
             icon="arrow-left-to-line"
-            label="Make default (moves first)"
+            label={t("ui.editor.m3.variablesdialog.15")}
             disabled={themes[pop.axis]?.[0] === pop.value}
             onSelect={() => {
               onClose()
@@ -1035,14 +1041,14 @@ function DialogPopovers({
           />
           <M3MenuItem
             icon="pencil"
-            label="Rename value"
+            label={t("ui.editor.m3.variablesdialog.14")}
             onSelect={() =>
               setPop({ kind: "rename-value", anchor: pop.anchor, axis: pop.axis, value: pop.value })
             }
           />
           <M3MenuItem
             icon="copy"
-            label="Duplicate value"
+            label={t("ui.editor.m3.variablesdialog.13")}
             onSelect={() => {
               onClose()
               run(
@@ -1059,7 +1065,7 @@ function DialogPopovers({
           <MenuDivider />
           <M3MenuItem
             icon="trash-2"
-            label="Delete value"
+            label={t("ui.editor.m3.variablesdialog.12")}
             danger
             disabled={(themes[pop.axis]?.length ?? 0) < 2}
             onSelect={() => {
@@ -1071,7 +1077,9 @@ function DialogPopovers({
                 void m3
                   .confirm({
                     title: `Delete ${pop.axis} = ${pop.value}?`,
-                    desc: "Entries and pins that name it are removed.",
+                    desc: t(
+                      "ui.editor.m3.variablesdialog.entries-and-pins-that-name-it-are-removed",
+                    ),
                     icon: "trash-2",
                     tone: "danger",
                     items: [{ icon: "circle-dot", text: dry.error.message }],
@@ -1093,11 +1101,14 @@ function DialogPopovers({
     case "rename-value":
       return (
         <TextPopover
-          title={`Rename ${pop.axis} value`}
+          title={t("ui.editor.m3.variables.renameAxis", { axis: pop.axis })}
           anchor={pop.anchor}
           initial={pop.value}
-          onCommit={(t) =>
-            run({ cmd: "renameAxisValue", axis: pop.axis, from: pop.value, to: t }, "Rename value")
+          onCommit={(next) =>
+            run(
+              { cmd: "renameAxisValue", axis: pop.axis, from: pop.value, to: next },
+              t("ui.editor.m3.variables.renameValue"),
+            )
           }
           onClose={onClose}
         />
@@ -1124,10 +1135,16 @@ function DialogPopovers({
       )
     case "entry":
       return (
-        <MenuDense width={200} label="Entry" anchor={pop.anchor} onClose={onClose} autoFocus>
+        <MenuDense
+          width={200}
+          label={t("ui.editor.m3.variablesdialog.11")}
+          anchor={pop.anchor}
+          onClose={onClose}
+          autoFocus
+        >
           <M3MenuItem
             icon="trash-2"
-            label="Delete entry"
+            label={t("ui.editor.m3.variablesdialog.10")}
             danger
             onSelect={() => {
               onClose()
@@ -1253,7 +1270,7 @@ function TextPopover({
       >
         <Input aria-label={title} value={text} onChange={(e) => setText(e.currentTarget.value)} />
         <M3Button variant="primary" type="submit">
-          Apply
+          {t("ui.editor.m3.variablesdialog.41")}
         </M3Button>
       </form>
     </Popover>
@@ -1279,7 +1296,7 @@ function DetailsPopover({
   if (!v) return null
   return (
     <Popover
-      title="Variable details"
+      title={t("ui.editor.m3.variablesdialog.9")}
       anchor={anchor}
       onClose={onClose}
       initialFocus="first"
@@ -1310,20 +1327,28 @@ function DetailsPopover({
       >
         <div className="m3-details__field">
           <span className="m3-details__label">Name</span>
-          <Input aria-label="Name" value={n} onChange={(e) => setN(e.currentTarget.value)} />
+          <Input
+            aria-label={t("ui.editor.m3.variablesdialog.8")}
+            value={n}
+            onChange={(e) => setN(e.currentTarget.value)}
+          />
         </div>
         <div className="m3-details__field">
           <span className="m3-details__label">Group</span>
           <Input
-            aria-label="Group"
-            placeholder="DTCG path, e.g. color"
+            aria-label={t("ui.editor.m3.variablesdialog.7")}
+            placeholder={t("ui.editor.m3.variablesdialog.6")}
             value={g}
             onChange={(e) => setG(e.currentTarget.value)}
           />
         </div>
         <div className="m3-details__field">
           <span className="m3-details__label">Description</span>
-          <Input aria-label="Description" value={d} onChange={(e) => setD(e.currentTarget.value)} />
+          <Input
+            aria-label={t("ui.editor.m3.variablesdialog.5")}
+            value={d}
+            onChange={(e) => setD(e.currentTarget.value)}
+          />
         </div>
         <div className="m3-details__field">
           <span className="m3-details__label">Type</span>
@@ -1333,7 +1358,7 @@ function DetailsPopover({
           </span>
         </div>
         <M3Button variant="primary" type="submit" className="m3-details__save">
-          Save
+          {t("ui.editor.m3.variablesdialog.42")}
         </M3Button>
       </form>
     </Popover>
@@ -1392,15 +1417,15 @@ function AxisPopover({
         <div className="m3-details__field">
           <span className="m3-details__label">Axis</span>
           <Input
-            aria-label="Axis name"
+            aria-label={t("ui.editor.m3.variablesdialog.4")}
             value={name}
             onChange={(e) => setName(e.currentTarget.value)}
           />
         </div>
         <div className="m3-details__field">
-          <span className="m3-details__label">Values (first = default)</span>
+          <span className="m3-details__label">{t("ui.editor.m3.variablesdialog.t1")}</span>
           <Input
-            aria-label="Axis values"
+            aria-label={t("ui.editor.m3.variablesdialog.3")}
             value={vals}
             onChange={(e) => setVals(e.currentTarget.value)}
           />
@@ -1415,7 +1440,7 @@ function AxisPopover({
                 m3.run({ cmd: "deleteAxis", axis }, "Delete axis")
               }}
             >
-              Delete axis
+              {t("ui.editor.m3.variablesdialog.43")}
             </M3Button>
           )}
           <span className="m3-vd__spacer" />
@@ -1489,8 +1514,8 @@ function AliasPicker({
     >
       <Input
         icon={<Icon name="search" size={16} />}
-        placeholder="Search variables"
-        aria-label="Search variables"
+        placeholder={t("ui.editor.m3.variablesdialog.2")}
+        aria-label={t("ui.editor.m3.variablesdialog.1")}
         value={q}
         onChange={(e) => setQ(e.currentTarget.value)}
       />
@@ -1563,7 +1588,11 @@ function AliasPicker({
             onClose()
           }}
         >
-          {`Detach alias${resolved.ok ? ` · keep ${valueText(type ?? "string", resolved.value)}` : ""}`}
+          {resolved.ok
+            ? t("ui.editor.m3.variables.detachAliasKeep", {
+                value: valueText(type ?? "string", resolved.value),
+              })
+            : t("ui.editor.m3.variables.detachAlias")}
         </M3Button>
         {type === "color" && (
           <M3Button variant="ghost" icon="pipette" onClick={onCustom}>

@@ -3,7 +3,9 @@
  * the family (an offline / local font lacks it), the weight field shows a 6px `$warning` dot and
  * its tooltip names the weight actually rendered. No synthetic bold.
  */
+
 import { weightName } from "../editor/text"
+import { t } from "../lib/i18n"
 
 /**
  * The weight the renderer draws instead of `wanted`: `@kimo/renderer` `nearestFace` picks the
@@ -34,11 +36,14 @@ export function missingWeight(
   const rendered = renderedWeight(weight, shipped)
   const name = weightName(weight)
   return {
-    title: `${family} ${name} (${weight}) isn't installed`,
+    title: t("ui.fonts.missingweight.title", { family, name, weight: String(weight) }),
     body:
       rendered === null
-        ? "Install the weight or pick another."
-        : `Showing ${weightName(rendered)} ${rendered}. Install the weight or pick another.`,
+        ? t("ui.fonts.missingweight.body")
+        : t("ui.fonts.missingweight.bodyShowing", {
+            weight: weightName(rendered),
+            value: String(rendered),
+          }),
     rendered,
   }
 }

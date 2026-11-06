@@ -7,6 +7,7 @@
  * pan (space-drag, middle mouse, wheel), zoom (⌘/ctrl-wheel, pinch, keys) and canvas commands.
  * Every document edit goes through `store.apply` with the host origin; one gesture = one undo step.
  */
+
 import {
   declaredProps,
   defaultTextFill,
@@ -62,6 +63,7 @@ import { modKeyHint } from "../editor/kbd"
 import { altDragCloneOps, type DuplicateMainPref } from "../editor/m3/component-actions"
 import { pageScopedSource, withActivePage } from "../editor/pages/model"
 import { manifestOps } from "../lib/asset-manifest"
+import { t } from "../lib/i18n"
 import { type Combo, matchCombo, matches, pointerHeld, shortcut } from "../shortcuts/shortcuts"
 import { AgentCanvasModel, type AgentDomState } from "./agent-canvas"
 import { BuildMotion } from "./agent-motion"
@@ -1360,25 +1362,29 @@ export class CanvasController {
       hint = {
         kind: "crop",
         icon: "crop",
-        text: "Drag edges to crop · drag inside to pan · Enter to apply",
+        text: t("ui.canvas.controller.drag-edges-to-crop-drag-inside-to-pan-enter-to-apply"),
       }
     } else if (pen?.closeHint && pen.anchors[0]) {
       const a = this.toScreen(pen.anchors[0])
       hint = {
         kind: "pen-close",
         icon: "circle-dot",
-        text: "Close path",
+        text: t("ui.canvas.controller.close-path"),
         screen: { x: a.x + CLOSE_HINT_OFFSET.x, y: a.y + CLOSE_HINT_OFFSET.y },
       }
     } else if (this.pathEdit) {
-      hint = { kind: "path-edit", icon: "spline", text: "Editing path · Esc or Enter to exit" }
+      hint = {
+        kind: "path-edit",
+        icon: "spline",
+        text: t("ui.canvas.controller.editing-path-esc-or-enter-to-exit"),
+      }
     } else if (measuring) {
-      hint = { kind: "measuring", text: "Measuring", keys: "⌥" }
+      hint = { kind: "measuring", text: t("ui.canvas.controller.measuring"), keys: "⌥" }
     } else if (this.ui.getState().tool === "path" && !pen?.anchors.length) {
       hint = {
         kind: "pen",
         icon: "pen-tool",
-        text: "Click to add points · Drag to curve · Enter to finish",
+        text: t("ui.canvas.controller.click-to-add-points-drag-to-curve-enter-to-finish"),
       }
     }
     this.opts.toolStore?.set({ penHint: hint?.kind === "pen" })
@@ -3566,7 +3572,10 @@ export class CanvasController {
     if (f && d && (d.kind === "draw" || d.kind === "line" || d.kind === "place")) {
       hint = {
         icon: "square",
-        text: `Release → inserts at ${f.slot + 1} · ${modKeyHint()} draws on top`,
+        text: t("ui.canvas.controller.releaseHint", {
+          slot: String(f.slot + 1),
+          mod: modKeyHint(),
+        }),
       }
       if (!f.absolute) {
         bar = slotBar(f.flow, f.slot)
@@ -3583,7 +3592,7 @@ export class CanvasController {
     } else if (d?.kind === "move" && d.reloc) {
       const r = d.reloc
       if (r.flowStart)
-        hint = { icon: "move", text: `Outside → to Canvas · ${modKeyHint()} keeps it absolute` }
+        hint = { icon: "move", text: t("ui.canvas.controller.outsideHint", { mod: modKeyHint() }) }
       const last = r.last
       if (last?.mode === "flow" && last.flow) {
         bar = slotBar(last.flow, last.slot)

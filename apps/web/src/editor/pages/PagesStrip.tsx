@@ -24,6 +24,7 @@ import {
 import { useEffect, useMemo, useRef, useState } from "react"
 import { useDocHeader } from "../../lib/header"
 import { useTreeRevision, useUi } from "../../lib/hooks"
+import { t, tn } from "../../lib/i18n"
 import { Icon } from "../../lib/icons"
 import { isUntitledRef } from "../../platform/contract"
 import { shortcutLabel } from "../../shortcuts/shortcuts"
@@ -203,13 +204,13 @@ export function PagesStrip({ session, m3 }: { session: FileSession; m3: M3Contro
         >
           <Icon name={collapsed ? "chevron-right" : "chevron-down"} size={12} />
         </button>
-        <span className="pages-strip__title">Pages</span>
+        <span className="pages-strip__title">{t("editor.pagesTitle")}</span>
         <span className="pages-strip__spacer" />
         <IconButton
           size="sm"
           tone="ghost"
           className="pages-strip__add"
-          label="Add page"
+          label={t("ui.editor.pages.pagesstrip.8")}
           icon={<Icon name="plus" size={14} />}
           onClick={onAdd}
         />
@@ -219,7 +220,7 @@ export function PagesStrip({ session, m3 }: { session: FileSession; m3: M3Contro
           ref={list}
           className="pages-strip__list"
           role="listbox"
-          aria-label="Pages"
+          aria-label={t("editor.pagesTitle")}
           style={{ maxHeight: MAX_ROWS * ROW_PITCH - 1 }}
           data-rows={visibleRows}
         >
@@ -279,7 +280,7 @@ export function PagesStrip({ session, m3 }: { session: FileSession; m3: M3Contro
         <MenuDense
           className="pages-strip__menu"
           width={196}
-          label="Page menu"
+          label={t("ui.editor.pages.pagesstrip.7")}
           autoFocus
           onClose={() => setMenu(null)}
           onKeyDown={(e) => {
@@ -291,7 +292,7 @@ export function PagesStrip({ session, m3 }: { session: FileSession; m3: M3Contro
           anchor={{ x: menu.x, y: menu.y, width: 0, height: 0 }}
         >
           <MenuItemDense
-            label="Rename"
+            label={t("ui.editor.pages.pagesstrip.6")}
             meta="Dbl-click"
             metaFont="sans"
             onSelect={() => {
@@ -300,14 +301,14 @@ export function PagesStrip({ session, m3 }: { session: FileSession; m3: M3Contro
             }}
           />
           <MenuItemDense
-            label="Duplicate page"
+            label={t("ui.editor.pages.pagesstrip.5")}
             onSelect={() => {
               duplicatePage(ctx, menu.id)
               setMenu(null)
             }}
           />
           <MenuItemDense
-            label="Copy link to page"
+            label={t("ui.editor.pages.pagesstrip.4")}
             disabled={menu.id === null || pageLink(session, menu.id) === null}
             onSelect={() => {
               const id = menu.id
@@ -316,15 +317,19 @@ export function PagesStrip({ session, m3 }: { session: FileSession; m3: M3Contro
               if (id)
                 void copyPageLink(session, id).then(
                   () =>
-                    m3.toast({ tone: "success", icon: "link-2", text: `Copied link to ${name}` }),
+                    m3.toast({
+                      tone: "success",
+                      icon: "link-2",
+                      text: t("ui.editor.pages.copiedLink", { name }),
+                    }),
                   (e: unknown) =>
-                    m3.toast({ tone: "danger", text: failureText("copy the link", e) }),
+                    m3.toast({ tone: "danger", text: failureText(t("errors.copyLink"), e) }),
                 )
             }}
           />
           <MenuDivider />
           <MenuItemDense
-            label="Move up"
+            label={t("ui.editor.pages.pagesstrip.3")}
             disabled={menuPage <= 0}
             onSelect={() => {
               if (menu.id) movePage(ctx, menu.id, menuPage - 1)
@@ -332,7 +337,7 @@ export function PagesStrip({ session, m3 }: { session: FileSession; m3: M3Contro
             }}
           />
           <MenuItemDense
-            label="Move down"
+            label={t("ui.editor.pages.pagesstrip.2")}
             disabled={menuPage < 0 || menuPage >= pages.length - 1}
             onSelect={() => {
               if (menu.id) movePage(ctx, menu.id, menuPage + 1)
@@ -342,7 +347,7 @@ export function PagesStrip({ session, m3 }: { session: FileSession; m3: M3Contro
           <MenuDivider />
           <MenuItemDense
             className="pages-strip__menu-delete"
-            label="Delete page…"
+            label={t("ui.editor.pages.pagesstrip.1")}
             meta={DELETE_KEY}
             disabled={pages.length <= 1}
             onSelect={() => {
@@ -428,7 +433,7 @@ export function PagesFooter({
       <span className="left-panel__footer-icon">
         <Icon name="files" size={14} />
       </span>
-      <span className="left-panel__footer-label">{n === 1 ? "1 page" : `${n} pages`}</span>
+      <span className="left-panel__footer-label">{tn("editor.pageOne", "editor.page", n)}</span>
       <span className="left-panel__footer-spacer" />
       <Kbd>{shortcutLabel("pageSwitcher")}</Kbd>
     </button>

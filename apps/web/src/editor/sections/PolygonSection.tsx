@@ -11,10 +11,12 @@
  * radius (star only). A star is `{ type: "polygon", star: { ratio } }` (ratio 0.38 = default,
  * stored as `star: {}`). The edited count is remembered for the next polygon / star drawn.
  */
+
 import type { Op } from "@kimo/editor-state"
 import { PropRow, SegmentedText } from "@kimo/ui"
 import { clampRatio, clampSides, STAR_RATIO } from "../../canvas/commands"
 import { canvasToolStore } from "../../canvas/tool-state"
+import { t } from "../../lib/i18n"
 import { Bindable } from "../bind"
 import { NumberField } from "../fields"
 import { type Sel, usePanel } from "../panel-context"
@@ -59,10 +61,10 @@ export function PolygonSection({ sel }: { sel: readonly Sel[] }) {
         <h3 className="rp-polygon__title">{isStar ? "Star" : "Polygon"}</h3>
         <SegmentedText
           className="rp-polygon__kind"
-          label="Polygon kind"
+          label={t("insp.polygonKind")}
           options={[
-            { value: "polygon", label: "Polygon" },
-            { value: "star", label: "Star" },
+            { value: "polygon", label: t("ui.editor.sections.polygonsection.polygon") },
+            { value: "star", label: t("ui.shortcuts.star") },
           ]}
           value={kind === MIXED ? null : kind}
           onChange={(v) =>
@@ -94,7 +96,7 @@ export function PolygonSection({ sel }: { sel: readonly Sel[] }) {
           sel={sel}
           spec={{
             type: "number",
-            label: "Corner radius",
+            label: t("insp.radius"),
             prefix: "Radius",
             get: (n) => n.radius ?? 0,
             put: (s, v) => setOps([s.id], "radius", v === 0 ? undefined : v),
@@ -105,7 +107,7 @@ export function PolygonSection({ sel }: { sel: readonly Sel[] }) {
           {(bind) => (
             <NumberField
               prefix="Radius"
-              label="Corner radius"
+              label={t("insp.radius")}
               bind={bind}
               value={radius}
               editor={editor}
@@ -120,7 +122,7 @@ export function PolygonSection({ sel }: { sel: readonly Sel[] }) {
       <PropRow className={isStar ? "rp-row" : "rp-row rp-polygon__row--off"}>
         <NumberField
           prefix="Ratio"
-          label="Star ratio"
+          label={t("insp.starRatio")}
           value={isStar ? (pct === MIXED ? MIXED : `${pct} %`) : "—"}
           editor={editor}
           min={1}

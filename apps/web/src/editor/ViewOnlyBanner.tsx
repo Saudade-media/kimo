@@ -3,7 +3,9 @@
  * Icon `eye`, Title "View only" (sans 12 / 600), Body (sans 12, text-secondary) naming the owner;
  * Secondary / Primary actions and Dismiss are off (`enabled: false` in the instance).
  */
+
 import { Banner } from "@kimo/ui"
+import { t } from "../lib/i18n"
 import { Icon } from "../lib/icons"
 import { roomKeyOf } from "../multiplayer/backend"
 import { useCollaborators, useMultiplayer } from "../multiplayer/hooks"
@@ -20,7 +22,7 @@ function BannerView({ body }: { body: string }) {
   return (
     <Banner
       icon={<Icon name="eye" size={16} />}
-      title="View only"
+      title={t("ui.editor.viewonlybanner.1")}
       body={body}
       data-testid="view-only-banner"
     />

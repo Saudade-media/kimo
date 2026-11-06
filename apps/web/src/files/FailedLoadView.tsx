@@ -8,10 +8,12 @@
  * Path mono 11 text-tertiary · Spacer · Reveal Button/Ghost h 30 [0, 12] · Open as text
  * Button/Secondary h 30 [0, 14], labels 12).
  */
+
 import type { HostOS } from "@kimo/platform"
 import { Button } from "@kimo/ui"
 import { FileX } from "lucide-react"
 import { useFailureToast } from "../editor/failure-toast"
+import { t } from "../lib/i18n"
 import { type FailedLoadDetail, revealLabel } from "../platform/contract"
 import { displayPath } from "../platform/format"
 import type { FileDocumentSession } from "../platform/session"
@@ -84,7 +86,7 @@ function FailedLoadCard({
             className="kimo-files-failed__open-text"
             onClick={onOpenAsText}
           >
-            Open as text
+            {t("ui.files.failedloadview.1")}
           </Button>
         )}
       </div>

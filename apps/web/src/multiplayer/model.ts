@@ -13,6 +13,7 @@
  * - The join card shows only when joining takes longer than {@link JOIN_CARD_DELAY_MS}.
  * - Testing a relay gives up after {@link RELAY_TEST_TIMEOUT_MS}.
  */
+
 import type { ClaimView } from "@kimo/editor-state"
 import type { KimoPlatform, SettingsApi } from "@kimo/platform"
 import type { PresenceState } from "@kimo/sync"
@@ -25,6 +26,7 @@ import {
   type RelayInfo,
   type Role,
 } from "@kimo/sync/mp"
+import { t, tn } from "../lib/i18n"
 import type { LocalPresence } from "../platform/share"
 import { assertRelayReachable } from "../platform/share"
 import type { AgentPauseView } from "./agent-pause"
@@ -464,11 +466,16 @@ export function resetConfirmCopy(impact: ResetImpact): string {
       impact.more > 0
         ? `${impact.people.join(", ")} and ${impact.more} more`
         : impact.people.join(", ")
-    parts.push(`${people} ${people === 1 ? "person" : "people"} now (${names})`)
+    parts.push(
+      tn("ui.mp.model.peopleNowOne", "ui.mp.model.peopleNow", impact.people.length, {
+        names,
+      }),
+    )
   }
-  if (impact.agents > 0) parts.push(`${impact.agents} ${impact.agents === 1 ? "agent" : "agents"}`)
-  if (parts.length === 0) return "Nobody is connected through these links now."
-  return `Disconnects ${parts.join(" and ")} using these links.`
+  if (impact.agents > 0)
+    parts.push(tn("ui.mp.model.agentsOne", "ui.mp.model.agents", impact.agents))
+  if (parts.length === 0) return t("ui.mp.model.nobody")
+  return t("ui.mp.model.disconnects", { what: parts.join(" and ") })
 }
 
 /** The relay status of a snapshot at `now` (board 41 section 2). */

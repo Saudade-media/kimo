@@ -15,9 +15,11 @@
  *   Actions (VM4GH): row, gap 6, padding [4, 0, 0, 0], justify end: Cancel (Button/Ghost h 28,
  *     [0, 10], 12) · Import (Button/Primary h 28, [0, 12], 12).
  */
+
 import { Button, Popover, Toggle } from "@kimo/ui"
 import { ImageIcon, PenTool } from "lucide-react"
 import { useId, useState } from "react"
+import { t } from "../lib/i18n"
 import { DEFAULT_SVG_OPTIONS, type SvgImportOptions } from "./convert"
 import "./svg-import.css"
 
@@ -87,7 +89,11 @@ export function SvgImportPopover({
       {...(anchor ? { anchor: anchor as HTMLElement } : {})}
       data-pen="mevh8"
     >
-      <div className="svg-import__as" role="radiogroup" aria-label="Import as">
+      <div
+        className="svg-import__as"
+        role="radiogroup"
+        aria-label={t("ui.svg.import.svgimportpopover.1")}
+      >
         {(
           [
             ["vector", "Vector paths", PenTool],
@@ -121,7 +127,7 @@ export function SvgImportPopover({
       ]}
       <div className="svg-import__actions">
         <Button variant="ghost" size="sm" className="svg-import__cancel" onClick={onCancel}>
-          Cancel
+          {t("ui.svg.import.svgimportpopover.2")}
         </Button>
         <Button
           variant="primary"
@@ -129,7 +135,7 @@ export function SvgImportPopover({
           className="svg-import__import"
           onClick={() => onImport({ mode, options })}
         >
-          Import
+          {t("ui.svg.import.svgimportpopover.3")}
         </Button>
       </div>
     </Popover>

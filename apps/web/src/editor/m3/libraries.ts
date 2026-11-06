@@ -15,6 +15,7 @@
  * Nothing here is stored in the `.kimo` file. Pure helpers ({@link diffLibraries},
  * {@link aliasFor}, {@link relativePath}) are unit-tested.
  */
+
 import {
   ALIAS_PATTERN,
   type KimoDocument,
@@ -22,6 +23,7 @@ import {
   localComponents,
   openDocument,
 } from "@kimo/core-schema"
+import { t } from "../../lib/i18n"
 import { isZip, readZip } from "../../lib/zip"
 
 type LibraryStatus = "loading" | "linked" | "changed" | "missing"
@@ -249,7 +251,7 @@ export async function pickLibraryFile(): Promise<PickedLibrary | null> {
       const [handle] = await w.showOpenFilePicker({
         types: [
           {
-            description: "Kimo library",
+            description: t("ui.editor.m3.libraries.kimo-library"),
             accept: { "application/json": [".kimo"], "application/zip": [".kimoz"] },
           },
         ],

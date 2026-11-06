@@ -1,3 +1,4 @@
+import { type MessageKey, t } from "@kimo/i18n"
 import { ChevronDown } from "lucide-react"
 import {
   type ComponentPropsWithRef,
@@ -14,11 +15,15 @@ import { MenuDense, MenuItemDense } from "../menu-dense/MenuDense"
 export type SizeMode = "fixed" | "fit" | "fill"
 
 /** Menu order and labels (Fixed · Hug · Fill). */
-export const SIZE_MODES: readonly { value: SizeMode; label: string }[] = [
-  { value: "fixed", label: "Fixed" },
-  { value: "fit", label: "Hug" },
-  { value: "fill", label: "Fill" },
+const SIZE_MODES: readonly { value: SizeMode; label: MessageKey }[] = [
+  { value: "fixed", label: "ui.pkg.size.fixed" },
+  { value: "fit", label: "ui.pkg.size.hug" },
+  { value: "fill", label: "ui.pkg.size.fill" },
 ]
+
+/** Menu options, translated when the field renders. */
+export const sizeModes = (): { value: SizeMode; label: string }[] =>
+  SIZE_MODES.map((m) => ({ value: m.value, label: t(m.label) }))
 
 /** Props for {@link SizeField}. Remaining `<div>` props go to the frame. */
 export interface SizeFieldProps
@@ -69,7 +74,8 @@ export function SizeField({
   const [draft, setDraft] = useState<string | null>(null)
   const [open, setOpen] = useState(false)
   const cancelled = useRef(false)
-  const label = SIZE_MODES.find((m) => m.value === mode)?.label ?? mode
+  const found = SIZE_MODES.find((m) => m.value === mode)
+  const label = found ? t(found.label) : mode
 
   const commit = () => {
     if (draft !== null && draft.trim() !== "" && draft !== value) onValueCommit?.(draft.trim())
@@ -189,7 +195,7 @@ export function SizeField({
           onClose={closeMenu}
           style={{ width: root.current?.getBoundingClientRect().width }}
         >
-          {SIZE_MODES.map((m) => (
+          {sizeModes().map((m) => (
             <MenuItemDense
               key={m.value}
               label={m.label}

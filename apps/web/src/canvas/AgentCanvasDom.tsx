@@ -9,6 +9,7 @@
  * - prompt footers (poE5B `pFCri`: status icon + text, Run / Stop / Retry), the running outline
  *   (n22Gv `VFi4q`: 1.5 `agent`) and target chips (n22Gv `sWQ2b`).
  */
+import { type MessageKey, t } from "../lib/i18n"
 import { Icon } from "../lib/icons"
 import { AgentSectionLayer } from "./AgentSectionCursor"
 import type { AgentDomState, PromptView } from "./agent-canvas"
@@ -62,10 +63,10 @@ const STATUS_ICON: Record<PromptView["status"], string | null> = {
   failed: "circle-alert",
 }
 
-const ACTION: Record<PromptView["action"], { icon: string; label: string }> = {
-  run: { icon: "play", label: "Run" },
-  stop: { icon: "square", label: "Stop" },
-  retry: { icon: "rotate-ccw", label: "Retry" },
+const ACTION: Record<PromptView["action"], { icon: string; label: MessageKey }> = {
+  run: { icon: "play", label: "ui.canvas.prompt.run" },
+  stop: { icon: "square", label: "ui.canvas.prompt.stop" },
+  retry: { icon: "rotate-ccw", label: "ui.canvas.prompt.retry" },
 }
 
 /** Prompt footer contents in world scale (the card and footer fill are canvas-drawn). */
@@ -119,7 +120,7 @@ function PromptChrome({ view, props }: { view: PromptView; props: AgentCanvasPro
           disabled={view.action === "stop" ? !props?.onStopPrompt : !props?.onRunPrompt}
         >
           <Icon name={action.icon} size={12} />
-          <span className="agent-canvas__prompt-run-label">{action.label}</span>
+          <span className="agent-canvas__prompt-run-label">{t(action.label)}</span>
         </button>
       </div>
       {view.target && (

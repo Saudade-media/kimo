@@ -1,3 +1,4 @@
+import { t } from "@kimo/i18n"
 import { Fragment, type ReactNode } from "react"
 import { cx } from "../internal/util"
 import { MenuDense, MenuDivider, MenuItemDense } from "../menu-dense/MenuDense"
@@ -51,7 +52,7 @@ export function CanvasContextMenu({
   groups,
   anchor,
   onClose,
-  label = "Canvas",
+  label = t("ui.pkg.canvas.context.menu.canvascontextmenu.canvas"),
   "data-testid": testId,
 }: CanvasContextMenuProps) {
   const shown = groups.filter((g) => g.length > 0)

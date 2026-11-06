@@ -9,6 +9,7 @@
  */
 import { Button } from "@kimo/ui"
 import { type ReactNode, useCallback, useEffect, useRef, useState } from "react"
+import { t } from "../lib/i18n"
 import { Icon } from "../lib/icons"
 import { inTauri } from "../platform/runtime"
 import {
@@ -109,22 +110,22 @@ function Handoff({ link, onContinue }: { link: StartupLink; onContinue(): void }
         else location.href = appLinkOf(link)
       }}
     >
-      Open in Kimo
+      {t("ui.join.handoff.4")}
     </Button>
   )
 
   let card: ReactNode
   if (phase === "trying")
     card = (
-      <Card phase={phase} icon="loader-circle" title="Opening in Kimo…" meta={host}>
-        If your browser asks, allow it to open Kimo.
+      <Card phase={phase} icon="loader-circle" title={t("ui.join.handoff.3")} meta={host}>
+        {t("ui.join.handoff.5")}
         <Actions>{browserButton("Continue in browser")}</Actions>
       </Card>
     )
   else if (phase === "opened")
     card = (
-      <Card phase={phase} icon="circle-check" tone="success" title="Opened in Kimo">
-        You can close this tab.
+      <Card phase={phase} icon="circle-check" tone="success" title={t("ui.join.handoff.2")}>
+        {t("ui.join.handoff.6")}
         <Actions>{browserButton("Continue in browser instead")}</Actions>
       </Card>
     )
@@ -134,7 +135,7 @@ function Handoff({ link, onContinue }: { link: StartupLink; onContinue(): void }
         phase={phase}
         icon="lock-open"
         tone="warning"
-        title="Open this link in Kimo"
+        title={t("ui.join.handoff.1")}
         meta={new URL(link.href).origin}
         foot={foot}
       >
@@ -169,7 +170,7 @@ function Handoff({ link, onContinue }: { link: StartupLink; onContinue(): void }
         meta={handoffMeta(link, Date.now())}
         foot={foot}
       >
-        Open it in Kimo, or right here in your browser.
+        {t("ui.join.handoff.7")}
         <Actions>
           {browserButton("Continue in browser")}
           {appButton}

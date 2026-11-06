@@ -15,6 +15,7 @@ import { MultiplayerError } from "@kimo/sync/mp"
 import { Button } from "@kimo/ui"
 import { type ReactNode, useEffect, useRef, useState } from "react"
 import { failureText } from "../../editor/errors"
+import { t } from "../../lib/i18n"
 import { Icon } from "../../lib/icons"
 import type { CloudState, CloudStore } from "../cloud/store"
 import { isUnreachable } from "../cloud/types"
@@ -75,7 +76,7 @@ export function CloudShareBody(props: CloudShareBodyProps) {
         if (e.code === "INTERNAL" || e.code === "RELAY_UNREACHABLE") return setRefused("offline")
       }
       if (isUnreachable(e)) return setRefused("offline")
-      toast({ tone: "danger", text: failureText("start sharing", e) })
+      toast({ tone: "danger", text: failureText(t("errors.startSharing"), e) })
     } finally {
       inFlight.current = false
     }
@@ -102,8 +103,8 @@ export function CloudShareBody(props: CloudShareBodyProps) {
           <Icon name={hostOpen ? "chevron-down" : "chevron-right"} size={16} />
         </span>
         <span className="mp-text">
-          <span className="mp-disclosure__title">Host your own, free</span>
-          <span className="mp-desc">Set up a relay, or use one you have</span>
+          <span className="mp-disclosure__title">{t("ui.multiplayer.ui.cloudshare.t2")}</span>
+          <span className="mp-desc">{t("ui.multiplayer.ui.cloudshare.t1")}</span>
         </span>
       </button>
       {hostOpen && props.hostContent}
@@ -176,7 +177,7 @@ export function CloudShareBody(props: CloudShareBodyProps) {
         {intro(
           "cloud",
           "Subscribe to share",
-          `You are signed in as ${account.account.email}. Kimo Cloud needs a plan to start sharing.`,
+          t("ui.mp.cloudshare.needsPlan", { email: account.account.email }),
         )}
         {wide("Subscribe", "external-link", () => props.onWizard("subscribe"), "subscribe")}
         <p className="mp-price">

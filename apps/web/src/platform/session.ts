@@ -58,6 +58,7 @@ import {
   type ReloadUndoToken,
   type SaveFailure,
 } from "@kimo/sync"
+import { t, tn } from "../lib/i18n"
 import { defaultNewFilesDir } from "../settings/model"
 import {
   type Banner,
@@ -227,16 +228,21 @@ function failedLoadDetail(error: FileLoadError | null, text: string | null): Fai
   let err: string | null = error?.message ?? null
   let line: number | undefined
   if (cause instanceof KimoParseError) {
-    headline = "This file can't be parsed"
-    explanation = "The file isn't valid JSON, so Kimo can't open it."
+    headline = t("ui.platform.session.parseHeadline")
+    explanation = t("ui.platform.session.parseExplanation")
     line = cause.line
     err =
       cause.line !== undefined
-        ? `SyntaxError · line ${cause.line}${cause.column !== undefined ? `, column ${cause.column}` : ""}`
-        : `SyntaxError · ${cause.message}`
+        ? cause.column !== undefined
+          ? t("ui.platform.session.syntaxAt", {
+              line: String(cause.line),
+              column: String(cause.column),
+            })
+          : t("ui.platform.session.syntaxLine", { line: String(cause.line) })
+        : t("ui.platform.session.syntaxMessage", { message: cause.message })
   } else if (error?.code === "READ_ONLY") {
-    headline = "This file isn't valid"
-    explanation = "It doesn't match the .kimo format, so Kimo opened nothing to edit."
+    headline = t("ui.platform.session.invalidHeadline")
+    explanation = t("ui.platform.session.invalidExplanation")
     err = error.reasons.map((r) => r.message).join("; ") || error.message
   }
   if (markers) explanation = GIT_MARKERS_EXPLANATION
@@ -948,7 +954,7 @@ export class FileDocumentSession implements DocumentSession {
     const untitled = this.untitled
     try {
       target = await platform.dialogs.saveFile({
-        title: "Save as",
+        title: t("ui.platform.session.save-as"),
         // Untitled: "Untitled.kimo" in the last-used folder (board 20 note h6JPi), else in
         // Settings › Files & autosave › New files go to.
         suggestedName: untitled ? `${UNTITLED_NAME}.kimo` : this.fileName,
@@ -991,7 +997,7 @@ export class FileDocumentSession implements DocumentSession {
           { op: "setHeader", set: { imports: rebased } },
           {
             origin: "user",
-            label: "Update library paths",
+            label: t("ui.platform.session.update-library-paths"),
           },
         )
       }
@@ -1607,7 +1613,7 @@ export class FileSessionManager implements SessionManager {
       if (session && session.state().phase === "failed-load") await session.close().catch(() => {})
     }
     const target = await platform.dialogs.saveFile({
-      title: "Save as",
+      title: t("ui.platform.session.save-as"),
       suggestedName: entry.name.endsWith(".kimo") ? entry.name : `${entry.name}.kimo`,
       filters: [KIMO_FILE_FILTER],
     })
@@ -1707,20 +1713,34 @@ export class FileSessionManager implements SessionManager {
 /** Board 17 RecoveryItem copy for an entry. */
 function recoveryCandidate(entry: RecoveryEntry): RecoveryCandidate {
   const untitled = entry.sourceRef === null
-  const badge = untitled ? "never saved" : `${entry.edits} edit${entry.edits === 1 ? "" : "s"}`
+  const badge = untitled
+    ? t("ui.platform.session.neverSaved")
+    : tn("ui.platform.session.editsOne", "ui.platform.session.edits", entry.edits)
   let detail: string
   if (untitled) {
-    detail = `Created ${formatTime(entry.createdAt)}${entry.layers !== undefined ? ` · ${entry.layers} layers` : ""}`
+    detail =
+      entry.layers !== undefined
+        ? t("ui.platform.session.createdLayers", {
+            time: formatTime(entry.createdAt),
+            n: String(entry.layers),
+          })
+        : t("ui.platform.session.created", { time: formatTime(entry.createdAt) })
   } else {
     const parts = [
       entry.lastAutosaveAt !== null
-        ? `Last autosave ${formatTime(entry.lastAutosaveAt)}`
-        : `Saved to recovery ${formatTime(entry.updatedAt)}`,
+        ? t("ui.platform.session.lastAutosave", {
+            time: formatTime(entry.lastAutosaveAt),
+          })
+        : t("ui.platform.session.savedToRecovery", { time: formatTime(entry.updatedAt) }),
     ]
-    if (entry.sourceChangedSince === false) parts.push("file unchanged on disk since")
-    else if (entry.sourceChangedSince === true) parts.push("file changed on disk since")
+    if (entry.sourceChangedSince === false) parts.push(t("ui.platform.session.unchangedSince"))
+    else if (entry.sourceChangedSince === true) parts.push(t("ui.platform.session.changedSince"))
     else if (entry.ownerExitedAt !== null)
-      parts.push(`quit unexpectedly ${formatTime(entry.ownerExitedAt)}`)
+      parts.push(
+        t("ui.platform.session.quitUnexpectedly", {
+          time: formatTime(entry.ownerExitedAt),
+        }),
+      )
     detail = parts.join(" · ")
   }
   return {

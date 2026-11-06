@@ -7,6 +7,7 @@
  */
 import { useRef } from "react"
 import { failureText } from "../../editor/errors"
+import { t } from "../../lib/i18n"
 import { useOptionalRuntime } from "../../platform/runtime"
 import { useRelaySetupServices } from "../relay-setup/services"
 import { type NewWorkspaceFlow, RelayWizard } from "./RelayWizard"
@@ -42,7 +43,7 @@ export function NewWorkspaceWizard({
       }
       return m.id
     } catch (e) {
-      toast({ tone: "danger", text: failureText("create the workspace", e) })
+      toast({ tone: "danger", text: failureText(t("errors.createWorkspace"), e) })
       throw e
     }
   }

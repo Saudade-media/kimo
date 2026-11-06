@@ -14,6 +14,7 @@ import {
 import type { KimoDocument } from "@kimo/core-schema"
 import { createEmptyDocument, serialize } from "@kimo/editor-state"
 import type { FileRef, KimoPlatform } from "@kimo/platform"
+import { t } from "../lib/i18n"
 import { defaultNewFilesDir, homeOf } from "../settings/model"
 import type { HomeHandoffRecord } from "./handoff"
 
@@ -27,7 +28,6 @@ export const HOME_PRESETS = {
 } as const
 export type HomePreset = keyof typeof HOME_PRESETS
 
-const UNTITLED = "Untitled"
 export const FIRST_FRAME_ID = "HomeFrame1"
 
 /** Owner origin of the session's placeholder (ADR 0014 §5 / §11). */
@@ -123,7 +123,7 @@ export async function submitHomePrompt(
   const now = deps.now ?? Date.now
   const sessionId = newSessionId()
   const owner = ownerOrigin(deps.model, sessionId)
-  const title = (await deps.nameFile(prompt).catch(() => null)) ?? UNTITLED
+  const title = (await deps.nameFile(prompt).catch(() => null)) ?? t("file.untitled")
   const build = (name: string) => homeDocument({ title: name, preset, owner, now: new Date(now()) })
   let path: string
   let name: string

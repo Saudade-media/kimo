@@ -1,3 +1,4 @@
+import { t } from "@kimo/i18n"
 import { Layers2 } from "lucide-react"
 import type { ComponentPropsWithRef } from "react"
 import { AliasChip } from "../alias-chip/AliasChip"
@@ -47,7 +48,7 @@ export function VarCell({
   onSwatchClick,
   onAliasClick,
   onToggle,
-  label = "Value",
+  label = t("ui.pkg.var.cell.varcell.value"),
   className,
   ...rest
 }: VarCellProps) {
@@ -84,13 +85,16 @@ export function VarCell({
       {value.kind === "empty" && (
         <span
           className="kimo-var-cell__value kimo-var-cell__value--empty"
-          title="No entry: falls back"
+          title={t("ui.pkg.var.cell.varcell.no-entry-falls-back")}
         >
           —
         </span>
       )}
       {multi && (value.kind === "color" || value.kind === "number") && (
-        <Layers2 className="kimo-var-cell__multi" aria-label="Multi-axis entry" />
+        <Layers2
+          className="kimo-var-cell__multi"
+          aria-label={t("ui.pkg.var.cell.varcell.multi-axis-entry")}
+        />
       )}
     </div>
   )

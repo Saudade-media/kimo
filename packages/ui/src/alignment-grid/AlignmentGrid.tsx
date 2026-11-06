@@ -1,3 +1,4 @@
+import { t } from "@kimo/i18n"
 import { type ComponentPropsWithRef, type KeyboardEvent, useRef } from "react"
 import { cx } from "../internal/util"
 
@@ -58,7 +59,7 @@ export function AlignmentGrid({
   justify,
   align,
   onChange,
-  label = "Alignment",
+  label = t("ui.pkg.alignment.grid.alignmentgrid.alignment"),
   className,
   ...rest
 }: AlignmentGridProps) {

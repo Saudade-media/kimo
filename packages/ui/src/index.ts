@@ -241,10 +241,10 @@ export {
   useFocusTrap,
 } from "./popover/usePopover"
 export {
-  PROP_TYPE_OPTIONS,
   PropDefRow,
   type PropDefRowProps,
   type PropType,
+  propTypeOptions,
 } from "./prop-def-row/PropDefRow"
 export { PropField, type PropFieldProps } from "./prop-field/PropField"
 export { PropTextField, type PropTextFieldProps } from "./prop-field/PropTextField"
@@ -268,7 +268,7 @@ export {
   type SegmentedProps,
 } from "./segmented/Segmented"
 export { Select, type SelectOption, type SelectProps } from "./select/Select"
-export { SIZE_MODES, SizeField, type SizeFieldProps, type SizeMode } from "./size-field/SizeField"
+export { SizeField, type SizeFieldProps, type SizeMode, sizeModes } from "./size-field/SizeField"
 export {
   AlphaSlider,
   type AlphaSliderProps,

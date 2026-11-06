@@ -1,3 +1,4 @@
+import { t } from "@kimo/i18n"
 import type { ComponentPropsWithRef } from "react"
 import { cx } from "../internal/util"
 import { SegmentedText } from "../segmented-text/SegmentedText"
@@ -22,8 +23,8 @@ export interface ReviewFileRowProps
 }
 
 const CHOICES = [
-  { value: "keep", label: "Keep" },
-  { value: "overwrite", label: "Overwrite" },
+  { value: "keep", label: "ui.pkg.review.keep" },
+  { value: "overwrite", label: "ui.pkg.review.overwrite" },
 ] as const
 
 /**
@@ -77,7 +78,7 @@ export function ReviewFileRow({
         <SegmentedText
           className="kimo-review-row__choice"
           label={`${name}: keep or overwrite`}
-          options={CHOICES}
+          options={CHOICES.map((c) => ({ value: c.value, label: t(c.label) }))}
           value={choice}
           onChange={(v) => onChoice?.(v)}
         />

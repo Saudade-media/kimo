@@ -14,6 +14,7 @@
 import { CompactButton } from "@kimo/ui"
 import { useCallback, useSyncExternalStore } from "react"
 import { CanvasAgentMark } from "../canvas/agent-mark"
+import { t } from "../lib/i18n"
 import { Icon } from "../lib/icons"
 import { type AreaWaits, areaBusyCopy } from "../multiplayer/area-busy"
 import { personaOfHolder } from "../multiplayer/canvas-model"
@@ -62,7 +63,9 @@ export function AreaBusyCard({ env, callId }: { env: AreaBusyEnv; callId: string
           <Icon name="arrow-right" size={14} />
         </span>
         <span className="area-busy-line__label">
-          {next ? `Work elsewhere · working on ${next} instead` : "Work elsewhere"}
+          {next
+            ? t("ui.agent.panel.areabusycard.elsewhereOn", { next })
+            : t("ui.agent.panel.areabusycard.1")}
         </span>
       </div>
     )
@@ -97,7 +100,7 @@ export function AreaBusyCard({ env, callId }: { env: AreaBusyEnv; callId: string
           data-testid="area-busy-elsewhere"
           onClick={() => waits.workElsewhere(callId)}
         >
-          Work elsewhere
+          {t("ui.agent.panel.areabusycard.1")}
         </CompactButton>
         <CompactButton
           variant="ghost"
@@ -107,7 +110,9 @@ export function AreaBusyCard({ env, callId }: { env: AreaBusyEnv; callId: string
           data-testid="area-busy-wait"
           onClick={() => (waiting ? waits.stopWaiting(callId) : waits.wait(callId, origin, detail))}
         >
-          {waiting ? "Stop waiting" : "Wait"}
+          {waiting
+            ? t("ui.agent.panel.areabusycard.stopWaiting")
+            : t("ui.agent.panel.areabusycard.wait")}
         </CompactButton>
         <span className="area-busy-card__spacer" />
         <span className="area-busy-card__code">AREA_BUSY</span>
@@ -127,7 +132,8 @@ export function useAreaWaitStatus(env: AreaBusyEnv | undefined, callIds: readonl
     const b = waits.busy(id)
     if (!b || waits.resolution(id, b.detail).kind !== "waiting") continue
     const frameId = b.detail.ids[0] ?? b.detail.touched[0]
-    return `Waiting for ${(frameId && env.nodeName(frameId)) || "this area"}`
+    const who = (frameId && env.nodeName(frameId)) || t("ui.agent.panel.areabusycard.thisArea")
+    return t("ui.agent.panel.areabusycard.waitingFor", { who })
   }
   return null
 }

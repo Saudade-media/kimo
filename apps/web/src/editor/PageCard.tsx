@@ -15,6 +15,7 @@
  * background yet, so the row shows it read-only.
  */
 import { useMemo } from "react"
+import { t } from "../lib/i18n"
 import { Icon } from "../lib/icons"
 import { cssToken, useTheme } from "../lib/theme"
 import { useActivePageName } from "./pages/PagesStrip"
@@ -31,7 +32,7 @@ export function PageCard({ session, onExport }: { session: FileSession; onExport
     <div className="page-card" data-testid="page-card">
       <div className="page-card__page">
         <div className="page-card__page-header">
-          <span className="page-card__title">Page</span>
+          <span className="page-card__title">{t("editor.pageTitle")}</span>
           <span className="page-card__page-name">{name}</span>
         </div>
         <div className="page-card__background">
@@ -40,12 +41,12 @@ export function PageCard({ session, onExport }: { session: FileSession; onExport
         </div>
       </div>
       <div className="page-card__export">
-        <span className="page-card__title">Export</span>
+        <span className="page-card__title">{t("editor.export")}</span>
         {onExport && (
           <button
             type="button"
             className="page-card__add"
-            aria-label="Export…"
+            aria-label={t("editor.exportEllipsis")}
             onClick={() => onExport()}
           >
             <Icon name="plus" size={14} />
@@ -56,7 +57,7 @@ export function PageCard({ session, onExport }: { session: FileSession; onExport
         <span className="page-card__hint-icon">
           <Icon name="mouse-pointer-2" size={12} />
         </span>
-        <span className="page-card__hint-label">Select a layer to edit it</span>
+        <span className="page-card__hint-label">{t("editor.selectLayerHint")}</span>
       </div>
     </div>
   )

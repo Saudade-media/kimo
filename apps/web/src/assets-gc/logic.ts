@@ -3,6 +3,7 @@
  * (`src/assets/gc.ts`); this file adds the dialog copy.
  */
 import type { AssetFile } from "@kimo/core-schema"
+import { t, tn } from "../lib/i18n"
 
 export {
   type AssetFile,
@@ -28,15 +29,18 @@ export function formatBytes(bytes: number): string {
 }
 
 export function gcTitle(n: number): string {
-  return `Remove ${n} unused asset${n === 1 ? "" : "s"}?`
+  return tn("ui.assetsgc.logic.removeTitleOne", "ui.assetsgc.logic.removeTitle", n)
 }
 
 export function gcDescription(fileName: string, bytes: number): string {
-  return `Nothing in ${fileName} uses these files. Removing them frees ${formatBytes(bytes)}; Git history keeps old versions.`
+  return t("ui.assetsgc.logic.removeBody", {
+    file: fileName,
+    size: formatBytes(bytes),
+  })
 }
 
 export function gcConfirmLabel(n: number): string {
-  return `Remove ${n} file${n === 1 ? "" : "s"}`
+  return tn("ui.assetsgc.logic.removeActionOne", "ui.assetsgc.logic.removeAction", n)
 }
 
 /** The CLI equivalent shown as the footnote. */
@@ -58,10 +62,12 @@ export const GC_NOTHING_TITLE = "Nothing to clean up"
 /** "Every asset is in use. Each file in assets/ is referenced by … in marketing.kimo." (same
  * sentence as `kimo gc`). */
 export function gcNothingDescription(fileName: string): string {
-  return `Every asset is in use. Each file in assets/ is referenced by a node, fill, component or variable in ${fileName}.`
+  return t("ui.assetsgc.logic.allInUse", { file: fileName })
 }
 
 /** Body Summary: "12 assets · 31.4 MB". */
 export function gcSummary(count: number, bytes: number): string {
-  return `${count} asset${count === 1 ? "" : "s"} · ${formatBytes(bytes)}`
+  return tn("ui.assetsgc.logic.summaryOne", "ui.assetsgc.logic.summary", count, {
+    size: formatBytes(bytes),
+  })
 }

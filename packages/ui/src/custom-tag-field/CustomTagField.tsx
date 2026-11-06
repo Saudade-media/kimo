@@ -1,3 +1,4 @@
+import { t } from "@kimo/i18n"
 import { type ComponentPropsWithRef, type KeyboardEvent, useId, useState } from "react"
 import { Button } from "../button/Button"
 import { Input } from "../input/Input"
@@ -95,7 +96,7 @@ export function CustomTagField({
       </span>
       <div className="kimo-custom-tag__inputs">
         <Input
-          aria-label="OpenType tag"
+          aria-label={t("ui.pkg.custom.tag.field.customtagfield.opentype-tag")}
           placeholder="cv11"
           maxLength={4}
           autoFocus={autoFocus}
@@ -112,7 +113,7 @@ export function CustomTagField({
           =
         </span>
         <Input
-          aria-label="Feature value"
+          aria-label={t("ui.pkg.custom.tag.field.customtagfield.feature-value")}
           inputMode="numeric"
           maxLength={2}
           autoComplete="off"

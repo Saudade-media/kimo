@@ -32,6 +32,7 @@ import type { FileSession } from "../editor/session"
 import type { FontSystem } from "../fonts/font-system"
 import type { AssetStore } from "../lib/assets"
 import type { Bus } from "../lib/hooks"
+import { t } from "../lib/i18n"
 import { type AgentPauseView, pausesFor } from "../multiplayer/agent-pause"
 import { areaWaitsFor } from "../multiplayer/area-busy"
 import { EMPTY_TRANSFERS } from "../multiplayer/backend"
@@ -540,7 +541,9 @@ function NameOnlyFontBanner({
           ? "They are not open-licensed, so Kimo shares their names only. Showing Inter until you install them."
           : "It is not open-licensed, so Kimo shares its name only. Showing Inter until you install it."
       }
-      actions={onOpen ? [{ id: "fonts", label: "Fonts", variant: "primary" }] : []}
+      actions={
+        onOpen ? [{ id: "fonts", label: t("ui.fonts.fontpicker.1"), variant: "primary" }] : []
+      }
       onAction={() => onOpen?.()}
     />
   )

@@ -1,3 +1,4 @@
+import { t } from "@kimo/i18n"
 import { GitMerge } from "lucide-react"
 import type { ComponentPropsWithRef } from "react"
 import { cx } from "../internal/util"
@@ -13,7 +14,7 @@ export function ConflictMarker({ className, ...rest }: ConflictMarkerProps) {
   return (
     <span
       role="img"
-      aria-label="Merge conflict"
+      aria-label={t("ui.pkg.conflict.marker.conflictmarker.merge-conflict")}
       {...rest}
       className={cx("kimo-conflict-marker", className)}
     >

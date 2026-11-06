@@ -17,6 +17,7 @@ import { activeToolId, CANVAS_TOOLS, type CanvasToolId, type UiStore } from "../
 import { HintPill } from "../canvas/hints"
 import { slotToolId, useCanvasToolState } from "../canvas/tool-state"
 import { useUi } from "../lib/hooks"
+import { t } from "../lib/i18n"
 import { Icon } from "../lib/icons"
 import { keyHint, toolHint } from "./kbd"
 import { ShapeSlot } from "./ShapeSlot"
@@ -75,13 +76,13 @@ export function FloatingToolbar({
         ref={bar}
         className={viewOnly ? "floating-toolbar floating-toolbar--view-only" : "floating-toolbar"}
         role="toolbar"
-        aria-label="Tools"
+        aria-label={t("ui.editor.floatingtoolbar.2")}
         hidden={pathEdit !== null}
       >
-        {CANVAS_TOOLS.map((t) => {
-          if (t.slot === "shape") {
+        {CANVAS_TOOLS.map((spec) => {
+          if (spec.slot === "shape") {
             // One slot for every shape tool, at the first shape tool's place (rkFut).
-            if (t.id !== CANVAS_TOOLS.find((x) => x.slot === "shape")?.id) return null
+            if (spec.id !== CANVAS_TOOLS.find((x) => x.slot === "shape")?.id) return null
             return (
               <ShapeSlot
                 key="shape-slot"
@@ -92,37 +93,37 @@ export function FloatingToolbar({
             )
           }
           // M3: one-shot actions (Component, ⌥⌘K) are enabled even while the tool spec is not.
-          const enabled = t.enabled || t.action !== undefined
+          const enabled = spec.enabled || spec.action !== undefined
           return (
             <Tooltip
-              key={t.id}
+              key={spec.id}
               side="top"
-              label={enabled ? t.label : `${t.label} · coming soon`}
-              shortcut={enabled && t.shortcut ? toolHint(t) : undefined}
+              label={enabled ? t(spec.label) : `${t(spec.label)} · ${t("ui.tool.comingSoon")}`}
+              shortcut={enabled && spec.shortcut ? toolHint(spec) : undefined}
             >
               <ToolButton
-                label={t.label}
+                label={t(spec.label)}
                 icon={
-                  t.iconColor ? (
+                  spec.iconColor ? (
                     // M6 (board 22 cf2sC "Insert hint"): Note sticky-note `note-text`,
                     // Prompt sparkles `agent`.
                     <span
                       className="floating-toolbar__tinted"
                       style={{
                         display: "inline-flex",
-                        color: `var(--kimo-${t.iconColor}, ${TINT_FALLBACK[t.iconColor] ?? "currentColor"})`,
+                        color: `var(--kimo-${spec.iconColor}, ${TINT_FALLBACK[spec.iconColor] ?? "currentColor"})`,
                       }}
                     >
-                      <Icon name={t.icon} size={18} />
+                      <Icon name={spec.icon} size={18} />
                     </span>
                   ) : (
-                    <Icon name={t.icon} size={18} />
+                    <Icon name={spec.icon} size={18} />
                   )
                 }
-                active={active === t.id}
+                active={active === spec.id}
                 disabled={!enabled}
-                data-tool={t.id}
-                onClick={() => onActivate(t.id)}
+                data-tool={spec.id}
+                onClick={() => onActivate(spec.id)}
               />
             </Tooltip>
           )
@@ -133,17 +134,17 @@ export function FloatingToolbar({
             <span className="floating-toolbar__ask-icon">
               <Icon name="sparkles" size={16} />
             </span>
-            <span className="floating-toolbar__ask-label">Ask Kimo</span>
+            <span className="floating-toolbar__ask-label">{t("editor.askKimo")}</span>
             <Kbd>{keyHint("askKimo", "⌘K")}</Kbd>
           </button>
         ) : (
           // The agent panel mounts once the file's id resolves: Ask Kimo waits for it.
-          <Tooltip side="top" label="Loading the agent…">
+          <Tooltip side="top" label={t("ui.editor.floatingtoolbar.1")}>
             <button type="button" className="floating-toolbar__ask" aria-disabled="true">
               <span className="floating-toolbar__ask-icon">
                 <Icon name="sparkles" size={16} />
               </span>
-              <span className="floating-toolbar__ask-label">Ask Kimo</span>
+              <span className="floating-toolbar__ask-label">{t("editor.askKimo")}</span>
               <Kbd>{keyHint("askKimo", "⌘K")}</Kbd>
             </button>
           </Tooltip>

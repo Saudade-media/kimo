@@ -15,13 +15,12 @@ import { Check, ChevronDown, ChevronRight } from "lucide-react"
 import { useEffect, useRef, useState, useSyncExternalStore } from "react"
 import { useFailureToast } from "../editor/failure-toast"
 import { typeIcon } from "../editor/props"
+import { t } from "../lib/i18n"
 import { Icon } from "../lib/icons"
 import type { ConflictRowView } from "../platform/contract"
 import { groupRows, sourceLine } from "./rows"
 import type { EditorConflictSession } from "./session"
 import "./conflicts.css"
-
-const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`
 
 /** Tab label: "Conflicts 2" (open count), board 18 `LD9CB`. */
 export const conflictsTabLabel = (open: number) => `Conflicts ${open}`
@@ -74,7 +73,7 @@ export function ConflictsPanel({ session, getNode }: ConflictsPanelProps) {
     <div ref={root} className="conflicts-panel" data-testid="conflicts-panel">
       <div className="conflicts-panel__summary">
         <div className="conflicts-panel__title-row">
-          <span className="conflicts-panel__title">Merge conflicts</span>
+          <span className="conflicts-panel__title">{t("ui.conflicts.conflictspanel.t1")}</span>
           <span className="conflicts-panel__count">
             {counts.resolved} of {counts.total} resolved
           </span>
@@ -82,7 +81,7 @@ export function ConflictsPanel({ session, getNode }: ConflictsPanelProps) {
         <div
           className="conflicts-panel__progress"
           role="progressbar"
-          aria-label="Resolved conflicts"
+          aria-label={t("ui.conflicts.conflictspanel.2")}
           aria-valuemin={0}
           aria-valuemax={counts.total}
           aria-valuenow={counts.resolved}
@@ -98,7 +97,7 @@ export function ConflictsPanel({ session, getNode }: ConflictsPanelProps) {
             disabled={counts.open === 0}
             onClick={() => session.chooseAll("ours")}
           >
-            Take all ours
+            {t("ui.conflicts.conflictspanel.3")}
           </Button>
           <Button
             variant="secondary"
@@ -107,7 +106,7 @@ export function ConflictsPanel({ session, getNode }: ConflictsPanelProps) {
             disabled={counts.open === 0}
             onClick={() => session.chooseAll("theirs")}
           >
-            Take all theirs
+            {t("ui.conflicts.conflictspanel.4")}
           </Button>
         </div>
       </div>
@@ -152,7 +151,10 @@ export function ConflictsPanel({ session, getNode }: ConflictsPanelProps) {
       })}
 
       {resolved.length > 0 && (
-        <section className="conflicts-panel__resolved" aria-label="Resolved">
+        <section
+          className="conflicts-panel__resolved"
+          aria-label={t("ui.conflicts.conflictspanel.1")}
+        >
           <button
             type="button"
             className="conflicts-panel__resolved-header"
@@ -201,11 +203,11 @@ export function ConflictsPanel({ session, getNode }: ConflictsPanelProps) {
             session
               .markResolvedAndSave()
               // A5: a failed write keeps the conflicts and says why (Toast/Danger).
-              .catch((e: unknown) => fail(`save ${session.fileName()}`, e))
+              .catch((e: unknown) => fail(t("errors.save", { file: session.fileName() }), e))
               .finally(() => setSaving(false))
           }}
         >
-          Mark resolved &amp; save
+          {t("ui.conflicts.panel.markResolvedSave")}
         </Button>
         <span
           className={
@@ -213,8 +215,12 @@ export function ConflictsPanel({ session, getNode }: ConflictsPanelProps) {
           }
         >
           {ready
-            ? `${counts.resolved} of ${counts.total} resolved · writes ${session.fileName()} without conflict nodes`
-            : `Pick a side for ${plural(counts.open, "more conflict")}`}
+            ? t("ui.conflicts.panel.ready", {
+                resolved: String(counts.resolved),
+                total: String(counts.total),
+                file: session.fileName(),
+              })
+            : t("ui.conflicts.panel.pickSide", { n: String(counts.open) })}
         </span>
       </div>
     </div>

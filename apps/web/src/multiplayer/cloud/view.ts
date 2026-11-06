@@ -3,6 +3,7 @@
  * popover stage (4A, 4B, 4C, 6A) and the editor banner (6B, 6C, past due). Prices and the storage
  * cap come from Kimo Cloud (`GET /v1/plans`, the account); the board's numbers are placeholders.
  */
+import { t } from "../../lib/i18n"
 import type { CloudState } from "./store"
 import type { BillingInterval, CloudAccount, CloudPlan, CloudUsage, PlanPrice } from "./types"
 
@@ -100,16 +101,16 @@ export function planPill(plan: CloudPlan): {
 } {
   switch (plan.status) {
     case "active":
-      return { tone: "success", label: "Active" }
+      return { tone: "success", label: t("ui.multiplayer.cloud.view.active") }
     case "past_due":
-      return { tone: "warning", label: "Past due" }
+      return { tone: "warning", label: t("ui.multiplayer.ui.workspaceshare.8") }
     case "grace":
-      return { tone: "warning", label: "Ended" }
+      return { tone: "warning", label: t("ui.multiplayer.cloud.view.ended") }
     case "read_only":
     case "expired":
-      return { tone: "danger", label: "Ended" }
+      return { tone: "danger", label: t("ui.multiplayer.cloud.view.ended") }
     default:
-      return { tone: "muted", label: "No plan" }
+      return { tone: "muted", label: t("ui.multiplayer.cloud.view.no-plan") }
   }
 }
 
@@ -131,7 +132,7 @@ export function cloudShareStage(state: Pick<CloudState, "session" | "account" | 
 /** 6A: "Renew to share new files. Files you already share keep syncing until Nov 4." */
 export function lapsedDesc(plan: CloudPlan, now: number): string {
   if (plan.graceEndsAt && plan.graceEndsAt > now)
-    return `Renew to share new files. Files you already share keep syncing until ${shortDate(plan.graceEndsAt)}.`
+    return t("ui.mp.cloud.renewToShare", { date: shortDate(plan.graceEndsAt) })
   return "Renew to share new files. Files you already share are read-only until you renew."
 }
 
@@ -157,8 +158,10 @@ export function planBannerKind(plan: CloudPlan | null, now: number): PlanBannerK
 
 /** 6D: "We could not charge your card. Nothing has stopped, but update it by Nov 28 to keep ..." */
 export function paymentFailedDesc(plan: CloudPlan): string {
-  const by = plan.paymentDueBy ? ` by ${shortDate(plan.paymentDueBy)}` : ""
-  return `We could not charge your card. Nothing has stopped, but update it${by} to keep sharing new files.`
+  const by = plan.paymentDueBy
+    ? t("ui.mp.cloud.byDate", { date: shortDate(plan.paymentDueBy) })
+    : ""
+  return t("ui.mp.cloud.chargeFailed", { by })
 }
 
 /** Resend countdown (2B): "Resend in 0:42", or "Resend" once unlocked. */

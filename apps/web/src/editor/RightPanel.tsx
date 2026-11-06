@@ -20,6 +20,7 @@ import type { FontSystem } from "../fonts/font-system"
 import type { AssetStore } from "../lib/assets"
 import { useDocHeader } from "../lib/header"
 import { type Bus, createBus, useNodes, useUi } from "../lib/hooks"
+import { t } from "../lib/i18n"
 import { Icon } from "../lib/icons"
 import { useEditor } from "./fields"
 import { type M3Controller, useBusValue } from "./m3/controller"
@@ -52,15 +53,17 @@ type RightTab = "design" | "code" | "agent" | "activity" | "conflicts"
 const NO_REV = createBus(0)
 
 const TABS = [
-  { value: "design", label: "Design" },
-  { value: "code", label: "Code" },
-  { value: "agent", label: "Agent" },
+  { value: "design", label: "editor.tab.design" },
+  { value: "code", label: "editor.tab.code" },
+  { value: "agent", label: "editor.tab.agent" },
 ] as const
 
 /** Board 48 §5 Dot (5GwcxabDJa / aZEI42bzst): agent while one works, warning while one waits. */
-const AGENT_DOT: Record<"working" | "waiting", TabDot> = {
-  working: { color: "var(--kimo-agent)", label: "An agent is working" },
-  waiting: { color: "var(--kimo-warning)", label: "An agent is waiting for you" },
+function agentDot(kind: "working" | "waiting"): TabDot {
+  return {
+    color: kind === "working" ? "var(--kimo-agent)" : "var(--kimo-warning)",
+    label: t(kind === "working" ? "ui.editor.agentDot.working" : "ui.editor.agentDot.waiting"),
+  }
 }
 
 interface RightPanelProps {
@@ -168,10 +171,12 @@ export function RightPanel({
     if (conflicts) setTab("conflicts")
   }, [reviewRev, conflicts])
   const items = useMemo(() => {
-    const base: TabsItem<RightTab>[] = TABS.map((t) =>
-      t.value === "agent" && agentActivity ? { ...t, dot: AGENT_DOT[agentActivity] } : t,
-    )
-    if (hasActivity) base.push({ value: "activity", label: "Activity" })
+    const base: TabsItem<RightTab>[] = TABS.map((x) => ({
+      value: x.value,
+      label: t(x.label),
+      ...(x.value === "agent" && agentActivity ? { dot: agentDot(agentActivity) } : {}),
+    }))
+    if (hasActivity) base.push({ value: "activity", label: t("editor.tab.activity") })
     if (conflicts && counts)
       base.push({ value: "conflicts", label: conflictsTabLabel(counts.open) })
     return base
@@ -182,7 +187,7 @@ export function RightPanel({
     return (
       <aside
         className="right-panel ws-card ws-card--right ws-card--collapsed"
-        aria-label="Properties panel"
+        aria-label={t("ui.editor.rightpanel.6")}
       >
         {header}
       </aside>
@@ -193,10 +198,10 @@ export function RightPanel({
   return (
     <aside
       className={`right-panel ws-card ws-card--right right-panel--${tab}${page ? " ws-card--page" : ""}`}
-      aria-label="Properties panel"
+      aria-label={t("ui.editor.rightpanel.5")}
     >
       {header}
-      <Tabs label="Right panel" items={items} value={tab} onChange={setTab} />
+      <Tabs label={t("ui.editor.rightpanel.4")} items={items} value={tab} onChange={setTab} />
       {tab === "activity" && activity}
       {tab === "conflicts" && conflicts && (
         <ConflictsPanel session={conflicts} getNode={(id) => session.store.getNode(id)} />
@@ -226,8 +231,8 @@ export function RightPanel({
         <div className="right-panel__empty" data-testid="agent-panel-loading" aria-busy="true">
           <EmptyState
             icon={<Icon name="sparkles" size={18} />}
-            title="Loading the agent…"
-            description="Describe a change and Kimo makes it on the canvas, with undo per turn."
+            title={t("ui.editor.rightpanel.3")}
+            description={t("ui.editor.rightpanel.2")}
           />
         </div>
       )}
@@ -300,7 +305,7 @@ function SelectionName({
         // biome-ignore lint/a11y/noAutofocus: rename starts on an explicit double-click
         autoFocus
         className="selection-header__input"
-        aria-label="Layer name"
+        aria-label={t("ui.editor.rightpanel.1")}
         value={draft}
         onFocus={(e) => e.currentTarget.select()}
         onChange={(e) => setDraft(e.currentTarget.value)}
@@ -507,8 +512,12 @@ function DesignTab({
             a view link that may export still can. */}
           {onExport && (
             <PropSection
-              title="Export"
-              action={{ label: "Export…", icon: <Icon name="plus" size={14} />, onClick: onExport }}
+              title={t("editor.export")}
+              action={{
+                label: t("editor.exportEllipsis"),
+                icon: <Icon name="plus" size={14} />,
+                onClick: onExport,
+              }}
             />
           )}
         </OverrideFieldsContext.Provider>

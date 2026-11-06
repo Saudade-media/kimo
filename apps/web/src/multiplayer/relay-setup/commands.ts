@@ -1,3 +1,4 @@
+import { t } from "../../lib/i18n"
 /**
  * Board 42 sections 4-6 and rules "Allowed origins", "Fly.io", "Railway", "Relay image": the text
  * Kimo hands out for relays it does not run itself. Each builder takes this device's public key
@@ -217,7 +218,11 @@ export function flyDeploySteps(
       label: `fly deploy -c ${FLY_CONFIG_PATH}`,
       args: ["deploy", "--config", config, "--app", app, "--ha=false", "--yes"],
     },
-    { id: "health", label: "Wait for health check", args: null },
+    {
+      id: "health",
+      label: t("ui.multiplayer.relay.setup.commands.wait-for-health-check"),
+      args: null,
+    },
   )
   return steps
 }

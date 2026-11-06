@@ -8,6 +8,7 @@ import { Dialog, DialogScrim } from "@kimo/ui"
 import { useState } from "react"
 import { createPortal } from "react-dom"
 import { failureText } from "../../editor/errors"
+import { t } from "../../lib/i18n"
 import { Icon } from "../../lib/icons"
 import { useShareLinks } from "../hooks"
 import { type MultiplayerModel, resetConfirmCopy } from "../model"
@@ -44,12 +45,12 @@ export function ResetLinksDialog({
       toast({
         tone: "component",
         icon: "rotate-ccw",
-        text: "All links reset · a new key is in use",
+        text: t("ui.multiplayer.ui.resetlinksdialog.all-links-reset-a-new-key-is-in-use"),
       })
       onDone()
     } catch (e) {
       setBusy(false)
-      toast({ tone: "danger", text: failureText("reset the links", e) })
+      toast({ tone: "danger", text: failureText(t("errors.resetLinks"), e) })
     }
   }
   const dialog = (
@@ -57,7 +58,7 @@ export function ResetLinksDialog({
       className="mp-reset-dialog"
       tone="danger"
       icon={<Icon name="rotate-ccw" size={16} />}
-      title="Reset all links?"
+      title={t("ui.multiplayer.ui.resetlinksdialog.1")}
       description={resetDescription(links.items.length, resetConfirmCopy(impact))}
       footnote="A new key is made for this file."
       confirmLabel="Reset all links"

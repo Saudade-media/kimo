@@ -6,6 +6,7 @@
  * Pure: unit-tested in test/m3-drop.test.ts.
  */
 import type { ComponentDropTarget } from "../../canvas/contract"
+import { t } from "../../lib/i18n"
 
 type Rec = Readonly<Record<string, unknown>>
 
@@ -44,13 +45,16 @@ export function resolveComponentDrop(
         const loc = view.locate(cur)
         if (loc?.instance && loc.path !== undefined) {
           const count = view.children(cur).length
-          const inst = view.getNode(loc.instance)
           return {
             kind: "slot",
             instance: loc.instance,
             path: loc.path,
             index: count,
-            label: `Insert into ${nameOf(n)} · slot · ${count + 1} of ${count + 1}${inst ? "" : ""}`,
+            label: t("ui.editor.m3.drop.intoSlot", {
+              name: nameOf(n),
+              index: String(count + 1),
+              total: String(count + 1),
+            }),
           }
         }
       }
@@ -78,8 +82,17 @@ export function resolveComponentDrop(
       kind: "frame",
       parent: id,
       index: count,
-      label: `Insert into ${nameOf(n)} · ${count + 1} of ${count + 1}`,
+      label: t("ui.editor.m3.drop.into", {
+        name: nameOf(n),
+        index: String(count + 1),
+        total: String(count + 1),
+      }),
     }
   }
-  return { kind: "frame", parent: null, index: -1, label: "Place on the page" }
+  return {
+    kind: "frame",
+    parent: null,
+    index: -1,
+    label: t("ui.editor.m3.drop.onPage"),
+  }
 }

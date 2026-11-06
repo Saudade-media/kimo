@@ -22,6 +22,7 @@ import type { CanvasHandle } from "../../canvas/contract"
 import { M3_TOAST_COPY } from "../../canvas/contract"
 import { currentHeader } from "../../lib/header"
 import { type Bus, createBus } from "../../lib/hooks"
+import { t } from "../../lib/i18n"
 import type { FileSession, Gesture } from "../session"
 import { deleteDependents, deletedRoots } from "./delete-deps"
 import { LibraryManager } from "./libraries"
@@ -245,7 +246,10 @@ export class M3Controller {
             this.toast({
               tone: "warning",
               text: `${e.name} changed since last open: ${e.changes.length} change${e.changes.length === 1 ? "" : "s"}`,
-              action: { label: "Review", run: () => this.openPanel({ libraryChanges: e.alias }) },
+              action: {
+                label: t("ui.editor.m3.componentdialogs.10"),
+                run: () => this.openPanel({ libraryChanges: e.alias }),
+              },
             })
           }
         this.view_ = this.makeView()
@@ -380,7 +384,7 @@ export class M3Controller {
       this.toast({
         tone: "danger",
         text: M3_TOAST_COPY.HIDDEN_INSTEAD.replace("{name}", n.name),
-        action: { label: "Undo", run: () => store.undo("user") },
+        action: { label: t("ui.editor.clipboard.undo"), run: () => store.undo("user") },
       })
     return this.detachDependents(r.ops)
   }
@@ -409,7 +413,7 @@ export class M3Controller {
     this.toast({
       tone: "warning",
       text: `${n} instance${n === 1 ? "" : "s"} of ${dep.components.join(", ")} detached`,
-      action: { label: "Undo", run: () => this.session.store.undo("user") },
+      action: { label: t("ui.editor.clipboard.undo"), run: () => this.session.store.undo("user") },
     })
     return [...detach, ...ops]
   }
@@ -505,7 +509,10 @@ export class M3Controller {
       this.toast({
         tone: "danger",
         text: hidden.message,
-        action: { label: "Undo", run: () => this.session.store.undo("user") },
+        action: {
+          label: t("ui.editor.clipboard.undo"),
+          run: () => this.session.store.undo("user"),
+        },
       })
     const dropped = notes.filter((n) => n.code === "ARG_DROPPED" || n.code === "OVERRIDE_DROPPED")
     if (dropped.length)

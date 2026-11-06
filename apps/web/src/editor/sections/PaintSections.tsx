@@ -22,6 +22,7 @@ import {
 } from "@kimo/ui"
 import { Fragment, type MouseEvent, useRef, useState } from "react"
 import { cropStore } from "../../canvas/crop"
+import { type MessageKey, t } from "../../lib/i18n"
 import { Icon } from "../../lib/icons"
 import { Bindable } from "../bind"
 import { useImageError } from "../failure-toast"
@@ -185,7 +186,7 @@ function PaintRows({ paints, name, write, colorOnly = false, onCrop }: PaintRows
                     className="kimo-fill-row__blend"
                     size={24}
                     rest="clear"
-                    label={`Blend mode of ${who.toLowerCase()}`}
+                    label={t("ui.editor.sections.blendOf", { who: who.toLowerCase() })}
                     icon={<Icon name="blend" size={14} />}
                     pressed={mode !== "normal"}
                     aria-haspopup="menu"
@@ -215,7 +216,10 @@ function PaintRows({ paints, name, write, colorOnly = false, onCrop }: PaintRows
           value={paintBlend(paints[blendMenu.index]) as LayerBlendMode}
           onSelect={(m) => {
             const i = blendMenu.index
-            write(replace(i, withPaintBlend(paints[i], m)), `Set ${name.toLowerCase()} blend mode`)
+            write(
+              replace(i, withPaintBlend(paints[i], m)),
+              t("ui.editor.sections.setBlend", { name: name.toLowerCase() }),
+            )
           }}
           onClose={() => {
             blendMenu.el.focus({ preventScroll: true })
@@ -305,7 +309,7 @@ function MixedRow({ name }: { name: string }) {
     <FillRow
       name={name.toLowerCase()}
       swatch="var(--kimo-bg-muted)"
-      label="Mixed"
+      label={t("insp.mixed")}
       labelFont="sans"
       visible
       removable={false}
@@ -318,7 +322,7 @@ function useAddMenu(add: (kind: "solid" | "linear" | "image") => void) {
   const [anchor, setAnchor] = useState<HTMLElement | null>(null)
   const menu = anchor && (
     <MenuDense
-      label="Add paint"
+      label={t("insp.addPaint")}
       anchor={anchor}
       autoFocus
       width={168}
@@ -433,7 +437,7 @@ export function FillSection({ sel }: { sel: readonly Sel[] }) {
     // Icon nodes: one solid color (`color`; absent = #000000).
     const color = shared(nodes, (n) => n.color ?? "#000000")
     return (
-      <PropSection title={<SectionTitle label="Fill" fields={["fill"]} />}>
+      <PropSection title={<SectionTitle label={t("insp.fill")} fields={["fill"]} />}>
         <div className="rp-body">
           {color === MIXED ? (
             <MixedRow name="Fill" />
@@ -454,8 +458,12 @@ export function FillSection({ sel }: { sel: readonly Sel[] }) {
 
   return (
     <PropSection
-      title={<SectionTitle label="Fill" fields={["fill"]} />}
-      action={{ label: "Add fill", icon: <Icon name="plus" size={14} />, onClick: add.onClick }}
+      title={<SectionTitle label={t("insp.fill")} fields={["fill"]} />}
+      action={{
+        label: t("ui.editor.sections.paintsections.add-fill"),
+        icon: <Icon name="plus" size={14} />,
+        onClick: add.onClick,
+      }}
     >
       {(fill === MIXED || list.length > 0) && (
         <div className="rp-body">
@@ -488,20 +496,32 @@ type Cap = "butt" | "round" | "square"
 type Join = "miter" | "round" | "bevel"
 
 const ALIGN_OPTIONS = [
-  { value: "inside", label: "Inside" },
-  { value: "center", label: "Center" },
-  { value: "outside", label: "Outside" },
-] as const
+  { value: "inside", label: "ui.stroke.align.inside" },
+  { value: "center", label: "ui.stroke.align.center" },
+  { value: "outside", label: "ui.stroke.align.outside" },
+] as const satisfies readonly Option[]
 const CAPS = [
-  { value: "butt", label: "Butt" },
-  { value: "round", label: "Round" },
-  { value: "square", label: "Square" },
-] as const
+  { value: "butt", label: "ui.stroke.cap.butt" },
+  { value: "round", label: "ui.stroke.cap.round" },
+  { value: "square", label: "ui.stroke.cap.square" },
+] as const satisfies readonly Option[]
 const JOINS = [
-  { value: "miter", label: "Miter" },
-  { value: "round", label: "Round" },
-  { value: "bevel", label: "Bevel" },
-] as const
+  { value: "miter", label: "ui.stroke.join.miter" },
+  { value: "round", label: "ui.stroke.join.round" },
+  { value: "bevel", label: "ui.stroke.join.bevel" },
+] as const satisfies readonly Option[]
+
+interface Option {
+  value: string
+  label: MessageKey
+}
+
+const opts = <V extends string>(
+  list: readonly { value: V; label: MessageKey }[],
+): {
+  value: V
+  label: string
+}[] => list.map((o) => ({ value: o.value, label: t(o.label) }))
 
 export function StrokeSection({ sel }: { sel: readonly Sel[] }) {
   const { editor, assets, session } = usePanel()
@@ -542,8 +562,12 @@ export function StrokeSection({ sel }: { sel: readonly Sel[] }) {
     const some = nodes.some((n) => strokeObj(n.stroke) !== null)
     return (
       <PropSection
-        title={<SectionTitle label="Stroke" fields={["stroke"]} />}
-        action={{ label: "Add stroke", icon: <Icon name="plus" size={14} />, onClick: add.onClick }}
+        title={<SectionTitle label={t("insp.stroke")} fields={["stroke"]} />}
+        action={{
+          label: t("ui.editor.sections.paintsections.add-stroke"),
+          icon: <Icon name="plus" size={14} />,
+          onClick: add.onClick,
+        }}
       >
         {some && (
           <div className="rp-body">
@@ -584,8 +608,12 @@ export function StrokeSection({ sel }: { sel: readonly Sel[] }) {
 
   return (
     <PropSection
-      title={<SectionTitle label="Stroke" fields={["stroke"]} />}
-      action={{ label: "Add stroke", icon: <Icon name="plus" size={14} />, onClick: add.onClick }}
+      title={<SectionTitle label={t("insp.stroke")} fields={["stroke"]} />}
+      action={{
+        label: t("ui.editor.sections.paintsections.add-stroke"),
+        icon: <Icon name="plus" size={14} />,
+        onClick: add.onClick,
+      }}
     >
       <div className="rp-body">
         {paint === MIXED ? (
@@ -617,7 +645,7 @@ export function StrokeSection({ sel }: { sel: readonly Sel[] }) {
             className="rp-bind--w96"
             spec={{
               type: "number",
-              label: "Stroke weight",
+              label: t("insp.strokeWeight"),
               prefix: <Icon name="menu" size={12} />,
               get: (n) => strokeObj(n.stroke)?.width ?? 1,
               put: (s, v) => mapOps([s], "stroke", (n) => withStrokeField(n.stroke, "width", v)),
@@ -628,7 +656,7 @@ export function StrokeSection({ sel }: { sel: readonly Sel[] }) {
             {(bind) => (
               <NumberField
                 icon="menu"
-                label="Stroke weight"
+                label={t("insp.strokeWeight")}
                 bind={bind}
                 className="rp-field--w96"
                 value={weightValue}
@@ -646,16 +674,16 @@ export function StrokeSection({ sel }: { sel: readonly Sel[] }) {
           </Bindable>
           <Select<Align>
             dense
-            label="Stroke align"
+            label={t("insp.strokeAlign")}
             className="rp-select-fill"
-            options={ALIGN_OPTIONS}
+            options={opts(ALIGN_OPTIONS)}
             value={align === MIXED ? null : align}
-            placeholder="Mixed"
+            placeholder={t("insp.mixed")}
             onChange={(v) => set("align", v, "Set stroke align")}
           />
         </PropRow>
         <ToggleRow
-          label="Individual sides"
+          label={t("insp.sides")}
           checked={individual}
           onChange={(on) =>
             editor.apply(
@@ -678,7 +706,7 @@ export function StrokeSection({ sel }: { sel: readonly Sel[] }) {
           />
         )}
         <ToggleRow
-          label="Dashed"
+          label={t("insp.dashed")}
           checked={dash === MIXED ? MIXED : dash !== null}
           onChange={(on) =>
             editor.apply(
@@ -691,7 +719,7 @@ export function StrokeSection({ sel }: { sel: readonly Sel[] }) {
           <PropRow className="rp-row">
             <NumberField
               prefix="Dash"
-              label="Dash length"
+              label={t("insp.dashLength")}
               value={dash[0]}
               editor={editor}
               min={0}
@@ -703,7 +731,7 @@ export function StrokeSection({ sel }: { sel: readonly Sel[] }) {
             />
             <NumberField
               prefix="Gap"
-              label="Dash gap"
+              label={t("insp.dashGap")}
               value={dash[1]}
               editor={editor}
               min={0}
@@ -717,22 +745,22 @@ export function StrokeSection({ sel }: { sel: readonly Sel[] }) {
         )}
         {/* Cap Row (mZczZ): label 36 · Segmented fill */}
         <div className="rp-labeled-row">
-          <span className="rp-labeled-row__label">Cap</span>
+          <span className="rp-labeled-row__label">{t("insp.cap")}</span>
           <Segmented<Cap>
             fill
-            label="Stroke cap"
-            options={CAPS}
+            label={t("insp.strokeCap")}
+            options={opts(CAPS)}
             value={cap === MIXED ? null : cap}
             onChange={(v) => set("cap", v, "Set stroke cap")}
           />
         </div>
         {/* Join Row (BonkB) */}
         <div className="rp-labeled-row">
-          <span className="rp-labeled-row__label">Join</span>
+          <span className="rp-labeled-row__label">{t("insp.join")}</span>
           <Segmented<Join>
             fill
-            label="Stroke join"
-            options={JOINS}
+            label={t("insp.strokeJoin")}
+            options={opts(JOINS)}
             value={join === MIXED ? null : join}
             onChange={(v) => set("join", v, "Set stroke join")}
           />

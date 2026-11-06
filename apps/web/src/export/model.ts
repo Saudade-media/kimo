@@ -6,6 +6,7 @@
  */
 
 import type { FileRef, KimoPlatform } from "@kimo/platform"
+import { type MessageKey, t, tn } from "../lib/i18n"
 
 // --- Formats ---------------------------------------------------------------------------------
 
@@ -18,14 +19,39 @@ export type ExportFormat = "react" | "html" | "tokens" | "assets" | "pdf"
 export const EXPORT_FORMATS: readonly {
   id: ExportFormat
   icon: string
-  title: string
-  sub: string
+  title: MessageKey
+  sub: MessageKey
 }[] = [
-  { id: "react", icon: "atom", title: "React + Tailwind", sub: "TSX · Tailwind v4" },
-  { id: "html", icon: "code-xml", title: "HTML + CSS", sub: "Static markup, CSS variables" },
-  { id: "tokens", icon: "braces", title: "Design tokens", sub: "W3C DTCG JSON + CSS" },
-  { id: "assets", icon: "image", title: "SVG / PNG", sub: "Vector or raster per frame" },
-  { id: "pdf", icon: "file-text", title: "PDF", sub: "Vector · one page per frame" },
+  {
+    id: "react",
+    icon: "atom",
+    title: "ui.export.format.react",
+    sub: "ui.export.format.reactSub",
+  },
+  {
+    id: "html",
+    icon: "code-xml",
+    title: "ui.export.format.html",
+    sub: "ui.export.format.htmlSub",
+  },
+  {
+    id: "tokens",
+    icon: "braces",
+    title: "ui.export.format.tokens",
+    sub: "ui.export.format.tokensSub",
+  },
+  {
+    id: "assets",
+    icon: "image",
+    title: "ui.export.format.assets",
+    sub: "ui.export.format.assetsSub",
+  },
+  {
+    id: "pdf",
+    icon: "file-text",
+    title: "ui.export.format.pdf",
+    sub: "ui.export.format.pdfSub",
+  },
 ]
 
 /** Preview bar Scale switch (`k7fVi5`): 1×, 2×, 3× (rule: default 2×). */
@@ -76,10 +102,12 @@ export const DEFAULT_TAILWIND: TailwindChoices = { theme: "v4", mapTokens: true 
  * the React exporter writes the `@theme` block into its `tokens.css` (next to the CSS variables),
  * so the label names the file it really writes.
  */
-export const TAILWIND_THEMES: readonly { value: TailwindThemeOutput; label: string }[] = [
-  { value: "v4", label: "@theme in tokens.css (v4)" },
-  { value: "v3", label: "tailwind.config.ts (v3)" },
-  { value: "none", label: "Don't emit" },
+const TAILWIND_THEME_VALUES: readonly TailwindThemeOutput[] = ["v4", "v3", "none"]
+
+export const tailwindThemes = (): { value: TailwindThemeOutput; label: string }[] => [
+  { value: "v4", label: t("ui.export.theme.v4") },
+  { value: "v3", label: t("ui.export.theme.v3") },
+  { value: "none", label: t("ui.export.theme.none") },
 ]
 
 const STORE = "kimo.export"
@@ -102,7 +130,7 @@ export function readExportTailwind(storage: Pick<Storage, "getItem"> | null): Ta
   try {
     const raw = storage?.getItem(`${STORE}.tailwind`)
     const v = raw ? { ...DEFAULT_TAILWIND, ...(JSON.parse(raw) as object) } : DEFAULT_TAILWIND
-    return TAILWIND_THEMES.some((t) => t.value === v.theme) && typeof v.mapTokens === "boolean"
+    return TAILWIND_THEME_VALUES.includes(v.theme) && typeof v.mapTokens === "boolean"
       ? v
       : DEFAULT_TAILWIND
   } catch {
@@ -641,30 +669,42 @@ export function describeWriteError(
     case "EPERM":
     case "EROFS":
     case "PERMISSION":
-      reason = `Permission denied (${errno ?? "EACCES"}). ${where} is read-only.`
+      reason = t("ui.export.model.permDenied", {
+        code: errno ?? "EACCES",
+        where,
+      })
       break
     case "ENOSPC":
     case "EDQUOT":
     case "DISK_FULL":
-      reason = `Disk full (${errno ?? "ENOSPC"}). Not enough space in ${where}.`
+      reason = t("ui.export.model.diskFull", {
+        code: errno ?? "ENOSPC",
+        where,
+      })
       break
     case "EEXIST":
     case "CHANGED":
-      reason = `${file} changed while exporting, review again.`
+      reason = t("ui.export.model.changed", { file })
       break
     default:
-      reason = e?.message ? `${e.message}.` : "The file could not be written."
+      reason = e?.message ? `${e.message}.` : t("ui.export.model.couldNotWrite")
   }
   const tail = [
-    written.length ? `${list(written)} ${written.length === 1 ? "was" : "were"} written` : "",
+    written.length
+      ? tn("ui.export.model.writtenOne", "ui.export.model.written", written.length, {
+          files: list(written),
+        })
+      : "",
     notStarted.length
-      ? `${list(notStarted)} ${notStarted.length === 1 ? "was" : "were"} not started`
+      ? tn("ui.export.model.notStartedOne", "ui.export.model.notStarted", notStarted.length, {
+          files: list(notStarted),
+        })
       : "",
   ]
     .filter(Boolean)
     .join("; ")
   return {
-    title: `Couldn't write ${file}`,
+    title: t("ui.export.model.writeTitle", { file }),
     description: tail ? `${reason} ${tail}.` : reason,
   }
 }
@@ -709,7 +749,10 @@ export function exportToastOf(
     return {
       tone: "warning",
       icon: "circle-alert",
-      text: `Export cancelled · ${o.written.length} of ${o.cancelled.total} written`,
+      text: t("ui.export.model.cancelled", {
+        written: String(o.written.length),
+        total: String(o.cancelled.total),
+      }),
       reveal: o.folder,
       duration: 6000,
     }

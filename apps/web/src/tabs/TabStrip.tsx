@@ -34,6 +34,7 @@ import {
 import { roomFileName } from "../editor/session"
 import { useSessionState, useSessions, useWindowChrome } from "../files/hooks"
 import { getFile } from "../lib/files"
+import { t } from "../lib/i18n"
 import { Icon } from "../lib/icons"
 import { useJoinedRoom, useMultiplayer } from "../multiplayer/hooks"
 import { isUntitledRef, UNTITLED_NAME } from "../platform/contract"
@@ -192,7 +193,7 @@ export function TabStrip({
       data-pen="6LTyzBnoUm"
       data-tauri-drag-region=""
       role="tablist"
-      aria-label="Open files"
+      aria-label={t("ui.tabs.tabstrip.6")}
     >
       {lights && (
         // The design's 16 strip padding is the lights' leading: the native lights sit at x 16.
@@ -208,8 +209,8 @@ export function TabStrip({
         type="button"
         role="tab"
         aria-selected={state.active === null}
-        aria-label="Home"
-        title="Home"
+        aria-label={t("ui.tabs.tabstrip.5")}
+        title={t("ui.tabs.tabstrip.4")}
         className={`tab-strip__home${state.active === null ? " tab-strip__home--active" : ""}`}
         onClick={() => tabs.activate(null)}
       >
@@ -263,8 +264,8 @@ export function TabStrip({
       <button
         type="button"
         className="tab-strip__new"
-        aria-label="New tab"
-        title="New tab"
+        aria-label={t("ui.tabs.tabstrip.3")}
+        title={t("ui.tabs.tabstrip.2")}
         onClick={() => tabs.newTab()}
       >
         <Icon name="plus" size={14} />
@@ -279,7 +280,7 @@ export function TabStrip({
           <TabItem tab={draggedOut} active={false} ghost manager={manager} dragging={false} />
           <span className="tab-drag__hint">
             <Icon name="app-window" size={12} />
-            Release to open in a new window
+            {t("ui.tabs.tabstrip.7")}
           </span>
         </div>
       )}
@@ -356,7 +357,7 @@ function TabItem({
       {/* A new tab shows Home until a file is picked there. */}
       <Icon name={target ? "file" : "house"} size={13} className="tab__icon" />
       <span className="tab__name">{name}</span>
-      {unsaved && <span className="tab__dot" role="img" aria-label="Unsaved changes" />}
+      {unsaved && <span className="tab__dot" role="img" aria-label={t("ui.tabs.tabstrip.1")} />}
       <button
         type="button"
         className="tab__close"

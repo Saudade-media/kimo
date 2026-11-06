@@ -28,6 +28,7 @@ import {
   Toggle,
 } from "@kimo/ui"
 import { Fragment, useRef, useState } from "react"
+import { t, t as tr } from "../../lib/i18n"
 import { Icon } from "../../lib/icons"
 import {
   addSlotProp,
@@ -87,11 +88,11 @@ export function InstanceSection({ m3, id }: { m3: M3Controller; id: string }) {
   return (
     <PropSection
       ref={header}
-      title="Instance"
+      title={t("ui.editor.m3.sections.12")}
       className="m3-instance-section"
       data-testid="instance-section"
       action={{
-        label: "Instance menu",
+        label: t("ui.editor.m3.sections.instance-menu"),
         icon: <Icon name="ellipsis" size={14} />,
         onClick: (e) => setMenu(menu ? null : e.currentTarget),
       }}
@@ -111,7 +112,7 @@ export function InstanceSection({ m3, id }: { m3: M3Controller; id: string }) {
           </span>
           <M3IconButton
             icon="arrow-up-right"
-            label="Go to main component"
+            label={t("ui.editor.m3.sections.11")}
             size={28}
             className="m3-go-main"
             onClick={() => goToMain(m3, id)}
@@ -126,7 +127,7 @@ export function InstanceSection({ m3, id }: { m3: M3Controller; id: string }) {
               className="m3-action-pill"
               onClick={(e) => setSwap(swap ? null : e.currentTarget)}
             >
-              Swap
+              {t("ui.editor.m3.sections.13")}
             </M3Button>
             <M3Button
               variant="secondary"
@@ -135,7 +136,7 @@ export function InstanceSection({ m3, id }: { m3: M3Controller; id: string }) {
               className="m3-action-pill"
               onClick={() => void detachInstance(m3, id)}
             >
-              Detach
+              {t("ui.editor.m3.sections.14")}
             </M3Button>
             <M3Button
               variant="secondary"
@@ -147,7 +148,7 @@ export function InstanceSection({ m3, id }: { m3: M3Controller; id: string }) {
                 m3.run({ cmd: "resetAllOverrides", instance: id }, "Reset all overrides")
               }
             >
-              Reset
+              {t("ui.editor.m3.sections.15")}
             </M3Button>
           </div>
         )}
@@ -211,10 +212,10 @@ export function PropertiesSection({ m3, id }: { m3: M3Controller; id: string }) 
   const slotPath = (p: DeclaredProp) => p.path
   return (
     <PropSection
-      title="Properties"
+      title={t("ui.editor.m3.sections.10")}
       data-testid="properties-section"
       action={{
-        label: "Edit component props",
+        label: t("ui.editor.m3.sections.edit-component-props"),
         icon: <Icon name="settings-2" size={14} />,
         onClick: () => goToMain(m3, id),
       }}
@@ -377,12 +378,12 @@ export function ThemeSection({ m3, id }: { m3: M3Controller; id: string }) {
   if (axes.length === 0) return null
   return (
     <PropSection
-      title="Theme"
+      title={t("ui.editor.m3.sections.9")}
       data-testid="theme-section"
       action={
         nextAxis
           ? {
-              label: "Pin another axis",
+              label: t("ui.editor.m3.sections.pin-another-axis"),
               icon: <Icon name="plus" size={14} />,
               onClick: () => setExtra((e) => [...e, nextAxis.key]),
             }
@@ -504,7 +505,10 @@ export function ComponentSection({ m3, id }: { m3: M3Controller; id: string }) {
               (store.getNode(c)?.type !== "instance" && hasFrame(c)),
           )
       if (!hasFrame(id))
-        return m3.toast({ tone: "warning", text: "Add a frame to the component first" })
+        return m3.toast({
+          tone: "warning",
+          text: t("ui.editor.m3.sections.add-a-frame-to-the-component-first"),
+        })
       return setSlotPick(menu)
     }
     const descendants: string[] = []
@@ -527,13 +531,20 @@ export function ComponentSection({ m3, id }: { m3: M3Controller; id: string }) {
     if (type === "text") {
       target = pick((x) => x.type === "text")
       if (!target)
-        return m3.toast({ tone: "warning", text: "Add a text layer to the component first" })
+        return m3.toast({
+          tone: "warning",
+          text: t("ui.editor.m3.sections.add-a-text-layer-to-the-component-first"),
+        })
       def = { type, target, field: "content" }
       const content = store.getNode(target)?.content
       if (typeof content === "string") def.default = content
     } else if (type === "boolean") {
       target = descendants[0]
-      if (!target) return m3.toast({ tone: "warning", text: "Add a layer to the component first" })
+      if (!target)
+        return m3.toast({
+          tone: "warning",
+          text: t("ui.editor.m3.sections.add-a-layer-to-the-component-first"),
+        })
       def = { type, target, field: "visible", default: true }
     } else if (type === "enum") {
       // Board 27 §8 (a): options own their targets (Add target per option); none yet.
@@ -541,7 +552,10 @@ export function ComponentSection({ m3, id }: { m3: M3Controller; id: string }) {
     } else {
       target = pick((x) => x.type === "instance")
       if (!target)
-        return m3.toast({ tone: "warning", text: "Add an instance layer to the component first" })
+        return m3.toast({
+          tone: "warning",
+          text: t("ui.editor.m3.sections.add-an-instance-layer-to-the-component-first"),
+        })
       def = { type, target }
       const of = store.getNode(target)?.of
       if (typeof of === "string") def.default = of
@@ -550,10 +564,10 @@ export function ComponentSection({ m3, id }: { m3: M3Controller; id: string }) {
   }
   return (
     <PropSection
-      title="Component"
+      title={t("ui.editor.m3.sections.8")}
       data-testid="component-section"
       action={{
-        label: "Component menu",
+        label: t("ui.editor.m3.sections.component-menu"),
         icon: <Icon name="ellipsis" size={14} />,
         onClick: (e) => setCompMenu(compMenu ? null : e.currentTarget),
       }}
@@ -564,7 +578,7 @@ export function ComponentSection({ m3, id }: { m3: M3Controller; id: string }) {
             <span className="m3-derived-row__glyph">
               <Icon name="diamond" size={12} />
             </span>
-            <span className="m3-derived-row__label">Instance of</span>
+            <span className="m3-derived-row__label">{t("ui.editor.m3.sections.t2")}</span>
             <span className="m3-derived-row__base">
               {componentName(doc, m3.libraries(), String(n.of))}
             </span>
@@ -573,7 +587,7 @@ export function ComponentSection({ m3, id }: { m3: M3Controller; id: string }) {
               icon="arrow-up-right"
               iconSize={14}
               size={20}
-              label="Go to base component"
+              label={t("ui.editor.m3.sections.7")}
               onClick={() => goToMain(m3, id)}
             />
           </div>
@@ -602,8 +616,8 @@ export function ComponentSection({ m3, id }: { m3: M3Controller; id: string }) {
           </div>
           <textarea
             className="m3-description__box"
-            aria-label="Component description"
-            placeholder="What it's for, where it goes…"
+            aria-label={t("ui.editor.m3.sections.6")}
+            placeholder={t("ui.editor.m3.sections.5")}
             defaultValue={description}
             key={description}
             rows={2}
@@ -627,7 +641,7 @@ export function ComponentSection({ m3, id }: { m3: M3Controller; id: string }) {
           <span className="m3-props-header__spacer" />
           <M3IconButton
             icon="plus"
-            label="Add prop"
+            label={t("ui.editor.m3.sections.4")}
             size={24}
             iconSize={14}
             className="m3-add-prop"
@@ -663,7 +677,7 @@ export function ComponentSection({ m3, id }: { m3: M3Controller; id: string }) {
                     if (t === "slot")
                       return m3.toast({
                         tone: "warning",
-                        text: "Slots are marked on a frame (Slot section)",
+                        text: tr("ui.editor.m3.sections.slots-are-marked-on-a-frame-slot-section"),
                       })
                     m3.run({ cmd: "removeProp", component: id, name: p.name }, "Change prop type")
                     addProp(t)
@@ -823,8 +837,10 @@ function EnumPropTargets({
   const typeOf = (lid: string) => String(nodeOf(lid)?.type ?? "")
   const all = targetsByOption(def)
   const rows = option ? rowsOf(all[option] ?? [], typeOf) : []
-  const labelOf = (property: string) =>
-    TARGET_PROPERTIES.find((x) => x.key === property)?.label ?? property.replace(/^field:/, "")
+  const labelOf = (property: string) => {
+    const found = TARGET_PROPERTIES.find((x) => x.key === property)
+    return found ? t(found.label) : property.replace(/^field:/, "")
+  }
   const write = (next: Rec | null, label: string) => {
     if (!next) return
     m3.run({ cmd: "updateProp", component, name, patch: next }, label)
@@ -842,7 +858,7 @@ function EnumPropTargets({
       defaultLabel={defaultOptionLabel(def, nodeOf)}
       layers={layers}
       properties={(lid) => {
-        const list = propertiesFor(typeOf(lid)).map((x) => ({ value: x.key, label: x.label }))
+        const list = propertiesFor(typeOf(lid)).map((x) => ({ value: x.key, label: t(x.label) }))
         // A stored field outside the catalog stays selectable on its row.
         for (const r of rows)
           if (r.layer === lid && r.property.startsWith("field:"))
@@ -903,7 +919,11 @@ function EnumPropTargets({
       onRenameOption={(from, to) => {
         const next = withOptionRenamed(def, from, to)
         if (!next) {
-          if (to === null) m3.toast({ tone: "warning", text: "An enum needs at least one option" })
+          if (to === null)
+            m3.toast({
+              tone: "warning",
+              text: t("ui.editor.m3.sections.an-enum-needs-at-least-one-option"),
+            })
           return
         }
         write(next, to === null ? "Remove option" : "Rename option")
@@ -969,10 +989,10 @@ export function SlotSection({ m3, id }: { m3: M3Controller; id: string }) {
     <PropSection
       title={
         <span className="m3-slot-header">
-          Slot
+          {t("ui.editor.m3.sections.16")}
           <span className="m3-slot-header__spacer" />
           <Toggle
-            label="Slot"
+            label={t("ui.editor.m3.sections.3")}
             checked={!!slot}
             onChange={(on) =>
               on
@@ -992,11 +1012,11 @@ export function SlotSection({ m3, id }: { m3: M3Controller; id: string }) {
             in.
           </p>
           <div className="m3-expose-row">
-            <span className="m3-expose-row__label">Expose as prop</span>
+            <span className="m3-expose-row__label">{t("ui.editor.m3.sections.t1")}</span>
             <span className="m3-expose-row__spacer" />
             <span className="m3-expose-row__prop">{propName}</span>
             <Toggle
-              label="Expose as prop"
+              label={t("ui.editor.m3.sections.2")}
               checked={!!exposed}
               onChange={(on) =>
                 on
@@ -1055,7 +1075,7 @@ export function SlotSection({ m3, id }: { m3: M3Controller; id: string }) {
             className="m3-add-suggestion"
             onClick={(e) => setAdd(add ? null : e.currentTarget)}
           >
-            Add suggestion
+            {t("ui.editor.m3.sections.17")}
           </M3Button>
         </div>
       )}
@@ -1065,7 +1085,7 @@ export function SlotSection({ m3, id }: { m3: M3Controller; id: string }) {
           instance={id}
           anchor={add}
           placement={leftOfPanel(add)}
-          title="Suggest a component"
+          title={t("ui.editor.m3.sections.1")}
           onPick={(of) => {
             setAdd(null)
             if (!suggested.includes(of))

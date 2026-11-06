@@ -8,6 +8,7 @@
  * confirm, the clipboard, the browser.
  */
 import { type HelpMenuAction, type KimoPlatform, REPO_URL_PLACEHOLDER } from "@kimo/platform"
+import { t } from "../lib/i18n"
 import { releaseLine, type VersionInfo, versionString } from "./version-info"
 
 export type HelpAction = HelpMenuAction | "logs"
@@ -31,11 +32,15 @@ export function helpItems(o: {
   logs: boolean
 }): HelpItem[] {
   const items: HelpItem[] = [
-    { id: "docs", label: "Kimo documentation", icon: "book-open" },
-    { id: "shortcuts", label: "Keyboard shortcuts", icon: "keyboard" },
-    { id: "whats-new", label: `What's new in ${releaseLine(o.version)}`, icon: "scroll-text" },
-    { id: "report-issue", label: "Report an issue…", icon: "bug", divider: true },
-    { id: "copy-diagnostics", label: "Copy diagnostics", icon: "clipboard-copy" },
+    { id: "docs", label: t("help.docs"), icon: "book-open" },
+    { id: "shortcuts", label: t("help.shortcuts"), icon: "keyboard" },
+    {
+      id: "whats-new",
+      label: t("help.whatsNew", { version: releaseLine(o.version) }),
+      icon: "scroll-text",
+    },
+    { id: "report-issue", label: t("help.reportIssue"), icon: "bug", divider: true },
+    { id: "copy-diagnostics", label: t("help.copyDiagnostics"), icon: "clipboard-copy" },
   ]
   if (o.logs) items.push({ id: "logs", label: logsLabel(o.os), icon: "folder-open", divider: true })
   return items
@@ -44,10 +49,10 @@ export function helpItems(o: {
 /** "Show logs in Finder" (macOS) / "… in Explorer" (Windows) / "… in folder" (Linux). */
 function logsLabel(os: KimoPlatform["os"]): string {
   return os === "windows"
-    ? "Show logs in Explorer"
+    ? t("help.showLogsExplorer")
     : os === "linux"
-      ? "Show logs in folder"
-      : "Show logs in Finder"
+      ? t("help.showLogsFolder")
+      : t("help.showLogsFinder")
 }
 
 export const DOCS_URL = "https://getkimo.design/docs/"
@@ -58,12 +63,12 @@ export const REPO_URL = REPO_URL_PLACEHOLDER
  * as AI providers' Storage line), the page's localStorage in the browser.
  */
 export function keysLocation(host: Pick<KimoPlatform, "kind" | "os">): string {
-  if (host.kind !== "desktop") return "keys stay in this browser"
+  if (host.kind !== "desktop") return t("settings.about.keysBrowser")
   return host.os === "windows"
-    ? "keys stay in Credential Manager"
+    ? t("settings.about.keysCredential")
     : host.os === "linux"
-      ? "keys stay in Secret Service"
-      : "keys stay in your Keychain"
+      ? t("settings.about.keysSecret")
+      : t("settings.about.keysKeychain")
 }
 
 /** The four About links (t4H8L): label · meta · icon · URL. */
@@ -74,29 +79,29 @@ export function aboutLinks(
   return [
     {
       id: "docs",
-      label: "Documentation",
+      label: t("settings.about.docs"),
       meta: "getkimo.design/docs",
       icon: "book-open",
       url: DOCS_URL,
     },
     {
       id: "source",
-      label: "Source code",
+      label: t("settings.about.source"),
       meta: REPO_URL.replace(/^https:\/\//, ""),
       icon: "git-branch",
       url: REPO_URL,
     },
     {
       id: "release-notes",
-      label: "Release notes",
+      label: t("settings.about.releaseNotes"),
       meta: version,
       icon: "scroll-text",
       url: releaseNotesUrl(version),
     },
     {
       id: "privacy",
-      label: "Privacy",
-      meta: `No telemetry · ${keysLocation(host)}`,
+      label: t("settings.about.privacy"),
+      meta: t("settings.about.noTelemetry", { where: keysLocation(host) }),
       icon: "shield",
       url: `${REPO_URL}/blob/main/SECURITY.md`,
     },

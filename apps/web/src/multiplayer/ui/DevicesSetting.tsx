@@ -14,6 +14,7 @@ import { Badge, Button, Dialog, DialogScrim, IconButton, Tooltip } from "@kimo/u
 import { type ReactNode, useCallback, useEffect, useRef, useState } from "react"
 import { createPortal } from "react-dom"
 import { failureText } from "../../editor/errors"
+import { t } from "../../lib/i18n"
 import { Icon } from "../../lib/icons"
 import type { IssuedPairingLink, OwnershipClient, RelayDevice } from "../ownership"
 import { useShareToast } from "./shared"
@@ -41,7 +42,7 @@ function countdownText(exp: number, now: number): string {
   const left = Math.max(0, Math.ceil(exp - now / 1000))
   const m = Math.floor(left / 60)
   const s = String(left % 60).padStart(2, "0")
-  return `Waiting for the other device · ${m}:${s} left`
+  return t("ui.mp.devices.waiting", { mm: String(m), ss: String(s) })
 }
 
 /** "Expired at 10:47" (24-hour local time). */
@@ -85,7 +86,7 @@ export function DevicesSetting(props: DevicesSettingProps) {
     try {
       onDevices(await ownership.renameDevice(relayUrl, device.pub, next))
     } catch (e) {
-      toast({ tone: "danger", text: failureText("rename the device", e) })
+      toast({ tone: "danger", text: failureText(t("errors.renameDevice"), e) })
     }
   }
   const remove = async (device: RelayDevice) => {
@@ -95,7 +96,7 @@ export function DevicesSetting(props: DevicesSettingProps) {
       if (device.self) props.onRemovedSelf()
       else onDevices(next)
     } catch (e) {
-      toast({ tone: "danger", text: failureText("remove the device", e) })
+      toast({ tone: "danger", text: failureText(t("errors.removeDevice"), e) })
     }
   }
 
@@ -103,11 +104,9 @@ export function DevicesSetting(props: DevicesSettingProps) {
     <div className="mp-setting mp-devices" data-pen="gon1u">
       <div className="mp-text mp-text--2">
         <p className="mp-setting__label">Devices</p>
-        <p className="mp-desc">
-          Only these can start sharing on this relay. Anyone with a link can still join.
-        </p>
+        <p className="mp-desc">{t("ui.multiplayer.ui.devicessetting.5")}</p>
       </div>
-      <ul className="mp-device-list" aria-label="Devices">
+      <ul className="mp-device-list" aria-label={t("ui.multiplayer.ui.devicessetting.4")}>
         {devices.map((d) => (
           <li
             key={d.pub}
@@ -129,7 +128,9 @@ export function DevicesSetting(props: DevicesSettingProps) {
                 ) : (
                   <span className="mp-device__name">{d.name}</span>
                 )}
-                {d.self && <Badge className="mp-device__self">This device</Badge>}
+                {d.self && (
+                  <Badge className="mp-device__self">{t("ui.multiplayer.ui.cloud.parts.t1")}</Badge>
+                )}
               </span>
               <span className="mp-device__meta">{addedText(d.addedAt)}</span>
             </span>
@@ -144,7 +145,7 @@ export function DevicesSetting(props: DevicesSettingProps) {
                   onClick={() => setRenaming(d.pub)}
                 />
                 {last ? (
-                  <Tooltip label="A relay needs at least one device">
+                  <Tooltip label={t("ui.multiplayer.ui.devicessetting.3")}>
                     <span className="mp-device__remove-wrap">
                       <IconButton
                         className="mp-device__remove"
@@ -176,9 +177,7 @@ export function DevicesSetting(props: DevicesSettingProps) {
           <span className="mp-device-hint__icon" aria-hidden="true">
             <Icon name="info" size={12} />
           </span>
-          <p className="mp-device-hint__text">
-            Add another device so you can still manage this relay if this one is lost.
-          </p>
+          <p className="mp-device-hint__text">{t("ui.multiplayer.ui.devicessetting.6")}</p>
         </div>
       )}
       <div className="mp-devices__footer">
@@ -189,9 +188,9 @@ export function DevicesSetting(props: DevicesSettingProps) {
           data-action="add-device"
           onClick={() => setSheet(true)}
         >
-          Add device
+          {t("ui.multiplayer.ui.devicessetting.7")}
         </Button>
-        <span className="mp-meta">Makes a link that works once, for 15 minutes</span>
+        <span className="mp-meta">{t("ui.multiplayer.ui.devicessetting.t1")}</span>
       </div>
       {removing && (
         <RemoveDeviceDialog
@@ -234,7 +233,7 @@ function RenameField({
     <input
       ref={ref}
       className="mp-device__name-field"
-      aria-label="Device name"
+      aria-label={t("ui.multiplayer.ui.devicessetting.2")}
       value={value}
       maxLength={64}
       spellCheck={false}
@@ -346,7 +345,7 @@ function AddDeviceSheet({
         () => undefined,
       )
     } catch (e) {
-      toast({ tone: "danger", text: failureText("make the link", e) })
+      toast({ tone: "danger", text: failureText(t("errors.makeLink"), e) })
       onClose()
     }
   }, [ownership, relayUrl, copy, toast, onClose, clock])
@@ -392,7 +391,7 @@ function AddDeviceSheet({
   const cancel = async () => {
     if (state.kind === "link")
       await ownership.cancelPairingLink(relayUrl, state.link).catch((e: unknown) => {
-        toast({ tone: "danger", text: failureText("cancel the link", e) })
+        toast({ tone: "danger", text: failureText(t("errors.cancelLink"), e) })
       })
     onClose()
   }
@@ -422,7 +421,7 @@ function AddDeviceSheet({
         <div className="mp-sheet__footer">
           <span className="mp-spacer" aria-hidden="true" />
           <Button variant="primary" className="mp-sheet__done" data-action="done" onClick={onClose}>
-            Done
+            {t("ui.multiplayer.ui.devicessetting.8")}
           </Button>
         </div>
       </>
@@ -451,7 +450,7 @@ function AddDeviceSheet({
         <div className="mp-sheet__footer">
           <span className="mp-spacer" aria-hidden="true" />
           <Button variant="ghost" className="mp-sheet__cancel" onClick={onClose}>
-            Close
+            {t("ui.multiplayer.ui.devicessetting.9")}
           </Button>
           <Button
             variant="primary"
@@ -460,7 +459,7 @@ function AddDeviceSheet({
             data-action="new-link"
             onClick={() => void make()}
           >
-            New link
+            {t("ui.multiplayer.ui.devicessetting.10")}
           </Button>
         </div>
       </>
@@ -515,10 +514,10 @@ function AddDeviceSheet({
             data-action="cancel-link"
             onClick={() => void cancel()}
           >
-            Cancel link
+            {t("ui.multiplayer.ui.devicessetting.11")}
           </Button>
           <Button variant="primary" className="mp-sheet__done" data-action="done" onClick={onClose}>
-            Done
+            {t("ui.multiplayer.ui.devicessetting.12")}
           </Button>
         </div>
       </>
@@ -530,7 +529,7 @@ function AddDeviceSheet({
       className="mp-sheet"
       role="dialog"
       aria-modal={inline ? undefined : "true"}
-      aria-label="Add device"
+      aria-label={t("ui.multiplayer.ui.devicessetting.1")}
       data-sheet={state.kind}
       onKeyDown={(e) => {
         if (e.key === "Escape") {

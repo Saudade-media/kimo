@@ -35,6 +35,7 @@ import {
 } from "@kimo/ui"
 import { type KeyboardEvent, useEffect, useMemo, useRef, useState } from "react"
 import { downloadBlob } from "../lib/files"
+import { t } from "../lib/i18n"
 import { Icon } from "../lib/icons"
 import "./export.css"
 import { type ExportSource, type GeneratedExport, generateExport, previewRaster } from "./generate"
@@ -78,8 +79,8 @@ import {
   reviewSummary,
   safeFileName,
   shortFolder,
-  TAILWIND_THEMES,
   type TailwindChoices,
+  tailwindThemes,
   tokenizeLine,
   unifiedDiff,
   type WriteResult,
@@ -326,7 +327,10 @@ export function ExportDialog({
 
   const pickFolder = async (): Promise<FileRef | null> => {
     const picked = await platform.dialogs
-      .pickFolder({ title: "Output folder", ...(folder ? { defaultDir: folder } : {}) })
+      .pickFolder({
+        title: t("ui.export.exportdialog.t3"),
+        ...(folder ? { defaultDir: folder } : {}),
+      })
       .catch(() => null)
     if (picked) {
       setFolder(picked)
@@ -446,7 +450,10 @@ export function ExportDialog({
           written: [],
           unchanged: [],
           kept: [],
-          error: { title: "Couldn't generate the export", description: full.errors.join(" · ") },
+          error: {
+            title: t("ui.export.exportdialog.couldn-t-generate-the-export"),
+            description: full.errors.join(" · "),
+          },
         })
         setStep("failed")
         return
@@ -518,7 +525,7 @@ export function ExportDialog({
       <div className="export-header">
         <div className="export-titles">
           <h2 id="export-title" className="export-title">
-            Export to code
+            {t("ui.export.exportdialog.13")}
           </h2>
           <p className="export-desc">
             {untitled
@@ -530,7 +537,7 @@ export function ExportDialog({
         </div>
         <IconButton
           className="export-close"
-          label="Close"
+          label={t("ui.export.exportdialog.12")}
           icon={<Icon name="x" size={16} />}
           disabled={step === "writing"}
           onClick={close}
@@ -568,7 +575,7 @@ export function ExportDialog({
                 <div
                   className="export-group export-group--format"
                   role="radiogroup"
-                  aria-label="Format"
+                  aria-label={t("ui.export.exportdialog.11")}
                 >
                   <span className="export-label">Format</span>
                   {EXPORT_FORMATS.map((f) => {
@@ -588,8 +595,8 @@ export function ExportDialog({
                           <Icon name={f.icon} size={16} />
                         </span>
                         <span className="export-format__text">
-                          <span className="export-format__title">{f.title}</span>
-                          <span className="export-format__sub">{f.sub}</span>
+                          <span className="export-format__title">{t(f.title)}</span>
+                          <span className="export-format__sub">{t(f.sub)}</span>
                         </span>
                         {on && (
                           <span className="export-format__check">
@@ -603,19 +610,19 @@ export function ExportDialog({
                 {format === "react" && (
                   <div className="export-group export-group--tailwind" data-option="tailwind">
                     <span className="export-label" id="export-tailwind-label">
-                      Tailwind theme
+                      {t("ui.export.exportdialog.14")}
                     </span>
                     <Select
                       className="export-tailwind-select"
-                      label="Tailwind theme"
-                      options={TAILWIND_THEMES}
+                      label={t("ui.export.exportdialog.10")}
+                      options={tailwindThemes()}
                       value={tailwind.theme}
                       disabled={!toggles.variables}
                       onChange={(v) => setTailwind((t) => ({ ...t, theme: v }))}
                     />
                     <div className="export-tailwind-map" data-option="mapTokens">
                       <span className="export-tailwind-map__label" id="export-opt-mapTokens">
-                        Map variables to theme tokens
+                        {t("ui.export.exportdialog.15")}
                       </span>
                       <Toggle
                         checked={tailwind.mapTokens && tailwind.theme !== "none"}
@@ -672,7 +679,7 @@ export function ExportDialog({
                 </div>
                 {desktop && !untitled && (
                   <div className="export-group export-group--path">
-                    <span className="export-label">Output folder</span>
+                    <span className="export-label">{t("ui.export.exportdialog.t3")}</span>
                     <button
                       type="button"
                       className="export-folder"
@@ -686,7 +693,7 @@ export function ExportDialog({
                 )}
                 {untitled && (
                   <div className="export-group export-group--path export-group--untitled">
-                    <span className="export-label">Output folder</span>
+                    <span className="export-label">{t("ui.export.exportdialog.t3")}</span>
                     <div className="export-folder-row">
                       <div
                         className={`export-folder-field${folder ? "" : " export-folder-field--empty"}`}
@@ -705,28 +712,25 @@ export function ExportDialog({
                         icon={<Icon name="folder-open" size={14} />}
                         onClick={() => void pickFolder()}
                       >
-                        Choose…
+                        {t("ui.export.exportdialog.16")}
                       </Button>
                     </div>
                     <div className="export-hint">
                       <span className="export-hint__icon">
                         <Icon name="info" size={12} />
                       </span>
-                      <span className="export-hint__text">
-                        Untitled files have no project folder yet. Pick one here, or save the file
-                        first and Kimo will suggest ./src/components next to it.
-                      </span>
+                      <span className="export-hint__text">{t("ui.export.exportdialog.17")}</span>
                     </div>
                   </div>
                 )}
                 {!desktop && count !== 1 && (
                   <div className="export-group export-group--path export-group--download">
-                    <span className="export-label">Download as</span>
+                    <span className="export-label">{t("ui.export.exportdialog.t2")}</span>
                     <label className="export-zip">
                       <span className="export-zip__prefix">zip</span>
                       <input
                         className="export-zip__value"
-                        aria-label="Zip file name"
+                        aria-label={t("ui.export.exportdialog.9")}
                         value={zipName ?? defaultZipName(summary?.name ?? source.fileName)}
                         spellCheck={false}
                         onChange={(e) => setZipName(e.target.value)}
@@ -737,8 +741,8 @@ export function ExportDialog({
                         <Icon name="info" size={12} />
                       </span>
                       <span className="export-hint__text">
-                        Browsers can't write into a folder, so the files arrive as one .zip in your
-                        Downloads. Use the desktop app to export into a project.
+                        {t("ui.export.exportdialog.18")}
+                        {t("ui.export.exportdialog.19")}
                       </span>
                     </div>
                   </div>
@@ -749,14 +753,18 @@ export function ExportDialog({
                 data-preview={format === "pdf" ? "pdf" : raster ? "png" : "code"}
                 data-pane={pane}
               >
-                <div className="export-pane-tabs" role="tablist" aria-label="Preview or issues">
+                <div
+                  className="export-pane-tabs"
+                  role="tablist"
+                  aria-label={t("ui.export.exportdialog.8")}
+                >
                   <Tab
                     className="export-pane-tab"
                     active={pane === "preview"}
                     data-pane-tab="preview"
                     onClick={() => setPane("preview")}
                   >
-                    Preview
+                    {t("ui.export.exportdialog.20")}
                   </Tab>
                   <button
                     type="button"
@@ -783,12 +791,16 @@ export function ExportDialog({
                       className="export-copy-report"
                       onClick={() => void copyText(issuesReport(issueGroups))}
                     >
-                      Copy report
+                      {t("ui.export.exportdialog.21")}
                     </button>
                   )}
                 </div>
                 {pane === "issues" && (
-                  <div className="export-issues" role="tabpanel" aria-label="Issues">
+                  <div
+                    className="export-issues"
+                    role="tabpanel"
+                    aria-label={t("ui.export.exportdialog.7")}
+                  >
                     {issueGroups.map((g) => (
                       <div key={g.file} className="export-issue-file" data-file={g.file}>
                         <div className="export-issue-file__head">
@@ -836,18 +848,16 @@ export function ExportDialog({
                       </div>
                     ))}
                     {issueCount === 0 && (
-                      <div className="export-issues-empty">
-                        No issues. Nothing was approximated.
-                      </div>
+                      <div className="export-issues-empty">{t("ui.export.exportdialog.22")}</div>
                     )}
-                    <div className="export-issues-note">Warnings never block export.</div>
+                    <div className="export-issues-note">{t("ui.export.exportdialog.t1")}</div>
                   </div>
                 )}
                 {pane === "preview" && format === "assets" && (
                   <div className="export-preview-bar">
                     <SegmentedText
                       className="export-seg"
-                      label="Image format"
+                      label={t("ui.export.exportdialog.6")}
                       options={IMAGE_KINDS}
                       value={image}
                       onChange={(v) => setPrefs((p) => ({ ...p, image: v }))}
@@ -855,7 +865,7 @@ export function ExportDialog({
                     {image === "png" && (
                       <SegmentedText
                         className="export-seg export-seg--scale"
-                        label="Scale"
+                        label={t("ui.export.exportdialog.5")}
                         options={SCALES}
                         value={String(scale)}
                         onChange={(v) => setPrefs((p) => ({ ...p, scale: Number(v) as PngScale }))}
@@ -911,7 +921,11 @@ export function ExportDialog({
                   </>
                 ) : (
                   <>
-                    <div className="export-tabs" role="tablist" aria-label="Files">
+                    <div
+                      className="export-tabs"
+                      role="tablist"
+                      aria-label={t("ui.export.exportdialog.4")}
+                    >
                       {files.map((f, i) => (
                         <Tab
                           key={f.path}
@@ -927,7 +941,7 @@ export function ExportDialog({
                       <span className="export-tabs__spacer" />
                       <IconButton
                         className="export-copy"
-                        label="Copy file"
+                        label={t("ui.export.exportdialog.3")}
                         icon={<Icon name="copy" size={16} />}
                         onClick={copy}
                       />
@@ -967,7 +981,7 @@ export function ExportDialog({
                   disabled={!copyable}
                   onClick={copy}
                 >
-                  Copy code
+                  {t("ui.export.exportdialog.23")}
                 </Button>
                 <Button
                   variant="primary"
@@ -991,7 +1005,7 @@ export function ExportDialog({
                   disabled={!copyable}
                   onClick={copy}
                 >
-                  Copy code
+                  {t("ui.export.exportdialog.24")}
                 </CompactButton>
                 <CompactButton
                   variant="primary"
@@ -1022,7 +1036,7 @@ export function ExportDialog({
                   actions={[
                     {
                       id: "choose_folder",
-                      label: "Choose folder…",
+                      label: t("ui.export.exportdialog.choose-folder"),
                       icon: <Icon name="folder-open" size={14} />,
                       onClick: () =>
                         void pickFolder().then((f) => {
@@ -1034,7 +1048,7 @@ export function ExportDialog({
                     },
                     {
                       id: "copy_error",
-                      label: "Copy error",
+                      label: t("ui.export.exportdialog.copy-error"),
                       icon: <Icon name="copy" size={14} />,
                       onClick: () => {
                         if (run.error) void copyText(`${run.error.title}\n${run.error.description}`)
@@ -1074,7 +1088,7 @@ export function ExportDialog({
                       cancel.current = true
                     }}
                   >
-                    Cancel
+                    {t("ui.export.exportdialog.25")}
                   </Button>
                   <Button
                     variant="primary"
@@ -1082,13 +1096,13 @@ export function ExportDialog({
                     icon={<Icon name="loader-circle" size={16} />}
                     disabled
                   >
-                    Exporting…
+                    {t("ui.export.exportdialog.26")}
                   </Button>
                 </>
               ) : (
                 <>
                   <Button variant="ghost" onClick={onClose}>
-                    Close
+                    {t("ui.export.exportdialog.27")}
                   </Button>
                   <Button
                     variant="primary"
@@ -1181,13 +1195,13 @@ function ReviewStep({
       <div className="export-header export-header--review">
         <IconButton
           className="export-close export-back"
-          label="Back"
+          label={t("ui.export.exportdialog.2")}
           icon={<Icon name="chevron-left" size={16} />}
           onClick={onBack}
         />
         <div className="export-titles">
           <h2 id="export-title" className="export-title">
-            Review changes
+            {t("ui.export.exportdialog.28")}
           </h2>
           <p className="export-desc">
             {reviewDesc(changed.length, plan.length, shortFolder(review.folder))}
@@ -1195,7 +1209,7 @@ function ReviewStep({
         </div>
         <IconButton
           className="export-close"
-          label="Close"
+          label={t("ui.export.exportdialog.1")}
           icon={<Icon name="x" size={16} />}
           onClick={onClose}
         />
@@ -1227,7 +1241,7 @@ function ReviewStep({
                 <Icon name="equal" size={12} />
               </span>
               <span className="export-review__identical-text">
-                Identical files are skipped silently
+                {t("ui.export.exportdialog.29")}
               </span>
             </div>
           )}
@@ -1265,7 +1279,7 @@ function ReviewStep({
         </span>
         <span className="export-footer__spacer" />
         <Button variant="ghost" className="export-keep-all" onClick={() => setAll("keep")}>
-          Keep all
+          {t("ui.export.exportdialog.30")}
         </Button>
         <Button
           variant="secondary"
@@ -1273,7 +1287,7 @@ function ReviewStep({
           icon={<Icon name="replace-all" size={16} />}
           onClick={() => setAll("overwrite")}
         >
-          Overwrite all
+          {t("ui.export.exportdialog.31")}
         </Button>
         <Button
           variant="primary"

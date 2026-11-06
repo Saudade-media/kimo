@@ -7,6 +7,7 @@
  * shows as "Can't reach Kimo Cloud" and never as a plan error (board 43 6E).
  */
 import { normalizeRelayUrl } from "@kimo/sync/mp"
+import { t } from "../../lib/i18n"
 import { type DeviceKeyStore, devicePubOf } from "../device-key"
 import { newNonce, signRequest } from "./sign"
 import {
@@ -220,7 +221,7 @@ export function createCloudClient(deps: CloudClientDeps): CloudClient {
     const retry = Number(answer.headers.get("retry-after"))
     throw new CloudError(
       code === "UNKNOWN" && answer.status >= 500 ? "INTERNAL" : code,
-      messageOf(answer.json) ?? `Kimo Cloud answered ${answer.status}`,
+      messageOf(answer.json) ?? t("ui.mp.cloud.answered", { status: String(answer.status) }),
       answer.status,
       Number.isFinite(retry) && retry > 0 ? retry : null,
     )
@@ -388,7 +389,7 @@ const messageOf = (v: unknown) => {
 }
 
 function bad(what: string): never {
-  throw new CloudError("BAD_RESPONSE", `Kimo Cloud sent an unexpected ${what}`)
+  throw new CloudError("BAD_RESPONSE", t("ui.mp.cloud.unexpected", { what }))
 }
 
 function obj(v: unknown, what = "answer"): Record<string, unknown> {

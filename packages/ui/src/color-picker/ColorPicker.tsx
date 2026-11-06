@@ -1,3 +1,4 @@
+import { t } from "@kimo/i18n"
 import { Check, Pipette, Search, X } from "lucide-react"
 import { type ReactNode, useId, useMemo, useState } from "react"
 import {
@@ -147,7 +148,7 @@ export function ColorPicker({
   const tabs = (
     <div
       role="tablist"
-      aria-label="Color source"
+      aria-label={t("ui.pkg.color.picker.colorpicker.color-source")}
       className={cx(
         "kimo-color-picker__tabs",
         tab === "custom" && "kimo-color-picker__tabs--inset",
@@ -176,20 +177,26 @@ export function ColorPicker({
     <div className="kimo-popover__actions">
       {tab === "custom" && showDropper && (
         <IconButton
-          label="Pick color from screen"
+          label={t("ui.pkg.color.picker.colorpicker.pick-color-from-screen")}
           icon={<Pipette />}
           size="sm"
           tone="ghost"
           onClick={pickFromScreen}
         />
       )}
-      <IconButton label="Close" icon={<X />} size="sm" tone="ghost" onClick={onClose} />
+      <IconButton
+        label={t("ui.pkg.color.picker.colorpicker.close")}
+        icon={<X />}
+        size="sm"
+        tone="ghost"
+        onClick={onClose}
+      />
     </div>
   )
 
   return (
     <Popover
-      label="Color"
+      label={t("ui.pkg.color.picker.colorpicker.color")}
       headerLeading={tabs}
       actions={actions}
       onClose={onClose}
@@ -229,7 +236,7 @@ export function ColorPicker({
             <Select
               dense
               menuWidth={188}
-              label="Color format"
+              label={t("ui.pkg.color.picker.colorpicker.color-format")}
               className="kimo-color-picker__format"
               options={COLOR_FORMATS.map((f) => ({
                 value: f.value,
@@ -272,7 +279,9 @@ export function ColorPicker({
               <div className="kimo-color-picker__divider" />
               <div className="kimo-color-picker__document">
                 <div className="kimo-color-picker__document-header">
-                  <span className="kimo-color-picker__caption">Document colors</span>
+                  <span className="kimo-color-picker__caption">
+                    {t("ui.pkg.color.picker.colorpicker.document-colors")}
+                  </span>
                 </div>
                 <div className="kimo-color-picker__swatches">
                   {documentColors.map((c) => (
@@ -415,12 +424,16 @@ function VariablesPanel({
       <Input
         dense
         icon={<Search />}
-        placeholder="Search variables"
-        aria-label="Search variables"
+        placeholder={t("ui.pkg.color.picker.colorpicker.search-variables")}
+        aria-label={t("ui.pkg.color.picker.colorpicker.search-variables")}
         value={query}
         onChange={(e) => setQuery(e.currentTarget.value)}
       />
-      <div role="listbox" aria-label="Color variables" className="kimo-color-picker__list">
+      <div
+        role="listbox"
+        aria-label={t("ui.pkg.color.picker.colorpicker.color-variables")}
+        className="kimo-color-picker__list"
+      >
         {rows}
       </div>
       {modes.length > 0 && (

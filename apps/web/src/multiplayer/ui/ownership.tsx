@@ -7,6 +7,7 @@
  */
 import { Button, Dialog, DialogScrim } from "@kimo/ui"
 import { createPortal } from "react-dom"
+import { t } from "../../lib/i18n"
 import { Icon } from "../../lib/icons"
 import { RELAY_GUIDE_URL } from "./shared"
 import "./relay-wizard.css"
@@ -42,7 +43,7 @@ export function NotYoursActions({
         data-action="add-this-device"
         onClick={onAddThisDevice}
       >
-        Add this device
+        {t("ui.multiplayer.ui.ownership.2")}
       </Button>
       <Button
         variant="ghost"
@@ -51,7 +52,7 @@ export function NotYoursActions({
         data-action="reset-ownership"
         onClick={onResetOwnership}
       >
-        Reset ownership
+        {t("ui.multiplayer.ui.ownership.3")}
       </Button>
     </div>
   )
@@ -99,9 +100,9 @@ export function AddThisDeviceDialog({
     <Dialog
       className="mp-add-this-device"
       icon={<Icon name="laptop" size={16} />}
-      title="Add this device"
-      description={`On a device that already shares on ${host}, open Settings › Multiplayer and choose Add device. Then open that link here.`}
-      footnote="The link works once, for 15 minutes."
+      title={t("ui.multiplayer.ui.ownership.1")}
+      description={t("ui.mp.ownership.hint", { host })}
+      footnote={t("ui.mp.ownership.linkOnce")}
       cancelLabel={null}
       confirmLabel="Got it"
       inline={inline ?? false}

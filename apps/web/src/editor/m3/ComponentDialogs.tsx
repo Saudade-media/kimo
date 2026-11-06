@@ -22,6 +22,7 @@ import {
 import { basenameOf, dirnameOf, KIMO_FILE_FILTER, resolveRelativeRef } from "@kimo/platform"
 import { Dialog, MenuDense, MenuDivider, type PopoverAnchor, Select } from "@kimo/ui"
 import { useEffect, useMemo, useState } from "react"
+import { t, tn } from "../../lib/i18n"
 import { Icon } from "../../lib/icons"
 import { useOptionalRuntime } from "../../platform/runtime"
 import { commandsFor } from "../clipboard/useEditorCommands"
@@ -51,7 +52,9 @@ export function openReplaceMain(m3: M3Controller, main: string): boolean {
   if (!source) {
     m3.toast({
       tone: "warning",
-      text: "Select the main and one other layer (not an instance of it)",
+      text: t(
+        "ui.editor.m3.componentdialogs.select-the-main-and-one-other-layer-not-an-instance-of-it",
+      ),
     })
     return false
   }
@@ -72,7 +75,7 @@ export function ComponentDialogs({ m3 }: { m3: M3Controller }) {
         void settings
           .set("general.duplicateMain", v)
           .catch((e: unknown) =>
-            m3.toast({ tone: "danger", text: failureText("save your choice", e) }),
+            m3.toast({ tone: "danger", text: failureText(t("errors.saveChoice"), e) }),
           ),
     }
     return () => {
@@ -88,7 +91,7 @@ export function ComponentDialogs({ m3 }: { m3: M3Controller }) {
       docRef: () => m3.session.document?.ref ?? null,
       pick: async () => {
         const [ref] = await platform.dialogs.openFile({
-          title: "Link library",
+          title: t("ui.editor.m3.componentdialogs.link-library"),
           filters: [KIMO_FILE_FILTER],
           defaultDir: dirnameOf(doc.ref),
         })
@@ -171,19 +174,25 @@ function ReplaceMainDialog({
         size="sm"
         tone="component"
         icon={<Icon name="replace" size={16} />}
-        title={`Replace “${mainName}” with “${srcName}”?`}
-        description={`“${srcName}” becomes the main component, with the same id and props. The old main's layers are discarded.`}
-        confirmLabel="Replace"
+        title={t("ui.editor.m3.componentdialogs.replaceTitle", {
+          main: mainName,
+          source: srcName,
+        })}
+        description={t("ui.editor.m3.componentdialogs.replaceDesc", { source: srcName })}
+        confirmLabel={t("ui.editor.m3.componentdialogs.replaceConfirm")}
         onCancel={onClose}
         onConfirm={() => {
           onClose()
-          const r = m3.run({ cmd: "replaceMain", main, source }, "Replace main with selection")
+          const r = m3.run(
+            { cmd: "replaceMain", main, source },
+            t("ui.editor.m3.componentdialogs.replaceRun"),
+          )
           if (r.ok && p.unmatched > 0)
             m3.toast({
               tone: "warning",
               text: `${p.unmatched} override${p.unmatched === 1 ? "" : "s"} can't be matched`,
               action: {
-                label: "Review",
+                label: t("ui.editor.m3.componentdialogs.10"),
                 run: () => m3.componentDialog.set({ kind: "fixOverrides", component: main }),
               },
             })
@@ -316,17 +325,33 @@ function FixOverridesDialog({
         width={776}
         className="m3-fix-dialog"
         icon={<Icon name="wrench" size={16} />}
-        title="Fix broken overrides"
+        title={t("ui.editor.m3.componentdialogs.9")}
         description={
           rows.length
-            ? `${rows.length} override${rows.length === 1 ? "" : "s"} on ${instances} instance${instances === 1 ? "" : "s"} point at layers or variables that no longer exist in “${compName}”.`
-            : `Every override of “${compName}” matches.`
+            ? t("ui.editor.m3.componentdialogs.fixesDesc", {
+                overrides: tn(
+                  "ui.editor.m3.componentdialogs.overrideOne",
+                  "ui.editor.m3.componentdialogs.override",
+                  rows.length,
+                ),
+                instances: tn(
+                  "ui.editor.m3.componentdialogs.instanceOne",
+                  "ui.editor.m3.componentdialogs.instance",
+                  instances,
+                ),
+                comp: compName,
+              })
+            : t("ui.editor.m3.componentdialogs.fixesAllMatch", { comp: compName })
         }
         tertiary={{
-          label: "Reset all",
+          label: t("ui.editor.m3.popovers.7"),
           onClick: () => setChoice(Object.fromEntries(rows.map((b) => [rowKey(b), "reset"]))),
         }}
-        confirmLabel={`Apply ${fixes} fix${fixes === 1 ? "" : "es"}`}
+        confirmLabel={tn(
+          "ui.editor.m3.componentdialogs.applyFixOne",
+          "ui.editor.m3.componentdialogs.applyFix",
+          fixes,
+        )}
         confirmDisabled={fixes === 0}
         onCancel={onClose}
         onConfirm={apply}
@@ -339,8 +364,8 @@ function FixOverridesDialog({
                 value: `remap:${c.value}`,
                 label: `Remap → ${c.label}`,
               })),
-              { value: "reset", label: "Reset" },
-              { value: "keep", label: "Keep" },
+              { value: "reset", label: t("ui.editor.m3.sections.15") },
+              { value: "keep", label: t("ui.agent.panel.modes.5") },
             ]
             return (
               <div key={k} className="m3-fix-row" data-key={b.key}>
@@ -395,7 +420,7 @@ export function BrokenStrip({ m3, instance }: { m3: M3Controller; instance: stri
         className="m3-broken-strip__action"
         onClick={() => m3.componentDialog.set({ kind: "fixOverrides", component: comp })}
       >
-        Review
+        {t("ui.editor.m3.componentdialogs.10")}
       </button>
     </div>
   )
@@ -430,13 +455,15 @@ function DuplicateMainDialog({
       mode: "instance" as const,
       icon: "diamond",
       name: "As an instance",
-      desc: `Linked to “${name}”. Most common.`,
+      desc: t("ui.editor.m3.componentdialogs.linkedTo", { name }),
     },
     {
       mode: "component" as const,
       icon: "component",
       name: "As a new component",
-      desc: `Independent copy named “${name.replace(/\s+\d+$/, "")} 2”, with its props.`,
+      desc: t("ui.editor.m3.componentdialogs.independentCopy", {
+        name: name.replace(/\s+\d+$/, ""),
+      }),
     },
   ]
   return (
@@ -445,7 +472,7 @@ function DuplicateMainDialog({
         size="sm"
         icon={<Icon name="copy" size={16} />}
         title={`Duplicate “${name}”`}
-        description="This is a main component."
+        description={t("ui.editor.m3.componentdialogs.8")}
         confirmLabel="Duplicate"
         onCancel={() => {
           onClose()
@@ -462,7 +489,11 @@ function DuplicateMainDialog({
           confirm()
         }}
       >
-        <div className="m3-dup-body" role="radiogroup" aria-label="Duplicate as">
+        <div
+          className="m3-dup-body"
+          role="radiogroup"
+          aria-label={t("ui.editor.m3.componentdialogs.7")}
+        >
           {options.map((o) => (
             // biome-ignore lint/a11y/useSemanticElements: a design option row acting as a radio.
             <button
@@ -498,7 +529,7 @@ function DuplicateMainDialog({
             <span className="m3-dup-remember__box" aria-hidden="true">
               {remember && <Icon name="check" size={10} />}
             </span>
-            <span className="m3-dup-remember__label">Remember my choice</span>
+            <span className="m3-dup-remember__label">{t("ui.editor.m3.componentdialogs.t1")}</span>
           </label>
         </div>
       </Dialog>
@@ -533,31 +564,31 @@ export function ComponentMenu({
   return (
     <MenuDense
       width={256}
-      label="Component"
+      label={t("ui.editor.m3.componentdialogs.6")}
       anchor={anchor}
       onClose={onClose}
       autoFocus
       data-testid="component-menu"
     >
       <MenuRow
-        label="Go to main component"
+        label={t("ui.editor.m3.componentdialogs.5")}
         disabled={!derived}
         onSelect={run(() => goToMain(m3, id))}
       />
       <MenuRow
-        label="Select all instances"
+        label={t("ui.editor.m3.componentdialogs.4")}
         meta={String(instances.length)}
         disabled={instances.length === 0}
         onSelect={run(() => m3.session.ui.getState().select(instances))}
       />
       <MenuDivider />
       <MenuRow
-        label="Replace main with selection…"
+        label={t("ui.editor.m3.componentdialogs.3")}
         disabled={!canReplace}
         onSelect={run(() => openReplaceMain(m3, id))}
       />
       <MenuRow
-        label="Detach all instances"
+        label={t("ui.editor.m3.componentdialogs.2")}
         disabled={instances.length === 0}
         onSelect={run(() => {
           for (const i of instances)
@@ -566,7 +597,7 @@ export function ComponentMenu({
       />
       <MenuDivider />
       <MenuRow
-        label="Duplicate"
+        label={t("ui.editor.m3.componentdialogs.1")}
         meta={keyHint("duplicate", "⌘D")}
         onSelect={run(() => {
           m3.session.ui.getState().select([id])

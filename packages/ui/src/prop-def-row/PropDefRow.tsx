@@ -1,3 +1,4 @@
+import { type MessageKey, t } from "@kimo/i18n"
 import { Crosshair, Lock, Minus, RotateCcw } from "lucide-react"
 import type { ComponentPropsWithRef, HTMLAttributes, ReactNode } from "react"
 import { IconButton } from "../icon-button/IconButton"
@@ -10,13 +11,17 @@ import { TypeGlyph } from "../type-glyph/TypeGlyph"
 /** Declared component prop types (spec §9.6). */
 export type PropType = "text" | "boolean" | "enum" | "instance" | "slot"
 
-export const PROP_TYPE_OPTIONS: readonly SelectOption<PropType>[] = [
-  { value: "text", label: "Text" },
-  { value: "boolean", label: "Boolean" },
-  { value: "enum", label: "Enum" },
-  { value: "instance", label: "Instance" },
-  { value: "slot", label: "Slot" },
+const PROP_TYPES: readonly { value: PropType; label: MessageKey }[] = [
+  { value: "text", label: "ui.pkg.propType.text" },
+  { value: "boolean", label: "ui.pkg.propType.boolean" },
+  { value: "enum", label: "ui.pkg.propType.enum" },
+  { value: "instance", label: "ui.pkg.propType.instance" },
+  { value: "slot", label: "ui.pkg.propType.slot" },
 ]
+
+/** Type options, translated when the row renders. */
+export const propTypeOptions = (): SelectOption<PropType>[] =>
+  PROP_TYPES.map((p) => ({ value: p.value, label: t(p.label) }))
 
 /** Props for {@link PropDefRow}. Remaining `<div>` props go to the row. */
 export interface PropDefRowProps extends Omit<ComponentPropsWithRef<"div">, "children"> {
@@ -91,7 +96,7 @@ export function PropDefRow({
         <label className="kimo-prop-def-row__name-field">
           <DraftInput
             className="kimo-prop-def-row__name"
-            aria-label="Prop name"
+            aria-label={t("ui.pkg.prop.def.row.propdefrow.prop-name")}
             value={name}
             disabled={locked}
             onCommit={onRename}
@@ -99,8 +104,8 @@ export function PropDefRow({
         </label>
         <Select
           className="kimo-prop-def-row__type"
-          label="Prop type"
-          options={PROP_TYPE_OPTIONS}
+          label={t("ui.pkg.prop.def.row.propdefrow.prop-type")}
+          options={propTypeOptions()}
           value={type}
           disabled={locked}
           onChange={onTypeChange}

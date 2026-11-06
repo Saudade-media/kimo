@@ -1,3 +1,4 @@
+import { t } from "@kimo/i18n"
 import type { ComponentPropsWithRef, CSSProperties, KeyboardEvent } from "react"
 import { usePointerDrag } from "../internal/drag"
 import { clamp, cx } from "../internal/util"
@@ -167,7 +168,7 @@ export function HueSlider({
   onChangeEnd,
   className,
   style,
-  "aria-label": label = "Hue",
+  "aria-label": label = t("ui.pkg.slider.slider.hue"),
   ...rest
 }: HueSliderProps) {
   const { drag, onKeyDown, f } = useRange({
@@ -224,7 +225,7 @@ export function AlphaSlider({
   onChangeEnd,
   className,
   style,
-  "aria-label": label = "Opacity",
+  "aria-label": label = t("ui.pkg.slider.slider.opacity"),
   ...rest
 }: AlphaSliderProps) {
   const { drag, onKeyDown, f } = useRange({

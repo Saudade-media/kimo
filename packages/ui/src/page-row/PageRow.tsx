@@ -1,3 +1,4 @@
+import { t } from "@kimo/i18n"
 import { Check, Ellipsis } from "lucide-react"
 import { type ComponentPropsWithRef, type KeyboardEvent, useEffect, useRef, useState } from "react"
 import { cx } from "../internal/util"
@@ -75,7 +76,7 @@ export function PageRow({
           <input
             ref={input}
             className="kimo-page-row__input"
-            aria-label="Page name"
+            aria-label={t("ui.pkg.page.row.pagerow.page-name")}
             value={draft}
             onChange={(e) => setDraft(e.currentTarget.value)}
             onBlur={() => finish(true)}

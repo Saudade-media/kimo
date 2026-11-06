@@ -17,6 +17,7 @@ import { activeToolId, CANVAS_TOOLS, type CanvasToolId, type UiStore } from "../
 import { HintPill } from "../canvas/hints"
 import { slotToolId, useCanvasToolState } from "../canvas/tool-state"
 import { useUi } from "../lib/hooks"
+import { t } from "../lib/i18n"
 import { Icon } from "../lib/icons"
 import { keyHint, toolHint } from "./kbd"
 import { ShapeSlot } from "./ShapeSlot"
@@ -75,7 +76,7 @@ export function FloatingToolbar({
         ref={bar}
         className={viewOnly ? "floating-toolbar floating-toolbar--view-only" : "floating-toolbar"}
         role="toolbar"
-        aria-label="Tools"
+        aria-label={t("ui.editor.floatingtoolbar.2")}
         hidden={pathEdit !== null}
       >
         {CANVAS_TOOLS.map((t) => {
@@ -133,17 +134,17 @@ export function FloatingToolbar({
             <span className="floating-toolbar__ask-icon">
               <Icon name="sparkles" size={16} />
             </span>
-            <span className="floating-toolbar__ask-label">Ask Kimo</span>
+            <span className="floating-toolbar__ask-label">{t("editor.askKimo")}</span>
             <Kbd>{keyHint("askKimo", "⌘K")}</Kbd>
           </button>
         ) : (
           // The agent panel mounts once the file's id resolves: Ask Kimo waits for it.
-          <Tooltip side="top" label="Loading the agent…">
+          <Tooltip side="top" label={t("ui.editor.floatingtoolbar.1")}>
             <button type="button" className="floating-toolbar__ask" aria-disabled="true">
               <span className="floating-toolbar__ask-icon">
                 <Icon name="sparkles" size={16} />
               </span>
-              <span className="floating-toolbar__ask-label">Ask Kimo</span>
+              <span className="floating-toolbar__ask-label">{t("editor.askKimo")}</span>
               <Kbd>{keyHint("askKimo", "⌘K")}</Kbd>
             </button>
           </Tooltip>

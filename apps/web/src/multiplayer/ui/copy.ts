@@ -5,6 +5,7 @@
 
 import type { Role } from "@kimo/sync/mp"
 import type { Persona, SaveStatusKind } from "@kimo/ui"
+import { type MessageKey, t } from "../../lib/i18n"
 import { assetSyncStatus } from "../canvas-model"
 import type {
   AgentView,
@@ -43,14 +44,14 @@ function syncStatusView(relay: RelayStatus, uploading = 0): SyncStatusView {
       return {
         kind: "saved",
         icon: "circle-check",
-        label: "Synced",
+        label: t("ui.multiplayer.ui.copy.synced"),
         tooltip: "The relay has every update",
       }
     case "syncing":
       return {
         kind: "saving",
         icon: "loader-circle",
-        label: "Syncing…",
+        label: t("ui.multiplayer.ui.copy.syncing"),
         tooltip: "Sending your edits to the relay",
       }
     case "saving":
@@ -64,14 +65,14 @@ function syncStatusView(relay: RelayStatus, uploading = 0): SyncStatusView {
       return {
         kind: "paused",
         icon: "refresh-cw",
-        label: "Reconnecting…",
+        label: t("ui.multiplayer.ui.copy.reconnecting"),
         tooltip: "The relay dropped. Keep editing: Kimo retries and syncs when it is back",
       }
     case "offline":
       return {
         kind: "read-only",
         icon: "wifi-off",
-        label: "Offline · edits kept",
+        label: t("ui.multiplayer.ui.copy.offline-edits-kept"),
         tooltip:
           "No network for more than 30 s. Edits stay in this file and sync when the relay is back",
       }
@@ -79,7 +80,7 @@ function syncStatusView(relay: RelayStatus, uploading = 0): SyncStatusView {
       return {
         kind: "read-only",
         icon: "eye",
-        label: "View only",
+        label: t("ui.editor.viewonlybanner.1"),
         tooltip: "You joined with a view link",
       }
   }
@@ -167,7 +168,10 @@ export const EXPIRY_LABEL: Record<ExpiryChoice, string> = {
   never: "Never",
 }
 
-export const ROLE_LABEL: Record<Role, string> = { view: "View", edit: "Edit" }
+export const ROLE_LABEL: Record<Role, MessageKey> = {
+  view: "ui.mp.copy.roleView",
+  edit: "ui.mp.copy.roleEdit",
+}
 
 /** "6 days", "23 h", "40 min", "less than a minute" until `at` (rounded to the nearest unit). */
 export function remaining(at: number, now: number): string {
@@ -208,7 +212,7 @@ export function linkMeta(link: Pick<LinkView, "expiresAt" | "lastUsedAt">, now: 
 export function linkCopiedText(link: Pick<LinkView, "role" | "expiresAt">, now: number): string {
   const when =
     link.expiresAt === null ? "never expires" : `expires in ${remaining(link.expiresAt, now)}`
-  return `${ROLE_LABEL[link.role]} link copied · ${when}`
+  return t("ui.mp.copy.linkCopied", { role: t(ROLE_LABEL[link.role]), when })
 }
 
 export const linkRevokedText = (role: Role) => `${ROLE_LABEL[role]} link revoked`
@@ -217,11 +221,11 @@ export const linkRevokedText = (role: Role) => `${ROLE_LABEL[role]} link revoked
 export function resetDescription(activeLinks: number, impactCopy: string): string {
   const links =
     activeLinks === 0
-      ? "Every link stops working."
+      ? t("ui.mp.copy.everyLink")
       : activeLinks === 1
-        ? "Every link stops working, including the active one."
-        : `Every link stops working, including the ${activeLinks} active ones.`
-  return `${links} ${impactCopy} The file and its history stay as they are.`
+        ? t("ui.mp.copy.everyLinkOne")
+        : t("ui.mp.copy.everyLinkMany", { n: String(activeLinks) })
+  return t("ui.mp.copy.linkImpact", { links, impact: impactCopy })
 }
 
 // --- Relay test results (section 4, and inline in the popover) -----------------------------------
@@ -259,33 +263,41 @@ export function relayResultView(state: RelayTestState): RelayResultView | null {
     case "idle":
       return null
     case "testing":
-      return { kind: "testing", text: `Testing ${state.url}…` }
+      return { kind: "testing", text: t("ui.mp.copy.testing", { url: state.url }) }
     case "ok":
       return {
         kind: "ok",
-        relay: `Kimo relay ${state.version}`,
+        relay: t("ui.mp.copy.relayVersion", { version: state.version }),
         ms: Math.round(state.ms),
-        time: `answered in ${Math.round(state.ms)} ms`,
-        protocol: `protocol ${protocolNumber(state.protocol)}`,
+        time: t("ui.mp.copy.answeredIn", { ms: String(Math.round(state.ms)) }),
+        protocol: t("ui.mp.copy.protocol", {
+          n: String(protocolNumber(state.protocol)),
+        }),
         owner: state.owner,
       }
     case "not-a-relay":
       return {
         kind: "warning",
         icon: "triangle-alert",
-        text: "This server answered, but not as a Kimo relay. Check the path, it usually ends in /kimo.",
+        text: t(
+          "ui.multiplayer.ui.copy.this-server-answered-but-not-as-a-kimo-relay-check-the-path-it-usually-ends-in-kimo",
+        ),
       }
     case "unreachable":
       return {
         kind: "danger",
         icon: "circle-x",
-        text: `Couldn't reach ${hostOf(state.url)}. Check the URL and that the relay is running.`,
+        text: t("ui.mp.copy.unreachable", { host: hostOf(state.url) }),
       }
     case "too-old":
       return {
         kind: "warning",
         icon: "triangle-alert",
-        text: `This relay speaks ${state.protocol ? `protocol ${protocolNumber(state.protocol)}` : "an older protocol"}. Update kimo-relay to 1.2 or later.`,
+        text: t("ui.mp.copy.tooOld", {
+          protocol: state.protocol
+            ? t("ui.mp.copy.protocol", { n: String(protocolNumber(state.protocol)) })
+            : t("ui.mp.copy.olderProtocol"),
+        }),
       }
     case "invalid":
       return {
@@ -311,7 +323,7 @@ export function ownerPill(
     case "unclaimed":
       return { tone: "muted", label: where === "popover" ? "Not set up yet" : "Not claimed yet" }
     case "other":
-      return { tone: "warning", label: "Not yours" }
+      return { tone: "warning", label: t("ui.multiplayer.ui.relaywizard.10") }
     case "external":
       return { tone: "success", label: where === "popover" ? "Managed relay" : "Managed" }
     default:
@@ -321,7 +333,7 @@ export function ownerPill(
 
 /** "Couldn't use this URL: the desktop app reaches plain http relays only on localhost…" */
 export const refusedText = (message: string) =>
-  `Couldn't use this URL: ${message.replace(/\.$/, "")}.`
+  t("ui.mp.copy.refused", { message: message.replace(/\.$/, "") })
 
 /** Start sharing needs a Kimo relay: the last test passed for this very URL. */
 export const relayReady = (state: RelayTestState, url: string | null) =>
@@ -360,8 +372,11 @@ export function agentMeta(
 ): string | null {
   const first = a.editing[0]
   if (first === undefined) return null
-  const name = nodeName(first) ?? "a layer"
+  const name = nodeName(first) ?? t("ui.mp.copy.alayer")
   return a.editing.length > 1
-    ? `Editing ${name} and ${a.editing.length - 1} more`
-    : `Editing ${name}`
+    ? t("ui.mp.copy.editingMore", {
+        name,
+        n: String(a.editing.length - 1),
+      })
+    : t("ui.mp.copy.editing", { name })
 }

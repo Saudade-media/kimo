@@ -19,6 +19,7 @@
 import { CompactButton, SegmentedText, Select, useFocusTrap } from "@kimo/ui"
 import { Eye, EyeOff, HardDrive, Lock, Pin, PlugZap, RefreshCw, Server, X } from "lucide-react"
 import { type ReactNode, useEffect, useId, useRef, useState } from "react"
+import { t } from "../lib/i18n"
 import type { AddProviderInput, AiSettingsController } from "./controller"
 import {
   type AuthScheme,
@@ -33,17 +34,17 @@ import "./polish.css"
 
 type ProviderType = AddProviderInput["type"]
 
-const ADD_PROVIDER_TYPES: { value: ProviderType; label: string }[] = [
-  { value: "custom", label: "Custom endpoint (OpenAI-compatible)" },
+const addProviderTypes = (): { value: ProviderType; label: string }[] => [
+  { value: "custom", label: t("ui.ai.type.customEndpoint") },
   { value: "openai", label: "OpenAI" },
   { value: "gemini", label: "Google Gemini" },
   { value: "openrouter", label: "OpenRouter" },
 ]
 
-const SCHEMES: { value: AuthScheme["scheme"]; label: string }[] = [
-  { value: "bearer", label: "Bearer" },
+const schemes = (): { value: AuthScheme["scheme"]; label: string }[] => [
+  { value: "bearer", label: t("ui.ai.type.bearer") },
   { value: "x-api-key", label: "x-api-key" },
-  { value: "custom", label: "Custom…" },
+  { value: "custom", label: t("ui.ai.type.custom") },
 ]
 
 const DEFAULT_NAME: Record<ProviderType, string> = {
@@ -54,12 +55,13 @@ const DEFAULT_NAME: Record<ProviderType, string> = {
 }
 
 /** Copy (uOwr0 l0KL0); other types are not drawn: one line about the key instead. */
-const DESC: Record<ProviderType, string> = {
-  custom: "Any OpenAI-compatible endpoint: Ollama, LM Studio, vLLM or a company gateway.",
-  openai: "OpenAI's API with your key. OpenAI bills the usage, not Kimo.",
-  gemini: "Google's Gemini API with your key. Google bills the usage, not Kimo.",
-  openrouter: "OpenRouter with your key. OpenRouter bills the usage, not Kimo.",
-}
+const desc = (type: ProviderType): string =>
+  ({
+    custom: t("ai.desc.custom"),
+    openai: t("ai.desc.openai"),
+    gemini: t("ai.desc.gemini"),
+    openrouter: t("ai.desc.openrouter"),
+  })[type]
 
 /** Local runtimes need no key (Ollama, LM Studio on localhost). */
 function isLocalUrl(url: string): boolean {
@@ -162,20 +164,20 @@ export function AddProviderDialog({ ctl, backend, os, onAdded, onCancel }: AddPr
           </span>
           <div className="ai-add__text">
             <h2 id={titleId} className="ai-add__title">
-              Add provider
+              {t("ai.addProvider")}
             </h2>
             <p id={descId} className="ai-add__desc">
-              {DESC[type]}
+              {desc(type)}
             </p>
           </div>
         </div>
 
         <div className="ai-add__body" data-pen="kumFs">
-          <Field label="Type" pen="cmSwF">
+          <Field label={t("ai.type")} pen="cmSwF">
             <Select
               className="ai-select ai-add__select"
-              label="Provider type"
-              options={ADD_PROVIDER_TYPES}
+              label={t("ai.providerType")}
+              options={addProviderTypes()}
               value={type}
               onChange={(v) => {
                 const t = v as ProviderType
@@ -185,12 +187,12 @@ export function AddProviderDialog({ ctl, backend, os, onAdded, onCancel }: AddPr
               }}
             />
           </Field>
-          <Field label="Name" pen="mjxjz" htmlFor="add-name">
+          <Field label={t("ai.name")} pen="mjxjz" htmlFor="add-name">
             <span className="ai-value-field ai-add__value" data-pen="p8jZmn">
               <input
                 id="add-name"
                 className="ai-add__input"
-                placeholder="Acme gateway"
+                placeholder={t("ai.namePlaceholder")}
                 value={label}
                 spellCheck={false}
                 onChange={(e) => setLabel(e.currentTarget.value)}
@@ -198,7 +200,7 @@ export function AddProviderDialog({ ctl, backend, os, onAdded, onCancel }: AddPr
             </span>
           </Field>
           {custom && (
-            <Field label="Base URL" pen="Fvp9F" htmlFor="add-url">
+            <Field label={t("ai.baseUrl")} pen="Fvp9F" htmlFor="add-url">
               <span className="ai-value-field ai-add__value" data-pen="VMdpU">
                 <input
                   id="add-url"
@@ -213,12 +215,12 @@ export function AddProviderDialog({ ctl, backend, os, onAdded, onCancel }: AddPr
           )}
           {custom && (
             <div className="ai-add__field ai-add__field--auth" data-pen="UqJ1i">
-              <span className="ai-add__label">Auth header</span>
+              <span className="ai-add__label">{t("ai.authHeader")}</span>
               <div className="ai-add__auth" data-pen="q7PGg">
                 <SegmentedText
                   className="ai-add__scheme"
-                  label="Auth header"
-                  options={SCHEMES}
+                  label={t("ai.authHeader")}
+                  options={schemes()}
                   value={auth.scheme}
                   onChange={(v) =>
                     setAuth(
@@ -231,8 +233,8 @@ export function AddProviderDialog({ ctl, backend, os, onAdded, onCancel }: AddPr
                   <span className="ai-value-field ai-add__value ai-add__header-name">
                     <input
                       className="ai-add__input ai-add__input--mono"
-                      aria-label="Header name"
-                      placeholder="X-Api-Token"
+                      aria-label={t("ai.headerName")}
+                      placeholder={t("ui.ai.settings.addproviderdialog.1")}
                       value={auth.header ?? ""}
                       spellCheck={false}
                       onChange={(e) => setAuth({ scheme: "custom", header: e.currentTarget.value })}
@@ -245,7 +247,7 @@ export function AddProviderDialog({ ctl, backend, os, onAdded, onCancel }: AddPr
               </div>
             </div>
           )}
-          <Field label="API key" pen="Qym0o" htmlFor="add-key">
+          <Field label={t("ai.apiKey")} pen="Qym0o" htmlFor="add-key">
             <span
               className={`ai-value-field ai-add__value${test && !test.ok && test.errorKind === "auth" ? " is-danger" : ""}`}
               data-pen="UkWYy"
@@ -274,7 +276,7 @@ export function AddProviderDialog({ ctl, backend, os, onAdded, onCancel }: AddPr
             </span>
           </Field>
           <div className="ai-add__field" data-pen="l7EYr">
-            <span className="ai-add__label">Models</span>
+            <span className="ai-add__label">{t("ai.models")}</span>
             <div className="ai-add__chips" data-pen="MMIyj">
               {models.map((m) => (
                 <span key={m} className="ai-add__chip" data-model={m}>
@@ -292,7 +294,7 @@ export function AddProviderDialog({ ctl, backend, os, onAdded, onCancel }: AddPr
               {/* Free text (rule BdODa): not drawn — a borderless mono input after the chips. */}
               <input
                 className="ai-add__chip-input"
-                aria-label="Add a model id"
+                aria-label={t("ai.addModel")}
                 placeholder={models.length ? "" : "model id"}
                 value={modelDraft}
                 spellCheck={false}
@@ -323,7 +325,7 @@ export function AddProviderDialog({ ctl, backend, os, onAdded, onCancel }: AddPr
                 }}
               >
                 <RefreshCw className={fetching ? "ai-spin" : undefined} aria-hidden="true" />
-                <span>Fetch /models</span>
+                <span>{t("ai.fetchModels")}</span>
               </button>
             </div>
           </div>
@@ -367,11 +369,11 @@ export function AddProviderDialog({ ctl, backend, os, onAdded, onCancel }: AddPr
             onClick={() => void runTest()}
             data-pen="Opv6O"
           >
-            Test connection
+            {t("ai.testConnection")}
           </CompactButton>
           <span className="ai-spacer" aria-hidden="true" />
           <CompactButton variant="ghost" height={28} padX={12} onClick={onCancel} data-pen="snjit">
-            Cancel
+            {t("ai.cancel")}
           </CompactButton>
           <CompactButton
             variant="primary"
@@ -391,7 +393,7 @@ export function AddProviderDialog({ ctl, backend, os, onAdded, onCancel }: AddPr
                 })
             }}
           >
-            Add provider
+            {t("ai.addProvider")}
           </CompactButton>
         </div>
       </div>
@@ -420,11 +422,11 @@ function savedTo(
   if (backend === "localStorage") return storageLabel(providerId, backend, os)
   const store =
     os === "windows"
-      ? "Windows Credential Manager"
+      ? t("ui.ai.settings.addprovider.storeWindows")
       : os === "linux"
-        ? "Secret Service"
-        : "macOS Keychain"
-  return `Saved to ${store} · kimo/provider.${providerId}`
+        ? t("ui.ai.settings.addprovider.storeLinux")
+        : t("ui.ai.settings.addprovider.storeMac")
+  return t("ui.ai.settings.addprovider.savedTo", { store, id: providerId })
 }
 
 function slug(label: string): string {

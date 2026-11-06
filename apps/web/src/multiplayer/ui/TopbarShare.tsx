@@ -13,6 +13,7 @@
  */
 import { Button, SaveStatus, Tooltip } from "@kimo/ui"
 import { type ReactNode, useEffect, useRef, useState } from "react"
+import { t } from "../../lib/i18n"
 import { Icon } from "../../lib/icons"
 import { useOptionalRuntime } from "../../platform/runtime"
 import { shareableWorkspaces } from "../cloud/workspaces"
@@ -183,7 +184,7 @@ function ShareCluster({
           data-shared={live || undefined}
           onClick={() => setOpen((o) => (o === "share" ? null : "share"))}
         >
-          {live && !card ? "Sharing" : "Share"}
+          {live && !card ? t("editor.sharing") : t("editor.share")}
         </Button>
       )}
       {open === "share" && canShare && (

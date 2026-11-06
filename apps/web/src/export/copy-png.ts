@@ -1,3 +1,5 @@
+import { t } from "../lib/i18n"
+
 /**
  * File › "Copy selection as PNG" ⇧⌘C (board 27 §10 (d) W3CpXw, rule VVlIk): the quick path that
  * skips the Export dialog and puts a 2× PNG of the selection on the clipboard. The renderer
@@ -42,7 +44,9 @@ export async function copySelectionAsPng(options: {
     return {
       ok: false,
       reason: "failed",
-      message: `Couldn't copy as PNG: ${e instanceof Error ? e.message : String(e)}`,
+      message: t("ui.export.copypng.failed", {
+        message: e instanceof Error ? e.message : String(e),
+      }),
     }
   }
 }

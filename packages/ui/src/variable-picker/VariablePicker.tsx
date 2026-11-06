@@ -1,3 +1,4 @@
+import { t } from "@kimo/i18n"
 import { Library, Plus, Search, Unlink } from "lucide-react"
 import { type KeyboardEvent, useId, useMemo, useRef, useState } from "react"
 import { Input } from "../input/Input"
@@ -192,8 +193,8 @@ export function VariablePicker({
             <button
               type="button"
               className="kimo-variable-picker__detach"
-              aria-label="Detach variable"
-              title="Detach"
+              aria-label={t("ui.pkg.variable.picker.variablepicker.detach-variable")}
+              title={t("ui.pkg.variable.picker.variablepicker.detach")}
               onClick={onDetach}
             >
               <Unlink aria-hidden="true" />

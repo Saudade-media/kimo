@@ -10,6 +10,7 @@
 import { MenuDense, MenuDivider, MenuItemDense } from "@kimo/ui"
 import { ChevronDown } from "lucide-react"
 import { useRef, useState } from "react"
+import { t } from "../lib/i18n"
 
 export interface ReplaceChoice {
   family: string
@@ -46,7 +47,7 @@ function ReplaceWithMenu({
   return (
     <MenuDense
       width={220}
-      label={`Replace ${family} with`}
+      label={t("ui.fonts.replacewith.label", { family })}
       className="fonts-replace-menu"
       {...(anchor ? { anchor } : {})}
       {...(onClose ? { onClose } : {})}
@@ -63,7 +64,11 @@ function ReplaceWithMenu({
       ))}
       <MenuDivider />
       <MenuItemDense label={`Install ${family}…`} onSelect={onInstall} disabled={!onInstall} />
-      <MenuItemDense label="Choose font file…" onSelect={onChooseFile} disabled={!onChooseFile} />
+      <MenuItemDense
+        label={t("ui.fonts.replacewithmenu.1")}
+        onSelect={onChooseFile}
+        disabled={!onChooseFile}
+      />
     </MenuDense>
   )
 }
@@ -87,7 +92,7 @@ export function FontReplaceSelect({ width = 148, ...menu }: FontReplaceSelectPro
         className="kimo-select__trigger"
         aria-haspopup="menu"
         aria-expanded={open}
-        aria-label={`Replace ${menu.family} with`}
+        aria-label={t("ui.fonts.replacewith.label", { family: menu.family })}
         onClick={() => setOpen((o) => !o)}
         onKeyDown={(e) => {
           if (e.key === "ArrowDown" || e.key === "Enter" || e.key === " ") {

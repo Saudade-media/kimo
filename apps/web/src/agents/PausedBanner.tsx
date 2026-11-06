@@ -4,6 +4,7 @@
  * queued ops are dropped, not retried. DOCUMENT_LOCKED offers Resume once the lock clears.
  */
 import { Banner, type BannerActionItem } from "@kimo/ui"
+import { t } from "../lib/i18n"
 import type { AgentsControllerExt } from "./controller"
 import { useAgentsState } from "./hooks"
 import { AgentIcon } from "./icons"
@@ -25,21 +26,26 @@ export function AgentPausedBanner({ controller, onShowOps, onSaveCopy }: AgentPa
   const lockCleared = locked && store !== null && store.readOnly === null
   const reason = store?.readOnly?.reason
   const body = locked
-    ? `${chip.paused.summary || "The file is locked by another app."} ${chip.label}’s last call returned DOCUMENT_LOCKED; its changes were not applied. Agents can still read.`
-    : `This file is read-only${reason ? ` (${reason})` : ""}: ${chip.label}’s last call returned READ_ONLY and was not applied. Agents can still read.`
+    ? t("ui.agents.pausedbanner.locked", {
+        summary: chip.paused.summary || t("ui.agents.pausedbanner.lockedDefault"),
+        agent: chip.label,
+      })
+    : reason
+      ? t("ui.agents.pausedbanner.readOnly", { reason, agent: chip.label })
+      : t("ui.agents.pausedbanner.readOnlyPlain", { agent: chip.label })
   const actions: BannerActionItem[] = [
-    { id: "show-ops", label: "Show changes", variant: "ghost" },
+    { id: "show-ops", label: t("ui.agents.pausedbanner.show-changes"), variant: "ghost" },
     lockCleared
-      ? { id: "resume", label: "Resume", variant: "primary" }
+      ? { id: "resume", label: t("ui.agents.pausedbanner.resume"), variant: "primary" }
       : locked
         ? null
-        : { id: "save-copy", label: "Save a copy…", variant: "primary" },
+        : { id: "save-copy", label: t("ui.agents.pausedbanner.save-a-copy"), variant: "primary" },
   ].filter((a): a is BannerActionItem => a !== null)
   return (
     <Banner
       tone="warning"
       icon={<AgentIcon name="circle-pause" />}
-      title="Agent edits paused"
+      title={t("ui.agents.pausedbanner.1")}
       body={body}
       actions={actions}
       data-testid="agent-paused-banner"

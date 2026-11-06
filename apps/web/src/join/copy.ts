@@ -2,6 +2,7 @@
  * Join screen copy and rows (board 41 section 5, vignettes A to G). Pure: the cards render what
  * these functions return, and the unit tests pin the copy.
  */
+import { t } from "../lib/i18n"
 import type { JoinErrorKind, JoinState } from "../multiplayer/model"
 
 /** The buttons of an error card, left to right. */
@@ -64,13 +65,13 @@ export function joinSteps(state: JoinState, now: number): JoinStepRow[] {
   const status = (done: boolean, previous: boolean): StepStatus =>
     done ? "done" : previous ? "active" : "pending"
   return [
-    { id: "relay", label: "Reached the relay", status: status(reachedRelay, true) },
+    { id: "relay", label: t("ui.join.copy.reached-the-relay"), status: status(reachedRelay, true) },
     {
       id: "link",
       label: reachedRelay ? linkStepLabel(state, now) : "Link is valid",
       status: status(linkValid, reachedRelay),
     },
-    { id: "decrypt", label: "Decrypting the file", status: status(decrypted, linkValid) },
+    { id: "decrypt", label: t("ui.join.joincard.1"), status: status(decrypted, linkValid) },
   ]
 }
 
@@ -101,12 +102,13 @@ export function errorCard(state: JoinState): JoinErrorCard {
         kind,
         icon: "clock-alert",
         tone: "neutral",
-        title: "This link has expired",
-        desc: `${
-          state.expiresAt !== null
-            ? `It stopped working on ${shortDate(state.expiresAt)}.`
-            : "It stopped working."
-        } Ask the person who shared it for a new link.`,
+        title: t("ui.join.copy.this-link-has-expired"),
+        desc: t("ui.join.copy.expiredDesc", {
+          reason:
+            state.expiresAt !== null
+              ? t("ui.join.copy.expiredOn", { date: shortDate(state.expiresAt) })
+              : t("ui.join.copy.expired"),
+        }),
         meta: null,
         actions: ["open-kimo"],
       }
@@ -115,8 +117,8 @@ export function errorCard(state: JoinState): JoinErrorCard {
         kind,
         icon: "link-2-off",
         tone: "neutral",
-        title: "This link was turned off",
-        desc: "The owner revoked it or reset all links. Ask them for a new one.",
+        title: t("ui.join.copy.this-link-was-turned-off"),
+        desc: t("ui.join.copy.the-owner-revoked-it-or-reset-all-links-ask-them-for-a-new-one"),
         meta: null,
         actions: ["open-kimo"],
       }
@@ -125,7 +127,7 @@ export function errorCard(state: JoinState): JoinErrorCard {
         kind,
         icon: "wifi-off",
         tone: "danger",
-        title: "Couldn't reach the relay",
+        title: t("ui.join.copy.couldn-t-reach-the-relay"),
         desc: `${host} did not answer. It may be down, or blocked on this network.`,
         meta: message || code || null,
         actions: ["copy-details", "try-again"],
@@ -135,8 +137,10 @@ export function errorCard(state: JoinState): JoinErrorCard {
         kind,
         icon: "server-off",
         tone: "danger",
-        title: "This is not a Kimo relay",
-        desc: "The link's server does not speak Kimo. Check the link is complete, or ask for a new one.",
+        title: t("ui.join.copy.this-is-not-a-kimo-relay"),
+        desc: t(
+          "ui.join.copy.the-link-s-server-does-not-speak-kimo-check-the-link-is-complete-or-ask-for-a-new-one",
+        ),
         meta: [host, message].filter((p) => p && p !== "the relay").join(" · ") || null,
         actions: ["copy-details"],
       }
@@ -145,8 +149,10 @@ export function errorCard(state: JoinState): JoinErrorCard {
         kind,
         icon: "server-off",
         tone: "danger",
-        title: "This relay is too old",
-        desc: "The relay speaks an older version of Kimo. Ask its owner to update it, then try again.",
+        title: t("ui.join.copy.this-relay-is-too-old"),
+        desc: t(
+          "ui.join.copy.the-relay-speaks-an-older-version-of-kimo-ask-its-owner-to-update-it-then-try-again",
+        ),
         meta: [host, message].filter((p) => p && p !== "the relay").join(" · ") || null,
         actions: ["copy-details"],
       }
@@ -155,8 +161,10 @@ export function errorCard(state: JoinState): JoinErrorCard {
         kind,
         icon: "key-round",
         tone: "danger",
-        title: "Couldn't open this file",
-        desc: "The key in the link is wrong or damaged. Copy the whole link again, including the part after #.",
+        title: t("ui.join.copy.couldn-t-open-this-file"),
+        desc: t(
+          "ui.join.copy.the-key-in-the-link-is-wrong-or-damaged-copy-the-whole-link-again-including-the-part-after",
+        ),
         meta: message || "AEAD tag mismatch",
         actions: ["paste-link", "try-again"],
       }
@@ -165,8 +173,10 @@ export function errorCard(state: JoinState): JoinErrorCard {
         kind,
         icon: "link-2-off",
         tone: "danger",
-        title: "This link is not complete",
-        desc: "It does not look like a Kimo link. Copy the whole link again, including the part after #.",
+        title: t("ui.join.copy.this-link-is-not-complete"),
+        desc: t(
+          "ui.join.copy.it-does-not-look-like-a-kimo-link-copy-the-whole-link-again-including-the-part-after",
+        ),
         meta: message || null,
         actions: ["paste-link", "try-again"],
       }
@@ -175,8 +185,10 @@ export function errorCard(state: JoinState): JoinErrorCard {
         kind: "failed",
         icon: "circle-alert",
         tone: "danger",
-        title: "Couldn't join this file",
-        desc: "Something went wrong while joining. Try again, or ask the owner for a new link.",
+        title: t("ui.join.copy.couldn-t-join-this-file"),
+        desc: t(
+          "ui.join.copy.something-went-wrong-while-joining-try-again-or-ask-the-owner-for-a-new-link",
+        ),
         meta: message || code || null,
         actions: ["copy-details", "try-again"],
       }
@@ -190,10 +202,15 @@ export function errorCard(state: JoinState): JoinErrorCard {
 export function detailsText(state: JoinState, now: Date): string {
   const error = state.error
   return [
-    `Kimo join failed`,
-    `Relay: ${state.relayHost ?? "unknown"}`,
-    `Time: ${now.toISOString()}`,
-    `Error: ${error?.code ?? "UNKNOWN"}${error?.message ? ` (${first(error.message)})` : ""}`,
+    t("ui.join.copy.detailsTitle"),
+    t("ui.join.copy.detailsRelay", {
+      host: state.relayHost ?? t("ui.join.copy.unknown"),
+    }),
+    t("ui.join.copy.detailsTime", { time: now.toISOString() }),
+    t("ui.join.copy.detailsError", {
+      code: error?.code ?? "UNKNOWN",
+      detail: error?.message ? ` (${first(error.message)})` : "",
+    }),
   ].join("\n")
 }
 
@@ -204,5 +221,8 @@ export function retryDelay(attempt: number): number {
 
 /** The toast text once joined (board 41 B). */
 export function joinedToast(role: "edit" | "view" | null, name: string): string {
-  return `You joined ${name} · ${role === "edit" ? "you can edit" : "view only"}`
+  return t("ui.join.copy.joined", {
+    name,
+    role: role === "edit" ? t("ui.join.copy.roleEdit") : t("ui.join.copy.roleView"),
+  })
 }

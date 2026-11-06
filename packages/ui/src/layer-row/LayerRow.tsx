@@ -1,3 +1,4 @@
+import { t } from "@kimo/i18n"
 import { ChevronDown, ChevronRight, Eye, EyeOff, Lock, LockOpen } from "lucide-react"
 import {
   type ComponentPropsWithRef,
@@ -140,7 +141,7 @@ export function LayerRow({
         <input
           ref={input}
           className="kimo-layer-row__input"
-          aria-label="Layer name"
+          aria-label={t("ui.pkg.layer.row.layerrow.layer-name")}
           value={draft}
           onChange={(e) => setDraft(e.currentTarget.value)}
           onBlur={() => finishRename(true)}

@@ -22,6 +22,7 @@ import { HandoffGate } from "./join/Handoff"
 import { JoinRoute } from "./join/JoinRoute"
 import { useJoinRoute } from "./join/useJoinRoute"
 import { useHash } from "./lib/hooks"
+import { t, useLanguage } from "./lib/i18n"
 import { type ThemeMode, useTheme } from "./lib/theme"
 import { WorkspaceHost } from "./multiplayer/ui/WorkspaceHost"
 import { WsToastStack } from "./multiplayer/ui/workspace-parts"
@@ -52,6 +53,8 @@ const Gallery = GALLERY_ENABLED
 
 export function App() {
   const hash = useHash()
+  // A language change redraws the whole tree here; components only import `t` (lib/i18n).
+  useLanguage()
   const route = usePairRoute(useJoinRoute(parseRoute(hash), hash), hash)
   const theme = useTheme()
   const { platform, manager, multiplayer } = useRuntime()
@@ -209,7 +212,7 @@ function NotFound({ path }: { path: string }) {
     <main className="not-found">
       <p className="not-found__label">Nothing at {path}</p>
       <a className="not-found__link" href="#/">
-        Back to files
+        {t("ui.app.1")}
       </a>
     </main>
   )

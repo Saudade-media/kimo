@@ -8,6 +8,7 @@
  */
 import type { LeaseHolder } from "@kimo/platform"
 import { Button, Popover, type PopoverProps } from "@kimo/ui"
+import { t } from "../lib/i18n"
 import { displayPath, formatClock } from "../platform/format"
 
 /** "Today 10:31:07" / "Yesterday 18:02:11" / "Sep 28 09:00:00". */
@@ -60,16 +61,13 @@ export function LockDetailsPopover({
           <span className="kimo-files-lease__value">{value}</span>
         </div>
       ))}
-      <p className="kimo-files-lease__note">
-        When the desktop app holds the lease, CLI writers attach to it over the socket instead. A
-        lease whose pid is dead is reclaimed on Retry.
-      </p>
+      <p className="kimo-files-lease__note">{t("ui.files.lockdetailspopover.1")}</p>
       <div className="kimo-files-lease__actions">
         <Button variant="ghost" className="kimo-files-lease__reveal" onClick={onRevealLock}>
-          Reveal lock file
+          {t("ui.files.lockdetailspopover.2")}
         </Button>
         <Button variant="secondary" className="kimo-files-lease__retry" onClick={onRetry}>
-          Retry
+          {t("ui.files.lockdetailspopover.3")}
         </Button>
       </div>
     </Popover>

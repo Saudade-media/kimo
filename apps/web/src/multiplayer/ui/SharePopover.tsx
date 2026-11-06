@@ -37,6 +37,7 @@ import {
 } from "@kimo/ui"
 import { type ClipboardEvent, useEffect, useId, useRef, useState } from "react"
 import { failureText } from "../../editor/errors"
+import { t } from "../../lib/i18n"
 import { Icon } from "../../lib/icons"
 import { useOpenSettings, useOptionalRuntime } from "../../platform/runtime"
 import { shareableWorkspaces } from "../cloud/workspaces"
@@ -98,8 +99,8 @@ function cloudRelayChanged(saved: string | null, answer: string): boolean {
 }
 
 const ROLE_OPTIONS = [
-  { value: "view" as const, label: ROLE_LABEL.view },
-  { value: "edit" as const, label: ROLE_LABEL.edit },
+  { value: "view" as const, label: t(ROLE_LABEL.view) },
+  { value: "edit" as const, label: t(ROLE_LABEL.edit) },
 ]
 
 const EXPIRY_OPTIONS = EXPIRY_CHOICES.map((c) => ({
@@ -143,20 +144,24 @@ export function SharePopover({
   return (
     <Popover
       className="mp-popover"
-      label="Share"
+      label={t("ui.multiplayer.ui.sharepopover.6")}
       data-stage={cloudKind ? `workspace-${cloudKind.kind}` : stage}
       headerLeading={
         <div className="kimo-popover__leading">
           <span className="kimo-popover__title">Share</span>
           {!cloudKind && stage === "live" && (
-            <StatusPill status="linked" label="Live" className="mp-live" />
+            <StatusPill
+              status="linked"
+              label={t("ui.multiplayer.ui.sharepopover.5")}
+              className="mp-live"
+            />
           )}
         </div>
       }
       actions={
         <IconButton
           className="mp-close"
-          label="Close"
+          label={t("ui.multiplayer.ui.sharepopover.4")}
           icon={<Icon name="x" size={14} />}
           size="sm"
           tone="ghost"
@@ -324,7 +329,7 @@ function SetupBody({
       // Claimed by another Kimo since the check: test again, so the Fix shows in place.
       if (e instanceof MultiplayerError && (e.code === "NOT_OWNER" || e.code === "RELAY_CLAIMED"))
         await model.relayTest.test(test.url)
-      else toast({ tone: "danger", text: failureText("start sharing", e) })
+      else toast({ tone: "danger", text: failureText(t("errors.startSharing"), e) })
     }
   }
   const result = relayResultView(test)
@@ -332,7 +337,7 @@ function SetupBody({
   const field = (
     <div className="mp-field" data-pen="mHqqj">
       <label className="mp-field-label" htmlFor={fieldId}>
-        Relay URL
+        {t("ui.multiplayer.ui.sharepopover.7")}
       </label>
       <Input
         id={fieldId}
@@ -439,7 +444,7 @@ function SetupBody({
                   icon={<Icon name="wand-sparkles" size={16} />}
                   onClick={() => onSetUpRelay("choose")}
                 >
-                  Set up a relay
+                  {t("ui.multiplayer.ui.sharepopover.8")}
                 </Button>
               )}
               {field}
@@ -473,11 +478,8 @@ function SetupBody({
               <Icon name="server" size={16} />
             </span>
             <div className="mp-text">
-              <p className="mp-title">Share through your own relay</p>
-              <p className="mp-desc">
-                Kimo runs no server. Edits travel end-to-end encrypted through a relay you host, and
-                the relay never sees the design.
-              </p>
+              <p className="mp-title">{t("ui.multiplayer.ui.sharepopover.relayTitle")}</p>
+              <p className="mp-desc">{t("ui.multiplayer.ui.sharepopover.9")}</p>
             </div>
           </div>
         )}
@@ -489,7 +491,7 @@ function SetupBody({
               icon={<Icon name="wand-sparkles" size={16} />}
               onClick={() => onSetUpRelay()}
             >
-              Set up a relay
+              {t("ui.multiplayer.ui.sharepopover.10")}
             </Button>
             <div className="mp-or" data-pen="HxQ2J">
               <span className="mp-or__line" aria-hidden="true" />
@@ -512,21 +514,18 @@ function SetupBody({
             }
           />
         ) : test.kind === "ok" && test.owner === "unclaimed" ? (
-          <p className="mp-desc">
-            Kimo will claim it when you start sharing, so only your devices can share on it. Nothing
-            leaves this device until you create a link.
-          </p>
+          <p className="mp-desc">{t("ui.multiplayer.ui.sharepopover.11")}</p>
         ) : firstRun ? (
           !onSetUpRelay && (
             <GuideLink
-              label="How to host a relay, about 5 minutes"
+              label={t("ui.multiplayer.ui.sharepopover.3")}
               leadingIcon
               onOpen={() => void openRelayGuide(platform)}
             />
           )
         ) : (
           <p className="mp-desc">
-            Starting gives this file a new encryption key. Nothing leaves this device until you
+            {t("ui.multiplayer.ui.sharepopover.12")}
             create a link.
           </p>
         )}
@@ -539,14 +538,14 @@ function SetupBody({
       )}
       <div className="mp-footer">
         {firstRun ? (
-          <span className="mp-footnote">Set once, kept in Settings</span>
+          <span className="mp-footnote">{t("ui.multiplayer.ui.sharepopover.t3")}</span>
         ) : (
           <Button
             variant="ghost"
             className="mp-button mp-button--small-label"
             onClick={() => void openSettings("multiplayer")}
           >
-            Change in Settings
+            {t("ui.multiplayer.ui.sharepopover.13")}
           </Button>
         )}
         <span className="mp-spacer" aria-hidden="true" />
@@ -599,8 +598,8 @@ function LiveBody({
     } catch (e) {
       toast({
         tone: "danger",
-        text: failureText("create the link", e),
-        action: { label: "Retry", run: () => void create() },
+        text: failureText(t("errors.createLink"), e),
+        action: { label: t("settings.retry"), run: () => void create() },
       })
     } finally {
       setBusy(false)
@@ -611,7 +610,7 @@ function LiveBody({
       await copyText(platform, link.link)
       toast({ tone: "success", icon: "link", text: linkCopiedText(link, Date.now()) })
     } catch (e) {
-      toast({ tone: "danger", text: failureText("copy the link", e) })
+      toast({ tone: "danger", text: failureText(t("errors.copyLink"), e) })
     }
   }
   const revoke = async (link: LinkView) => {
@@ -621,8 +620,8 @@ function LiveBody({
     } catch (e) {
       toast({
         tone: "danger",
-        text: failureText("revoke the link", e),
-        action: { label: "Retry", run: () => void revoke(link) },
+        text: failureText(t("errors.revokeLink"), e),
+        action: { label: t("settings.retry"), run: () => void revoke(link) },
       })
     }
   }
@@ -630,7 +629,7 @@ function LiveBody({
     try {
       await doc.stopSharing()
     } catch (e) {
-      toast({ tone: "danger", text: failureText("stop sharing", e) })
+      toast({ tone: "danger", text: failureText(t("errors.stopSharing"), e) })
     }
   }
   const now = Date.now()
@@ -645,22 +644,22 @@ function LiveBody({
             <Icon name="lock" size={14} />
           </span>
           <div className="mp-text mp-text--2">
-            <p className="mp-label-strong">End-to-end encrypted</p>
+            <p className="mp-label-strong">{t("ui.multiplayer.ui.sharepopover.t2")}</p>
             {share.relayHost && <span className="mp-meta-mono">{share.relayHost}</span>}
           </div>
         </div>
         <div className="mp-field" data-pen="r8JQX">
-          <span className="mp-field-label">New link</span>
+          <span className="mp-field-label">{t("ui.multiplayer.ui.sharepopover.t1")}</span>
           <div className="mp-controls">
             <SegmentedText
-              label="Role"
+              label={t("ui.multiplayer.ui.sharepopover.2")}
               options={ROLE_OPTIONS}
               value={role}
               onChange={(v) => setRole(v)}
             />
             <Select
               dense
-              label="Expiry"
+              label={t("ui.multiplayer.ui.sharepopover.1")}
               menuWidth={232}
               options={EXPIRY_OPTIONS}
               value={expiry}
@@ -673,7 +672,7 @@ function LiveBody({
               disabled={busy}
               onClick={() => void create()}
             >
-              Create link
+              {t("ui.multiplayer.ui.sharepopover.14")}
             </Button>
           </div>
         </div>
@@ -697,13 +696,13 @@ function LiveBody({
                   {quickTunnel && (
                     <span className="mp-quick-note" data-pen="m1FYw">
                       <Icon name="triangle-alert" size={11} />
-                      Stops working when your relay restarts
+                      {t("ui.multiplayer.ui.sharepopover.15")}
                     </span>
                   )}
                 </div>
                 <IconButton
                   className="mp-link__action mp-link__copy"
-                  label={`Copy ${ROLE_LABEL[l.role].toLowerCase()} link`}
+                  label={t("ui.mp.sharepopover.copyLink", { role: t(ROLE_LABEL[l.role]) })}
                   icon={<Icon name="copy" size={14} />}
                   size="sm"
                   tone="ghost"
@@ -711,7 +710,7 @@ function LiveBody({
                 />
                 <IconButton
                   className="mp-link__action mp-link__revoke"
-                  label={`Revoke ${ROLE_LABEL[l.role].toLowerCase()} link`}
+                  label={t("ui.mp.sharepopover.revokeLink", { role: t(ROLE_LABEL[l.role]) })}
                   icon={<Icon name="link-2-off" size={14} />}
                   size="sm"
                   tone="ghost"
@@ -738,11 +737,11 @@ function LiveBody({
           icon={<Icon name="rotate-ccw" size={16} />}
           onClick={onResetAll}
         >
-          Reset all links
+          {t("ui.multiplayer.ui.sharepopover.16")}
         </Button>
         <span className="mp-spacer" aria-hidden="true" />
         <Button variant="secondary" className="mp-button mp-stop" onClick={() => void stop()}>
-          Stop sharing
+          {t("ui.multiplayer.ui.sharepopover.17")}
         </Button>
       </div>
     </>

@@ -6,6 +6,7 @@
  */
 import type { InsertOp, Op } from "@kimo/editor-state"
 import { contentHash } from "../lib/assets"
+import { type MessageKey, t } from "../lib/i18n"
 import {
   analyzeSvg,
   type ConvertContext,
@@ -37,11 +38,11 @@ export interface PreparedSvg {
 type SvgRejectReason = "script" | "external" | "embedded-html"
 
 /** "it contains a script", "it loads an external file" (board 20 toasts M4Pij9 / fW1JW). */
-const REASON_TEXT: Record<SvgRejectReason, string> = {
-  script: "contains a script",
-  external: "loads an external file",
+const REASON_TEXT: Record<SvgRejectReason, MessageKey> = {
+  script: "ui.svg.flow.reasonScript",
+  external: "ui.svg.flow.reasonExternal",
   // Not drawn on board 20 (the rule lists <foreignObject>; the copy follows the same pattern).
-  "embedded-html": "embeds HTML content",
+  "embedded-html": "ui.svg.flow.reasonHtml",
 }
 
 /**
@@ -78,7 +79,12 @@ export class SvgRejectedError extends SvgImportError {
     details: string[],
     items: SvgRemovedItem[] = [],
   ) {
-    super(`Couldn't import ${fileName}: it ${REASON_TEXT[reason]}`)
+    super(
+      t("ui.svg.flow.rejected", {
+        file: fileName,
+        reason: t(REASON_TEXT[reason]),
+      }),
+    )
     this.fileName = fileName
     this.reason = reason
     this.details = details
@@ -236,7 +242,7 @@ export async function prepareSvg(
     imageKey,
     size: { w, h },
     vectorDescription: describeStats(stats),
-    imageDescription: `Copies the file to assets/${imageKey} and places an image fill.`,
+    imageDescription: t("ui.svg.flow.imageDescription", { key: imageKey }),
   }
 }
 

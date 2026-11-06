@@ -1,3 +1,4 @@
+import { type MessageKey, t } from "@kimo/i18n"
 import { ChevronDown, Droplet, Droplets, Eye, EyeOff, Minus, SlidersHorizontal } from "lucide-react"
 import { type ComponentPropsWithRef, useId, useRef, useState } from "react"
 import { IconButton } from "../icon-button/IconButton"
@@ -9,11 +10,11 @@ import { MenuDense, MenuItemDense } from "../menu-dense/MenuDense"
 export type EffectKind = "drop-shadow" | "inner-shadow" | "layer-blur" | "background-blur"
 
 /** Labels in menu order. */
-export const EFFECT_KINDS: readonly { value: EffectKind; label: string }[] = [
-  { value: "drop-shadow", label: "Drop shadow" },
-  { value: "inner-shadow", label: "Inner shadow" },
-  { value: "layer-blur", label: "Layer blur" },
-  { value: "background-blur", label: "Background blur" },
+export const EFFECT_KINDS: readonly { value: EffectKind; label: MessageKey }[] = [
+  { value: "drop-shadow", label: "ui.effect.dropShadow" },
+  { value: "inner-shadow", label: "ui.effect.innerShadow" },
+  { value: "layer-blur", label: "ui.effect.layerBlur" },
+  { value: "background-blur", label: "ui.effect.backgroundBlur" },
 ]
 
 /** Props for {@link EffectRow}. Remaining `<div>` props go to the row frame. */
@@ -63,7 +64,7 @@ export function EffectRow({
   const field = useRef<HTMLDivElement>(null)
   const typeButton = useRef<HTMLButtonElement>(null)
   const [menu, setMenu] = useState(false)
-  const label = EFFECT_KINDS.find((k) => k.value === kind)?.label ?? kind
+  const label = t(EFFECT_KINDS.find((k) => k.value === kind)?.label ?? "ui.effect.dropShadow")
   const Icon = ICON[kind]
 
   const closeMenu = () => {
@@ -80,7 +81,7 @@ export function EffectRow({
         <button
           type="button"
           className={cx("kimo-effect-row__settings", open && "kimo-effect-row__settings--open")}
-          aria-label={`${label} settings`}
+          aria-label={t("ui.effect.settings", { name: label })}
           aria-expanded={open}
           onClick={onToggleOpen}
         >
@@ -109,7 +110,7 @@ export function EffectRow({
         {menu && (
           <MenuDense
             id={`${id}-menu`}
-            label="Effect type"
+            label={t("ui.effect.type")}
             anchor={field.current}
             autoFocus
             onClose={closeMenu}
@@ -118,7 +119,7 @@ export function EffectRow({
             {EFFECT_KINDS.map((k) => (
               <MenuItemDense
                 key={k.value}
-                label={k.label}
+                label={t(k.label)}
                 checked={k.value === kind}
                 onSelect={() => {
                   if (k.value !== kind) onKindChange?.(k.value)
@@ -131,7 +132,7 @@ export function EffectRow({
       </div>
       <IconButton
         className="kimo-effect-row__eye"
-        label={visible ? `Hide ${label}` : `Show ${label}`}
+        label={t(visible ? "ui.effect.hide" : "ui.effect.show", { name: label })}
         icon={visible ? <Eye /> : <EyeOff />}
         size="sm"
         tone="quiet"
@@ -139,7 +140,7 @@ export function EffectRow({
       />
       <IconButton
         className={cx("kimo-effect-row__remove", !removable && "kimo-effect-row__remove--hidden")}
-        label={`Remove ${label}`}
+        label={t("ui.effect.remove", { name: label })}
         icon={<Minus />}
         size="sm"
         tone="quiet"

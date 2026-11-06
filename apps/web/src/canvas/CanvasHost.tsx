@@ -29,6 +29,7 @@ import { activeRoots } from "../editor/pages/model"
 import { contentHash, extensionFor, IMAGE_ACCEPT, MAX_ASSET_BYTES, sniffImage } from "../lib/assets"
 import { useDocHeader } from "../lib/header"
 import { useTreeRevision, useUi } from "../lib/hooks"
+import { t } from "../lib/i18n"
 import { Icon } from "../lib/icons"
 import { pathOf } from "./commands"
 import "./canvas-m2.css"
@@ -257,7 +258,9 @@ export function CanvasHost(props: CanvasHostProps & { ref?: Ref<CanvasHandle> })
         } catch (e) {
           cb.current.onError?.({
             kind: "op",
-            message: `Could not import image: ${e instanceof Error ? e.message : String(e)}`,
+            message: t("ui.canvas.canvashost.importFailed", {
+              message: e instanceof Error ? e.message : String(e),
+            }),
           })
         }
       })()
@@ -514,7 +517,7 @@ export function CanvasHost(props: CanvasHostProps & { ref?: Ref<CanvasHandle> })
       // biome-ignore lint/a11y/noNoninteractiveTabindex: the canvas takes keyboard focus for its shortcuts
       tabIndex={0}
       role="application"
-      aria-label="Design canvas"
+      aria-label={t("ui.canvas.canvashost.1")}
       onPointerMove={(e) => {
         // The ⌥ "Measuring" tooltip follows the pointer (positioned without React renders).
         const m = measuringRef.current

@@ -1,3 +1,4 @@
+import { t } from "@kimo/i18n"
 import { CircleX, Copy } from "lucide-react"
 import type { ComponentPropsWithRef } from "react"
 import { Button } from "../button/Button"
@@ -68,7 +69,10 @@ export function SvgRejectionDetails({
           Hide details
         </button>
       </div>
-      <ul className="kimo-svg-rejection__reasons" aria-label="Removed items">
+      <ul
+        className="kimo-svg-rejection__reasons"
+        aria-label={t("ui.pkg.svg.rejection.svgrejectiondetails.removed-items")}
+      >
         {shown.map((r, i) => (
           // biome-ignore lint/suspicious/noArrayIndexKey: two removals can share line and code; the list is static
           <li key={`${r.line}-${r.code}-${i}`} className="kimo-svg-rejection__reason">

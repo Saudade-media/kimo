@@ -91,6 +91,7 @@ import type { McpApprovalChoice } from "@kimo/platform"
 import { type AgentMarkState, type Persona, PersonaAllocator } from "@kimo/ui"
 import { workAreaIds } from "../canvas/agent-area"
 import { failureText } from "../editor/errors"
+import { t, t as tr } from "../lib/i18n"
 import {
   type AgentComposerView,
   type AgentMessageView,
@@ -876,7 +877,7 @@ export function createAgentPanelController(o: AgentPanelOptions): AgentPanelCont
     try {
       await rt.sessions.put(session)
     } catch (e) {
-      report(failureText("save this session to the history", e))
+      report(failureText(t("errors.saveSessionHistory"), e))
     }
     void reloadSessions()
   }
@@ -1214,7 +1215,9 @@ export function createAgentPanelController(o: AgentPanelOptions): AgentPanelCont
             budget: {
               check: (turnUsd: number) =>
                 usage.monthUsd + turnUsd >= usage.monthlyLimitUsd
-                  ? `Monthly limit reached · $${usage.monthlyLimitUsd.toFixed(2)}`
+                  ? tr("ui.agent.panel.controller.monthlyLimit", {
+                      amount: `$${usage.monthlyLimitUsd.toFixed(2)}`,
+                    })
                   : null,
             },
           }
@@ -1621,7 +1624,7 @@ export function createAgentPanelController(o: AgentPanelOptions): AgentPanelCont
         setLive(origin, "Kimo", "teal", true)
         const record = await runAgent({
           origin,
-          label: "Kimo",
+          label: t("ui.agent.panel.controller.kimo"),
           persona: "teal",
           policy: leadPolicy(scopeItems.flatMap((a) => a.nodeIds ?? [])),
           model,
@@ -1882,7 +1885,11 @@ export function createAgentPanelController(o: AgentPanelOptions): AgentPanelCont
       const slot = personas.assign({ id: origin })
       return { origin, slot, label: childLabel(i + 1), index: i + 1 }
     })
-    const lead = toolsFor({ origin: leadOrigin, label: "Kimo", policy: leadPolicy([]) })
+    const lead = toolsFor({
+      origin: leadOrigin,
+      label: t("ui.agent.panel.controller.kimo"),
+      policy: leadPolicy([]),
+    })
     const ops = planSideBySide(
       box,
       n,
@@ -1893,7 +1900,11 @@ export function createAgentPanelController(o: AgentPanelOptions): AgentPanelCont
       {
         id: `setup-${run.id}`,
         name: "kimo_apply_ops",
-        input: { docId: o.docId(), ops, label: `Side by side · ${n} variants` },
+        input: {
+          docId: o.docId(),
+          ops,
+          label: tr("ui.agent.panel.controller.sideBySideVariants", { n: String(n) }),
+        },
       },
       signal,
     )
@@ -1925,7 +1936,10 @@ export function createAgentPanelController(o: AgentPanelOptions): AgentPanelCont
         {
           callId: "setup",
           tool: "kimo_apply_ops",
-          label: `Created ${n} variant frames next to ${box.name}`,
+          label: tr("ui.agent.panel.controller.createdVariants", {
+            n: String(n),
+            box: box.name,
+          }),
           state: "done",
           changed: setup.result.ok ? (setup.result.changed ?? []) : [],
         },
@@ -2030,7 +2044,11 @@ export function createAgentPanelController(o: AgentPanelOptions): AgentPanelCont
       {
         id: `settle-${variants[0]?.frame ?? "variants"}`,
         name: "kimo_apply_ops",
-        input: { docId: o.docId(), ops, label: "Clear variant placeholders" },
+        input: {
+          docId: o.docId(),
+          ops,
+          label: t("ui.agent.panel.controller.clear-variant-placeholders"),
+        },
       },
       signal,
     )
@@ -2063,7 +2081,7 @@ export function createAgentPanelController(o: AgentPanelOptions): AgentPanelCont
     newRun("split", mode.agents)
     addRow({
       origin: leadOrigin,
-      label: "Lead",
+      label: t("ui.agent.panel.controller.lead"),
       scopeName: "page",
       modelLabel: modelLabel(model, rt.clis()),
       persona: "teal",
@@ -2111,7 +2129,7 @@ export function createAgentPanelController(o: AgentPanelOptions): AgentPanelCont
     const leadEvents = threadHandler(aid, leadOrigin)
     const record = await runAgent({
       origin: leadOrigin,
-      label: "Kimo",
+      label: t("ui.agent.panel.controller.kimo"),
       persona: "teal",
       policy: leadPolicy(scope),
       extra: [spawn],
@@ -2177,7 +2195,7 @@ export function createAgentPanelController(o: AgentPanelOptions): AgentPanelCont
       newRun("iterate", 1)
       addRow({
         origin,
-        label: "Kimo",
+        label: t("ui.agent.panel.controller.kimo"),
         scopeName: o.nodeName?.(frame) ?? frame,
         modelLabel: modelLabel(model, rt.clis()),
         persona: "teal",
@@ -2217,7 +2235,7 @@ export function createAgentPanelController(o: AgentPanelOptions): AgentPanelCont
     const rows: PlanLogRow[] = []
     const record = await runAgent({
       origin,
-      label: "Kimo",
+      label: t("ui.agent.panel.controller.kimo"),
       persona: "teal",
       policy: { ...leadPolicy([frame]), grants: [] },
       model: model as ModelSelection,
@@ -2366,7 +2384,11 @@ export function createAgentPanelController(o: AgentPanelOptions): AgentPanelCont
   // --- Undo ---------------------------------------------------------------------------------------
 
   async function undoGroups(groups: { docId: string; token: string }[], origin: `agent:${string}`) {
-    const host = toolsFor({ origin, label: "Kimo", policy: leadPolicy([]) })
+    const host = toolsFor({
+      origin,
+      label: t("ui.agent.panel.controller.kimo"),
+      policy: leadPolicy([]),
+    })
     let ok = true
     let stale = false
     for (const g of groups) {
@@ -2407,7 +2429,10 @@ export function createAgentPanelController(o: AgentPanelOptions): AgentPanelCont
     const latest = modeRun?.iterate
     if (!modeRun || !latest) return false
     if (!r.ok || r.stale) {
-      const what = view === "before" ? "show the frame before this pass" : "show this pass again"
+      const what =
+        view === "before"
+          ? tr("ui.agent.panel.controller.showBefore")
+          : tr("ui.agent.panel.controller.showAgain")
       modeRun = { ...modeRun, iterate: { ...latest, issue: undoIssue(what, r.stale) } }
       emit()
       return false
@@ -2420,7 +2445,11 @@ export function createAgentPanelController(o: AgentPanelOptions): AgentPanelCont
 
   /** Redo groups (in their original order) as `origin`: the After side of the iterate toggle. */
   async function redoGroups(groups: { docId: string; token: string }[], origin: `agent:${string}`) {
-    const host = toolsFor({ origin, label: "Kimo", policy: leadPolicy([]) })
+    const host = toolsFor({
+      origin,
+      label: t("ui.agent.panel.controller.kimo"),
+      policy: leadPolicy([]),
+    })
     let ok = true
     let stale = false
     for (const g of groups) {
@@ -2444,9 +2473,10 @@ export function createAgentPanelController(o: AgentPanelOptions): AgentPanelCont
 
   /** Why Undo turn / Regenerate stopped: stale (later edits on top) or refused by the history. */
   function undoIssue(what: string, stale: boolean): string {
-    return stale
-      ? `Couldn't ${what}. The layers changed after it, so Kimo left them as they are.`
-      : `Couldn't ${what}. These edits are no longer in the undo history, so Kimo left the layers as they are.`
+    return tr(
+      stale ? "ui.agent.panel.controller.undoStale" : "ui.agent.panel.controller.undoGone",
+      { what },
+    )
   }
 
   /** Undo groups as their own origin (children's groups live on their own stacks). */
@@ -2482,7 +2512,13 @@ export function createAgentPanelController(o: AgentPanelOptions): AgentPanelCont
     if (!r.ok || r.stale) {
       modeRun = {
         ...modeRun,
-        iterate: { ...latest, issue: undoIssue(`revert “${row.target}”`, r.stale) },
+        iterate: {
+          ...latest,
+          issue: undoIssue(
+            tr("ui.agent.panel.controller.revertTarget", { target: row.target }),
+            r.stale,
+          ),
+        },
       }
     } else {
       const { issue: _issue, ...rest } = latest
@@ -2555,9 +2591,9 @@ export function createAgentPanelController(o: AgentPanelOptions): AgentPanelCont
       if (rt.openLink) {
         Promise.resolve()
           .then(() => rt.openLink?.(url))
-          .catch((e: unknown) => report(failureText(`open ${url}`, e)))
+          .catch((e: unknown) => report(failureText(t("errors.openUrl", { url }), e)))
       } else if (!window.open(url, "_blank", "noopener,noreferrer"))
-        report(`Couldn't open ${url}. The browser blocked the new tab.`)
+        report(tr("ui.agent.panel.controller.blockedTab", { url }))
     },
     removeQueued(index) {
       if (index < 0 || index >= queued.length) return
@@ -2598,7 +2634,10 @@ export function createAgentPanelController(o: AgentPanelOptions): AgentPanelCont
         ? { ok: true, stale: false }
         : await undoGroups(plan.undo, agentOrigin(session.id, 0))
       if (!r.ok || r.stale) {
-        turnIssues = { ...turnIssues, [id]: undoIssue("regenerate this turn", r.stale) }
+        turnIssues = {
+          ...turnIssues,
+          [id]: undoIssue(tr("ui.agent.panel.controller.regenerateTurn"), r.stale),
+        }
         emit()
         return
       }
@@ -2638,7 +2677,11 @@ export function createAgentPanelController(o: AgentPanelOptions): AgentPanelCont
         undoneTurns = [...undoneTurns, id]
         const { [id]: _cleared, ...restIssues } = turnIssues
         turnIssues = restIssues
-      } else turnIssues = { ...turnIssues, [id]: undoIssue("undo this turn", r.stale) }
+      } else
+        turnIssues = {
+          ...turnIssues,
+          [id]: undoIssue(tr("ui.agent.panel.controller.undoTurn"), r.stale),
+        }
       emit()
       return r
     },
@@ -2665,7 +2708,7 @@ export function createAgentPanelController(o: AgentPanelOptions): AgentPanelCont
       try {
         s = await rt.sessions.get(id)
       } catch (e) {
-        report(failureText("open this session", e))
+        report(failureText(t("errors.openSession"), e))
         return
       }
       if (!s) {
@@ -2691,7 +2734,7 @@ export function createAgentPanelController(o: AgentPanelOptions): AgentPanelCont
       try {
         await rt.sessions.delete(id)
       } catch (e) {
-        report(failureText("delete this session", e))
+        report(failureText(t("errors.deleteSession"), e))
         return
       }
       if (session?.id === id) controller.newSession()
@@ -2822,7 +2865,10 @@ export function createAgentPanelController(o: AgentPanelOptions): AgentPanelCont
         const r = await undoGroups(calls, agentOrigin(session.id, 0))
         if (!modeRun?.iterate) return
         if (!r.ok || r.stale) {
-          const what = d.toPass === 0 ? "revert to the original" : `revert to pass ${d.toPass}`
+          const what =
+            d.toPass === 0
+              ? tr("ui.agent.panel.controller.revertOriginal")
+              : tr("ui.agent.panel.controller.revertPass", { pass: String(d.toPass) })
           modeRun = { ...modeRun, iterate: { ...modeRun.iterate, issue: undoIssue(what, r.stale) } }
           emit()
           return
@@ -2845,7 +2891,14 @@ export function createAgentPanelController(o: AgentPanelOptions): AgentPanelCont
       const frame = modeRun.agents[0]?.scopeId
       const user: UserMessage = {
         role: "user",
-        content: [{ type: "text", text: d.steer ? `Next pass: ${d.steer}` : "Next pass" }],
+        content: [
+          {
+            type: "text",
+            text: d.steer
+              ? tr("ui.agent.panel.controller.nextPass", { steer: d.steer })
+              : tr("ui.agent.panel.controller.nextPassPlain"),
+          },
+        ],
       }
       const aid = `a${now().toString(36)}${(++turnSeq).toString(36)}`
       messages = [
@@ -2853,7 +2906,7 @@ export function createAgentPanelController(o: AgentPanelOptions): AgentPanelCont
         {
           kind: "user",
           id: `u${aid}`,
-          text: d.steer ?? `Run pass ${it.pass + 1}`,
+          text: d.steer ?? tr("ui.agent.panel.controller.runPass", { pass: String(it.pass + 1) }),
           attachments: [],
           skills: [],
           fromHome: false,
@@ -2945,7 +2998,9 @@ export function createAgentPanelController(o: AgentPanelOptions): AgentPanelCont
     async discardVariant(origin) {
       const row = modeRun?.agents.find((a) => a.origin === origin)
       if (!row) return
-      const what = `discard ${row.scopeName ?? row.label}`
+      const what = tr("ui.agent.panel.controller.discard", {
+        name: row.scopeName ?? row.label,
+      })
       const refuse = (text: string) => {
         if (modeRun) modeRun = { ...modeRun, issue: text }
         emit()
@@ -2960,7 +3015,7 @@ export function createAgentPanelController(o: AgentPanelOptions): AgentPanelCont
       if (row.scopeId) {
         const lead = toolsFor({
           origin: agentOrigin(session?.id ?? "kimo", 0),
-          label: "Kimo",
+          label: t("ui.agent.panel.controller.kimo"),
           policy: leadPolicy([]),
         })
         const del = await lead.call(
@@ -2977,7 +3032,10 @@ export function createAgentPanelController(o: AgentPanelOptions): AgentPanelCont
         )
         if (!del.result.ok)
           return refuse(
-            `Couldn't ${what}. ${del.result.errors[0]?.message ?? "The document refused the delete."}`,
+            tr("errors.couldntCause", {
+              what,
+              cause: del.result.errors[0]?.message ?? tr("errors.deleteRefused"),
+            }),
           )
       }
       if (modeRun?.issue) {
@@ -3028,7 +3086,14 @@ export function createAgentPanelController(o: AgentPanelOptions): AgentPanelCont
       try {
         await rt.chooseCli?.(id)
       } catch (e) {
-        report(failureText(`use ${rt.clis().find((c) => c.id === id)?.label ?? id}`, e))
+        report(
+          failureText(
+            t("errors.useCli", {
+              name: rt.clis().find((c) => c.id === id)?.label ?? id,
+            }),
+            e,
+          ),
+        )
         return
       }
       model = sel
@@ -3117,9 +3182,9 @@ export function createAgentPanelController(o: AgentPanelOptions): AgentPanelCont
       savePromptRun(nodeId)
       emit()
     }
-    if (abort || runningPrompt) return fail("busy", "the agent is busy with another turn")
+    if (abort || runningPrompt) return fail("busy", tr("errors.agentBusy"))
     const fallback = model ?? rt.defaultSelection()
-    if (!fallback) return fail("unknown_model", "add an API key or sign in to a local agent CLI")
+    if (!fallback) return fail("unknown_model", tr("errors.noModel"))
     const s = ensureSession()
     const origin = agentOrigin(s.id, 0)
     // CLI selections are not API providers: let the plan resolve them as listed models.
@@ -3153,7 +3218,11 @@ export function createAgentPanelController(o: AgentPanelOptions): AgentPanelCont
     runningPrompt = { nodeId, origin }
     promptRuns = { ...promptRuns, [nodeId]: { status: "running", live: { ops: 0, costUsd: 0 } } }
     emit()
-    const lead = toolsFor({ origin, label: "Kimo", policy: leadPolicy([]) })
+    const lead = toolsFor({
+      origin,
+      label: t("ui.agent.panel.controller.kimo"),
+      policy: leadPolicy([]),
+    })
     let roots = plan.scopeRoots
     let created: string | null = null
     if (plan.setup.length) {
@@ -3161,7 +3230,11 @@ export function createAgentPanelController(o: AgentPanelOptions): AgentPanelCont
         {
           id: `prompt-setup-${nodeId}`,
           name: "kimo_apply_ops",
-          input: { docId: o.docId(), ops: plan.setup, label: "Prompt result frame" },
+          input: {
+            docId: o.docId(),
+            ops: plan.setup,
+            label: t("ui.agent.panel.controller.prompt-result-frame"),
+          },
         },
         new AbortController().signal,
       )
@@ -3170,7 +3243,10 @@ export function createAgentPanelController(o: AgentPanelOptions): AgentPanelCont
         : null
       if (!created) {
         runningPrompt = null
-        return fail("invalid_request", setup.result.ok ? "no result frame" : setup.result.summary)
+        return fail(
+          "invalid_request",
+          setup.result.ok ? tr("errors.noResultFrame") : setup.result.summary,
+        )
       }
       roots = [created]
     }
@@ -3201,7 +3277,7 @@ export function createAgentPanelController(o: AgentPanelOptions): AgentPanelCont
             input: {
               docId: o.docId(),
               ops: [{ op: "update", id: created, unset: ["placeholder"] }],
-              label: "Clear flag",
+              label: t("ui.agent.panel.controller.clear-flag"),
             },
           },
           new AbortController().signal,

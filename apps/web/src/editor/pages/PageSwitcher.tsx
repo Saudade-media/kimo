@@ -14,6 +14,7 @@
 import { Kbd, PaletteRow } from "@kimo/ui"
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react"
 import { createBus, useBus } from "../../lib/hooks"
+import { t, tn } from "../../lib/i18n"
 import { Icon } from "../../lib/icons"
 import { comboHint } from "../kbd"
 import type { M3Controller } from "../m3/controller"
@@ -103,7 +104,7 @@ function SwitcherPanel({
     const roots = rootsPerPage(session.store)
     const count = (id: string | null) => {
       const n = pageLayerCount(session.store, roots.get(id ?? "") ?? [])
-      return `${n} ${n === 1 ? "layer" : "layers"}`
+      return tn("editor.layerCountOne", "editor.layerCount", n)
     }
     const q = query.trim()
     const list: Result[] = []
@@ -137,7 +138,7 @@ function SwitcherPanel({
     list.push({
       kind: "new",
       id: null,
-      name: `New page “${q}”`,
+      name: t("ui.editor.pages.newPage", { query: q }),
       meta: NEW_PAGE_KEY,
       current: false,
     })
@@ -163,7 +164,7 @@ function SwitcherPanel({
       <div
         className="page-switcher"
         role="dialog"
-        aria-label="Go to page"
+        aria-label={t("ui.editor.pages.pageswitcher.6")}
         style={box ? { left: box.left, top: box.top } : { visibility: "hidden" }}
       >
         <div className="page-switcher__search">
@@ -173,7 +174,7 @@ function SwitcherPanel({
           <input
             ref={input}
             className="page-switcher__query"
-            aria-label="Page name"
+            aria-label={t("ui.editor.pages.pageswitcher.5")}
             role="combobox"
             aria-expanded="true"
             aria-controls="page-switcher-results"
@@ -225,10 +226,10 @@ function SwitcherPanel({
           ))}
         </div>
         <div className="page-switcher__hints">
-          <Hint keys="↑↓" label="Move" />
-          <Hint keys="↵" label="Go to page" />
-          <Hint keys={NEW_PAGE_KEY} label="New page" />
-          <Hint keys="esc" label="Close" />
+          <Hint keys="↑↓" label={t("ui.editor.pages.pageswitcher.4")} />
+          <Hint keys="↵" label={t("ui.editor.pages.pageswitcher.3")} />
+          <Hint keys={NEW_PAGE_KEY} label={t("ui.editor.pages.pageswitcher.2")} />
+          <Hint keys="esc" label={t("ui.editor.pages.pageswitcher.1")} />
         </div>
       </div>
     </div>

@@ -1,3 +1,4 @@
+import { type MessageKey, t } from "@kimo/i18n"
 import { Braces, Info, Plus, Search, X } from "lucide-react"
 import {
   type ComponentPropsWithRef,
@@ -16,12 +17,12 @@ import { AxisGroupHeader, ModeColumnHeader } from "../variable-row/VariableRow"
 /** Type filter of the toolbar (Type Filter `GHEjw`). */
 export type VariableTypeFilter = "all" | "color" | "number" | "string" | "boolean"
 
-const FILTERS: readonly { value: VariableTypeFilter; label: string }[] = [
-  { value: "all", label: "All" },
-  { value: "color", label: "Color" },
-  { value: "number", label: "Number" },
-  { value: "string", label: "String" },
-  { value: "boolean", label: "Boolean" },
+const FILTERS: readonly { value: VariableTypeFilter; label: MessageKey }[] = [
+  { value: "all", label: "ui.pkg.varFilter.all" },
+  { value: "color", label: "ui.pkg.varFilter.color" },
+  { value: "number", label: "ui.pkg.varFilter.number" },
+  { value: "string", label: "ui.pkg.varFilter.string" },
+  { value: "boolean", label: "ui.pkg.varFilter.boolean" },
 ]
 
 /** One theme axis as table columns (axes in `axisDisplayOrder`, values in axis order). */
@@ -156,26 +157,33 @@ export function VariablesDialog({
         </div>
         <IconButton
           className="kimo-variables-dialog__close"
-          label="Close"
+          label={t("ui.pkg.variables.dialog.variablesdialog.close")}
           icon={<X />}
           onClick={onClose}
         />
       </div>
       <div className="kimo-variables-dialog__body">
-        <nav className="kimo-variables-dialog__sidebar" aria-label="Variable groups">
+        <nav
+          className="kimo-variables-dialog__sidebar"
+          aria-label={t("ui.pkg.variables.dialog.variablesdialog.variable-groups")}
+        >
           {sidebar}
         </nav>
         <div className="kimo-variables-dialog__main">
           <div className="kimo-variables-dialog__toolbar">
             <Input
               icon={<Search />}
-              placeholder="Search variables"
-              aria-label="Search variables"
+              placeholder={t("ui.pkg.variables.dialog.variablesdialog.search-variables")}
+              aria-label={t("ui.pkg.variables.dialog.variablesdialog.search-variables")}
               value={query}
               onChange={(e) => onQueryChange(e.currentTarget.value)}
               frameProps={{ className: "kimo-variables-dialog__search" }}
             />
-            <div className="kimo-variables-dialog__filter" role="radiogroup" aria-label="Type">
+            <div
+              className="kimo-variables-dialog__filter"
+              role="radiogroup"
+              aria-label={t("ui.pkg.variables.dialog.variablesdialog.type")}
+            >
               {FILTERS.map((f, i) => (
                 // biome-ignore lint/a11y/useSemanticElements: APG radio group pattern with buttons.
                 <button
@@ -194,7 +202,7 @@ export function VariablesDialog({
                   onClick={() => onTypeFilterChange(f.value)}
                   onKeyDown={(e) => onFilterKey(e, i)}
                 >
-                  <span className="kimo-variables-dialog__seg-label">{f.label}</span>
+                  <span className="kimo-variables-dialog__seg-label">{t(f.label)}</span>
                 </button>
               ))}
             </div>

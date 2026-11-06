@@ -5,6 +5,7 @@
  */
 import { Badge, Button, IconButton, Input, StatusPill } from "@kimo/ui"
 import { type ReactNode, useId, useState } from "react"
+import { t } from "../../lib/i18n"
 import { Icon } from "../../lib/icons"
 import { originOf } from "../relay-setup/commands"
 import type { RelayCheck } from "../relay-setup/relay-test"
@@ -377,7 +378,7 @@ export function OriginsGroup({
     <div className="rw-group" data-group="origins">
       <div className="rw-label-row">
         <label className="rw-label" htmlFor={id}>
-          Allowed origins
+          {t("ui.multiplayer.ui.relay.parts.1")}
         </label>
         <span className="rw-tag">KIMO_ALLOWED_ORIGINS</span>
       </div>
@@ -426,7 +427,7 @@ export function OriginsGroup({
           id={id}
           frameProps={{ className: "rw-input-28" }}
           icon={<Icon name="plus" size={16} />}
-          placeholder="Add origin, e.g. https://kimo.example.org"
+          placeholder={t("ui.multiplayer.ui.relayparts.addOrigin")}
           spellCheck={false}
           autoComplete="off"
           value={draft}

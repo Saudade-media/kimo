@@ -19,6 +19,7 @@
 import { useEffect, useRef, useState } from "react"
 import { failureText } from "../../editor/errors"
 import { takeReadyShares } from "../../home/WorkspaceHome"
+import { t } from "../../lib/i18n"
 import { useOptionalRuntime } from "../../platform/runtime"
 import { roomKeyOf } from "../backend"
 import { fileOf, incomingTransfers } from "../cloud/workspaces"
@@ -76,7 +77,10 @@ export function WorkspaceHost() {
     // Signed in as someone else: the dialog below asks to sign out first.
     if (invite.phase === "ready" && invite.error === "INVITE_EMAIL_MISMATCH") return
     if (invite.phase === "ready" && invite.error !== null) {
-      toast({ tone: "danger", text: failureText(`join ${invite.peek.workspaceName}`) })
+      toast({
+        tone: "danger",
+        text: failureText(t("errors.joinNamed", { name: invite.peek.workspaceName })),
+      })
       store.dismissInvite()
     } else if (invite.phase === "sign-in") {
       if (accepting.current === `sign-in:${invite.token}`) return
@@ -84,9 +88,12 @@ export function WorkspaceHost() {
       // Only after Join: the account exists, so a sign-in link for the invite's email, accepted
       // once it is verified.
       void cloud?.startSignIn(invite.peek.email).catch(() => undefined)
-      toast({ tone: "component", icon: "mail", text: "Check your inbox" })
+      toast({ tone: "component", icon: "mail", text: t("ui.multiplayer.ui.cloudwizardsteps.7") })
     } else if (invite.phase === "joined") {
-      toast({ tone: "success", text: `You joined ${invite.workspace.name}` })
+      toast({
+        tone: "success",
+        text: t("ui.mp.wshost.joined", { name: invite.workspace.name }),
+      })
       store.dismissInvite()
     } else if (invite.phase === "failed") {
       toast({
@@ -94,7 +101,7 @@ export function WorkspaceHost() {
         text:
           invite.error === "INVITE_EXPIRED" || invite.error === "INVITE_USED"
             ? "This invite no longer works."
-            : failureText("open the invite"),
+            : failureText(t("errors.openInvite")),
       })
       store.dismissInvite()
     }
@@ -106,12 +113,15 @@ export function WorkspaceHost() {
     if (!store || !state || !transfer) return
     if (transfer.phase === "done") {
       const name = state.workspaces.find((w) => w.id === transfer.workspaceId)?.name
-      if (name) toast({ tone: "success", text: `You're now the Owner of ${name}` })
+      if (name) toast({ tone: "success", text: t("ui.mp.wshost.nowOwner", { name }) })
       store.dismissTransfer()
     } else if (transfer.phase === "failed") {
       toast({
         tone: "danger",
-        text: transfer.error === null ? "Payment did not go through" : failureText("open checkout"),
+        text:
+          transfer.error === null
+            ? "Payment did not go through"
+            : failureText(t("errors.openCheckout")),
       })
       store.dismissTransfer()
     }
@@ -139,7 +149,10 @@ export function WorkspaceHost() {
       const file = fileOf(state, room)?.file ?? null
       if (!file && Date.now() - a.at < APPROVED_WAIT_MS) continue
       approved.current.delete(room)
-      toast({ tone: "success", text: `You can now edit ${file?.name ?? a.workspaceName}` })
+      toast({
+        tone: "success",
+        text: t("ui.mp.wshost.canEdit", { file: file?.name ?? a.workspaceName }),
+      })
       // An open view session of the room reopens with an edit token.
       const doc = runtime?.multiplayer?.document(roomKeyOf(room))
       if (file && doc?.getState().share.room) void store.openFile(room).catch(() => undefined)
@@ -154,7 +167,9 @@ export function WorkspaceHost() {
       for (const { target, workspaceId } of takeReadyShares((key) => lib.get(key)))
         void store
           .shareFile(target, { workspaceId })
-          .catch((e: unknown) => toast({ tone: "danger", text: failureText("start sharing", e) }))
+          .catch((e: unknown) =>
+            toast({ tone: "danger", text: failureText(t("errors.startSharing"), e) }),
+          )
     }
     check()
     return lib.subscribe(check)
@@ -189,7 +204,7 @@ export function WorkspaceHost() {
       // The store then clears the mismatch, and the same dialog offers Join.
       await cloud.signOut()
     } catch (e) {
-      toast({ tone: "danger", text: failureText("sign out", e) })
+      toast({ tone: "danger", text: failureText(t("errors.signOut"), e) })
     } finally {
       setSigningOut(false)
     }

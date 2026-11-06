@@ -23,6 +23,7 @@ import {
   retarget,
   SECTION_FLASH_MS,
 } from "../canvas/agent-area"
+import { t } from "../lib/i18n"
 import type { AgentChipView, AgentsControllerExt } from "./controller"
 import { useAgentsState } from "./hooks"
 import { builtInCliSession, type GhostKind } from "./model"
@@ -277,7 +278,7 @@ function DryRunBar({ controller }: { controller: AgentsControllerExt }) {
           approval ? void controller.answer(approval.id, "deny") : controller.setDryRunHidden(true)
         }
       >
-        Discard
+        {t("ui.agents.canvaslayer.1")}
       </CompactButton>
       {approval && (
         <CompactButton
@@ -287,7 +288,7 @@ function DryRunBar({ controller }: { controller: AgentsControllerExt }) {
           text="xs"
           onClick={() => void controller.answer(approval.id, "once")}
         >
-          Apply
+          {t("ui.agents.canvaslayer.2")}
         </CompactButton>
       )}
     </div>

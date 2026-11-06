@@ -68,6 +68,7 @@ import * as filesModule from "../lib/files"
 import { createFile, exportFile, importFile, patchFile, pickKimoFile, saveFile } from "../lib/files"
 import { useDocHeader } from "../lib/header"
 import { createBus, isTyping } from "../lib/hooks"
+import { t, t as tr } from "../lib/i18n"
 import { Icon } from "../lib/icons"
 import { runTextEdit } from "../lib/native-menu"
 import { cssToken, useTheme } from "../lib/theme"
@@ -206,7 +207,7 @@ export function Editor({ fileId }: { fileId: string }) {
   return (
     <div className="editor-status">
       {state.status === "loading" ? (
-        <span className="editor-status__label">Opening file…</span>
+        <span className="editor-status__label">{t("ui.editor.editor.t1")}</span>
       ) : (
         <EmptyState
           icon={<Icon name="files" size={18} />}
@@ -218,7 +219,7 @@ export function Editor({ fileId }: { fileId: string }) {
       )}
       {state.status !== "loading" && (
         <a className="editor-status__link" href={`#${lastHomePath()}`}>
-          Back to files
+          {t("ui.editor.editor.3")}
         </a>
       )}
     </div>
@@ -271,17 +272,17 @@ export function DiskEditor({ fileRef, node }: { fileRef: string; node?: string |
   return (
     <div className="editor-status">
       {state.status === "loading" ? (
-        <span className="editor-status__label">Opening file…</span>
+        <span className="editor-status__label">{t("ui.editor.editor.t1")}</span>
       ) : (
         <EmptyState
           icon={<Icon name="files" size={18} />}
-          title="Could not open file"
+          title={t("ui.editor.editor.2")}
           description={state.message}
         />
       )}
       {state.status !== "loading" && (
         <a className="editor-status__link" href={`#${lastHomePath()}`}>
-          Back to files
+          {t("ui.editor.editor.4")}
         </a>
       )}
     </div>
@@ -362,7 +363,9 @@ function EditorShell({
       navigate(diskPath(ref))
       return
     }
-    const id = await createFile(name || "Untitled", { document: session.store.toDocument() })
+    const id = await createFile(name || t("file.untitled"), {
+      document: session.store.toDocument(),
+    })
     navigate(`/file/${id}`)
   }, [doc, session.store, name])
   // Board 41: a browser library file shares like a file on disk; one this device shared
@@ -490,7 +493,7 @@ function EditorShell({
         ...(details?.length
           ? {
               action: {
-                label: "Details",
+                label: t("ui.editor.editor.details"),
                 run: () =>
                   m3.toast({ tone: "danger", text: details.join(" · "), duration: 10_000 }),
               },
@@ -509,7 +512,11 @@ function EditorShell({
     if (frame) setPreview({ frame, selection: ui.selection })
     // E10: ⇧Space and the desktop menu bar's View › Preview stay live with no frames; say why
     // nothing opened instead of a dead click.
-    else m3.toast({ tone: "warning", text: "Nothing to preview. Add a frame to this page." })
+    else
+      m3.toast({
+        tone: "warning",
+        text: t("ui.editor.editor.nothing-to-preview-add-a-frame-to-this-page"),
+      })
   }, [session, m3])
   const previewTarget = usePreviewTarget(session.store, session.ui)
   // Desktop menu bar View › Preview (`kimo://editor-menu` {action: "preview"}).
@@ -549,7 +556,7 @@ function EditorShell({
     }).then((r) =>
       m3.toast(
         r.ok
-          ? { tone: "success", text: "Copied as PNG (2×)" }
+          ? { tone: "success", text: t("ui.editor.editor.copied-as-png-2") }
           : { tone: r.reason === "failed" ? "danger" : "warning", text: r.message },
       ),
     )
@@ -648,7 +655,7 @@ function EditorShell({
             : await manager.rename(doc.ref, next)
         if (to) navigate(diskPath(to))
       } catch (e) {
-        m3.toast({ tone: "danger", text: failureText(`rename ${was}`, e) })
+        m3.toast({ tone: "danger", text: failureText(t("errors.rename", { name: was }), e) })
       }
     },
     [doc, workspaces, manager, m3],
@@ -661,7 +668,7 @@ function EditorShell({
     // A5: a failed write or a locked target shows "Couldn't save …" (a cancelled dialog
     // resolves null inside saveAs and stays silent).
     const ref = await doc.saveAs().catch((e: unknown) => {
-      m3.toast({ tone: "danger", text: failureText(`save ${doc.fileName}`, e) })
+      m3.toast({ tone: "danger", text: failureText(t("errors.save", { file: doc.fileName }), e) })
       return null
     })
     if (ref) navigate(diskPath(ref))
@@ -681,13 +688,13 @@ function EditorShell({
       navigate(diskPath(s.ref))
       return
     }
-    navigate(`/file/${await createFile("Untitled")}`)
+    navigate(`/file/${await createFile(t("file.untitled"))}`)
   }, [platform, manager, doc])
   const openFile = useCallback(async () => {
     // Desktop (and files on disk): a native open dialog through the session manager.
     if (doc || platform.kind === "desktop") {
       const [ref] = await platform.dialogs
-        .openFile({ title: "Open", filters: [KIMO_OPEN_FILTER] })
+        .openFile({ title: t("ui.editor.editor.open"), filters: [KIMO_OPEN_FILTER] })
         .catch(() => [] as string[])
       if (ref) navigate(diskPath(ref))
       return
@@ -891,14 +898,14 @@ function EditorShell({
       if (matches("view.pixelGrid", e)) {
         e.preventDefault()
         toggleViewPref(platform.settings, "canvas.pixelGrid", (err) =>
-          m3.toast({ tone: "danger", text: failureText("change the view setting", err) }),
+          m3.toast({ tone: "danger", text: failureText(t("errors.changeViewSetting"), err) }),
         )
         return
       }
       if (matches("view.rulers", e)) {
         e.preventDefault()
         toggleViewPref(platform.settings, "canvas.rulers", (err) =>
-          m3.toast({ tone: "danger", text: failureText("change the view setting", err) }),
+          m3.toast({ tone: "danger", text: failureText(t("errors.changeViewSetting"), err) }),
         )
         return
       }
@@ -1098,11 +1105,12 @@ function EditorShell({
       ...(doc && !doc.untitled && platform.capabilities.reveal
         ? {
             onReveal: () =>
-              void platform.files
-                .reveal(doc.ref)
-                .catch((e: unknown) =>
-                  m3.toast({ tone: "danger", text: failureText(`reveal ${doc.fileName}`, e) }),
-                ),
+              void platform.files.reveal(doc.ref).catch((e: unknown) =>
+                m3.toast({
+                  tone: "danger",
+                  text: failureText(t("errors.reveal", { file: doc.fileName }), e),
+                }),
+              ),
           }
         : {}),
       onExportDialog: openExport,
@@ -1214,7 +1222,7 @@ function EditorShell({
             <main
               ref={canvasEl}
               className="editor__canvas"
-              aria-label="Canvas"
+              aria-label={t("ui.editor.editor.1")}
               onDragOver={(e) => {
                 drop.handlers.onDragOver(e)
                 // Board 27 §3: raster files (overlay + target), then SVG files.
@@ -1246,11 +1254,17 @@ function EditorShell({
                   // Board 27 §7 (uu8Qa): editing bound text asks "Detach copy/cta?" first.
                   m3.confirm({
                     title: `Detach ${refName(ref)}?`,
-                    desc: "This text is bound to a string variable. Editing it here replaces the binding with the current text.",
+                    desc: t(
+                      "ui.editor.editor.this-text-is-bound-to-a-string-variable-editing-it-here-replaces-the-binding-with-the-current-text",
+                    ),
                     icon: "unlink",
                     tone: "component",
                     items: [
-                      { icon: "type", accent: true, text: "The text keeps its current value" },
+                      {
+                        icon: "type",
+                        accent: true,
+                        text: t("ui.editor.editor.the-text-keeps-its-current-value"),
+                      },
                       { icon: "variable", text: `${refName(ref)} stays in the file, unchanged` },
                     ],
                     confirm: "Detach & edit",
@@ -1398,7 +1412,12 @@ function EditorShell({
                   text: t.text,
                   duration: t.duration,
                   ...(reveal && platform.kind === "desktop"
-                    ? { action: { label: "Reveal", run: () => void platform.files.reveal(reveal) } }
+                    ? {
+                        action: {
+                          label: tr("ui.editor.editor.reveal"),
+                          run: () => void platform.files.reveal(reveal),
+                        },
+                      }
                     : {}),
                 })
               }}
@@ -1451,7 +1470,10 @@ function EditorShell({
                       },
                     },
                   },
-                  { origin: "user", label: `Add font ${f.family}` },
+                  {
+                    origin: "user",
+                    label: t("ui.editor.editor.addFont", { family: f.family }),
+                  },
                 )
             }}
           />

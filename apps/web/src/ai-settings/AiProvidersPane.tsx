@@ -48,6 +48,7 @@ import {
   Trash2,
 } from "lucide-react"
 import { type ReactNode, useCallback, useContext, useEffect, useRef, useState } from "react"
+import { tn, t as tr } from "../lib/i18n"
 import type { ProviderRowView } from "../platform/contract"
 import { useSetSetting, useSettings } from "../settings/hooks"
 import { SettingsBannerContext, SettingsFailContext } from "../settings/panes"
@@ -121,15 +122,14 @@ async function copyToClipboard(text: string): Promise<void> {
 }
 
 function introCopy(s: AiSettingsState): string {
-  if (s.platform === "web")
-    return "Bring your own API key, billed by the provider and kept in this browser. Agent CLIs need the desktop app."
+  if (s.platform === "web") return tr("ai.apiDesc")
   const store =
     s.os === "windows"
       ? "the Windows Credential Manager"
       : s.os === "linux"
         ? "the Secret Service"
         : "the macOS Keychain"
-  return `Use a signed-in coding-agent CLI or your own API key. Keys stay in ${store}, never in files or logs.`
+  return tr("ui.ai.settings.aiproviderspane.keyStore", { store })
 }
 
 export interface AiProvidersPaneProps {
@@ -173,7 +173,7 @@ export function AiProvidersPane({ platform, controller, openUrl, section }: AiPr
   return (
     <div className="ai-pane" data-pen="EGVxF">
       <div className="ai-title-bar" data-pen="oXKjz" data-tauri-drag-region="deep">
-        <h2 className="ai-title">AI providers</h2>
+        <h2 className="ai-title">{tr("ai.title")}</h2>
         <span className="ai-spacer" />
         <AgentTonePill
           className="ai-agent-status"
@@ -193,7 +193,7 @@ export function AiProvidersPane({ platform, controller, openUrl, section }: AiPr
         <>
           <div className="ai-group ai-group--local" data-pen="j5dTH">
             <div className="ai-group__title-row" data-pen="qLbia">
-              <h3 className="ai-group__title">Local agents</h3>
+              <h3 className="ai-group__title">{tr("ai.localAgents")}</h3>
               <span className="ai-group__subtitle">uses your subscription</span>
               <span className="ai-spacer" />
               <GhostButton
@@ -202,7 +202,7 @@ export function AiProvidersPane({ platform, controller, openUrl, section }: AiPr
                 onClick={() => report("check the agent CLIs", ctl.redetectClis())}
                 data-pen="euQQn"
               >
-                Re-check all
+                {tr("ui.ai.settings.aiproviderspane.1")}
               </GhostButton>
             </div>
             <p className="ai-group__desc" data-pen="MZM7I">
@@ -213,24 +213,22 @@ export function AiProvidersPane({ platform, controller, openUrl, section }: AiPr
             <span className="ai-spacer-8" aria-hidden="true" />
             <div className="ai-precedence" data-pen="Y84n9" data-active-step={activeStep}>
               <ListOrdered className="ai-precedence__icon" aria-hidden="true" />
-              <span className="ai-precedence__key">Precedence</span>
+              <span className="ai-precedence__key">{tr("ai.precedence")}</span>
               <span className={`ai-precedence__step${activeStep === 1 ? " is-active" : ""}`}>
-                1 · Default CLI, if signed in
+                {tr("ai.step.cli")}
               </span>
               <ArrowRight className="ai-precedence__arrow" aria-hidden="true" />
               <span className={`ai-precedence__step${activeStep === 2 ? " is-active" : ""}`}>
-                2 · API default
+                {tr("ai.step.api")}
               </span>
               <ArrowRight className="ai-precedence__arrow" aria-hidden="true" />
               <span className={`ai-precedence__step${activeStep === 3 ? " is-active" : ""}`}>
-                3 · Agent off
+                {tr("ai.step.off")}
               </span>
             </div>
           </div>
           {s.clis.length === 0 && !s.detected && (
-            <p className="ai-group__desc ai-checking">
-              Looking for Claude Code, Codex and Gemini CLI…
-            </p>
+            <p className="ai-group__desc ai-checking">{tr("ui.ai.settings.aiproviderspane.2")}</p>
           )}
           {s.clis.map((c) => (
             <CliRow
@@ -248,16 +246,16 @@ export function AiProvidersPane({ platform, controller, openUrl, section }: AiPr
 
       <div className="ai-group ai-group--providers" data-pen="rXLN6">
         <div className="ai-group__title-row" data-pen="rKyoU">
-          <h3 className="ai-group__title">API providers</h3>
+          <h3 className="ai-group__title">{tr("ai.apiProviders")}</h3>
           <span className="ai-spacer" />
           <GhostButton icon={<Plus />} onClick={() => setAdding(true)} data-pen="A1ueIJ">
-            Add provider
+            {tr("ai.addProvider")}
           </GhostButton>
         </div>
         <p className="ai-group__desc" data-pen="HDutC">
           {s.platform === "desktop"
             ? "Used when no local agent is signed in, or when a session or prompt node picks one explicitly. A model is always {provider, model}. An unknown one fails with an error and never falls back."
-            : "Used by the agent in this browser, or when a session or prompt node picks one explicitly. A model is always {provider, model}. An unknown one fails with an error and never falls back."}
+            : tr("ai.apiGroupDesc")}
         </p>
       </div>
       {adding && (
@@ -285,20 +283,19 @@ export function AiProvidersPane({ platform, controller, openUrl, section }: AiPr
 
       <div ref={usage} className="ai-group ai-group--usage" data-pen="tAaTK" id="settings-usage">
         <div className="ai-group__title-row ai-group__title-row--usage" data-pen="T7x0M">
-          <h3 className="ai-group__title">Usage &amp; limits</h3>
+          <h3 className="ai-group__title">{tr("ai.usage")}</h3>
           <span className="ai-spacer" />
           <span className="ai-usage__period">{s.usage.period}</span>
         </div>
         <p className="ai-group__desc" data-pen="E8Erp5">
-          Estimated from each response's token usage × the provider's published price. Your
-          provider's invoice is the source of truth.
+          {tr("ai.usageDesc")}
         </p>
       </div>
       <UsageCard s={s} />
       <SettingRow
         data-pen="RNTFy"
-        label="Monthly limit"
-        description="When reached the agent finishes the current op batch, then stops and asks. 0 = no limit."
+        label={tr("ai.monthlyLimit")}
+        description={tr("ai.monthlyLimitDesc")}
         control={(ids) => (
           <AmountField
             value={s.settings.monthlyLimitUsd}
@@ -311,8 +308,8 @@ export function AiProvidersPane({ platform, controller, openUrl, section }: AiPr
       />
       <SettingRow
         data-pen="VgFYb"
-        label="Warn per turn above"
-        description="Ask before a single turn is expected to cost more than this (side by side × N counts as one turn)."
+        label={tr("ai.warnPerTurn")}
+        description={tr("ai.warnPerTurnDesc")}
         control={(ids) => (
           <AmountField
             value={s.settings.warnPerTurnUsd}
@@ -325,8 +322,8 @@ export function AiProvidersPane({ platform, controller, openUrl, section }: AiPr
       />
       <SettingRow
         data-pen="UtSey"
-        label="Show cost in the agent panel"
-        description="Per message tokens and cost, and the session total in the thread header."
+        label={tr("ai.showCost")}
+        description={tr("ai.showCostDesc")}
         control={(ids) => (
           <Toggle
             checked={s.settings.showCost}
@@ -365,15 +362,15 @@ function DefaultRows({ s, ctl }: { s: AiSettingsState; ctl: AiSettingsController
       <SettingRow
         data-pen="AseJa"
         className="ai-default-row"
-        label="Default provider"
-        description="New agent sessions start here. Only connected providers are listed."
+        label={tr("ai.defaultProvider")}
+        description={tr("ai.defaultProviderDesc")}
         control={
           <Select
             className="ai-default-select"
             data-testid="ai-default-provider"
-            label="Default provider"
+            label={tr("ai.defaultProvider")}
             disabled={none}
-            placeholder={none ? "Connect a provider first" : "Choose…"}
+            placeholder={none ? tr("ai.connectFirst") : tr("ai.choose")}
             options={choices.map((c) => ({ value: c.provider, label: c.label }))}
             value={current?.provider ?? null}
             onChange={(v) =>
@@ -385,15 +382,15 @@ function DefaultRows({ s, ctl }: { s: AiSettingsState; ctl: AiSettingsController
       <SettingRow
         data-pen="WmFb2"
         className="ai-default-row"
-        label="Default model"
-        description="Fast model is used for titles and summaries."
+        label={tr("ai.defaultModel")}
+        description={tr("ai.defaultModelDesc")}
         control={
           <Select
             className="ai-default-select"
             data-testid="ai-default-model"
-            label="Default model"
+            label={tr("ai.defaultModel")}
             disabled={!current}
-            placeholder={none ? "Connect a provider first" : "Choose…"}
+            placeholder={none ? tr("ai.connectFirst") : tr("ai.choose")}
             options={current?.models ?? []}
             value={current ? (sel?.model ?? current.model) : null}
             onChange={(v) => {
@@ -420,17 +417,17 @@ function DefaultRows({ s, ctl }: { s: AiSettingsState; ctl: AiSettingsController
 function WebAccessRow({ platform }: { platform: KimoPlatform }) {
   const fail = useContext(SettingsFailContext)
   const settings = useSettings(platform.settings)
-  const set = useSetSetting(platform.settings, (e) => fail("save Allow web access", e))
+  const set = useSetSetting(platform.settings, (e) => fail(tr("errors.saveAllowWeb"), e))
   const blocked = settings["privacy.noThirdPartyFetch"]
   return (
     <SettingRow
       className="ai-web-row"
       data-testid="ai-web-access"
-      label="Allow web access"
+      label={tr("ai.allowWeb")}
       description={
         blocked
           ? "Off while No third-party fetch is on in Settings › Fonts & privacy."
-          : "Lets the agent search and read the web for outside facts, shown in the thread. New sessions use this setting."
+          : tr("ai.allowWebDesc")
       }
       dimmed={blocked}
       control={(ids) => (
@@ -600,7 +597,7 @@ function CliRow({
           <Pill tone={pill.tone} label={pill.label} />
           {isDefault && (
             <span className="ai-default-badge" data-pen="dPHWu">
-              <span className="ai-default-badge__label">Default</span>
+              <span className="ai-default-badge__label">{tr("ai.defaultBadge")}</span>
             </span>
           )}
         </span>
@@ -608,7 +605,9 @@ function CliRow({
         {(state === "not-signed-in" || state === "unknown") && (
           <span className="ai-cli-row__hint" data-pen="kERUT">
             <Info className="ai-cli-row__hint-icon" aria-hidden="true" />
-            <span className="ai-cli-row__hint-text">{`Sign in in terminal: run “${command}”`}</span>
+            <span className="ai-cli-row__hint-text">
+              {tr("ui.ai.settings.aiproviderspane.signInHint", { command })}
+            </span>
           </span>
         )}
       </span>
@@ -627,11 +626,11 @@ function CliRow({
         )}
         {state === "not-found" ? (
           <GhostButton icon={<ExternalLink />} onClick={onInstallGuide}>
-            Install guide
+            {tr("ui.ai.settings.aiproviderspane.3")}
           </GhostButton>
         ) : (
           <GhostButton icon={<RefreshCw />} busy={checking} onClick={onRecheck}>
-            Re-check
+            {tr("ui.ai.settings.aiproviderspane.4")}
           </GhostButton>
         )}
       </span>
@@ -678,7 +677,7 @@ function ProviderBlock({
   if (expanded)
     actions = (
       <GhostButton icon={<ChevronUp />} onClick={onToggle}>
-        Collapse
+        {tr("ui.ai.settings.aiproviderspane.5")}
       </GhostButton>
     )
   else if (cloud)
@@ -686,15 +685,15 @@ function ProviderBlock({
       <SecondaryButton
         onClick={onToggle}
         disabled={webCloud}
-        {...(webCloud ? { title: "Signed credentials need the desktop app" } : {})}
+        {...(webCloud ? { title: tr("ai.signedDesktop") } : {})}
       >
-        Set up
+        {tr("ai.setUp")}
       </SecondaryButton>
     )
   else if (row.status === "not-set")
     actions = (
       <SecondaryButton onClick={onToggle}>
-        {row.kind === "custom" ? "Set up" : "Add key"}
+        {row.kind === "custom" ? tr("ai.setUp") : tr("ai.addKey")}
       </SecondaryButton>
     )
   else
@@ -716,9 +715,9 @@ function ProviderBlock({
           busy={testing}
           onClick={() => report("test the provider", ctl.test(row.id))}
         >
-          Test
+          {tr("ui.ai.settings.aiproviderspane.6")}
         </GhostButton>
-        <SecondaryButton onClick={onToggle}>Edit</SecondaryButton>
+        <SecondaryButton onClick={onToggle}>{tr("ai.edit")}</SecondaryButton>
       </>
     )
   return (
@@ -790,7 +789,7 @@ function ProviderDetail({
           />
           <span className="ai-optin__text">
             <span className="ai-optin__label" id={`optin-${row.id}`}>
-              Allow Anthropic calls from the browser
+              {tr("ui.ai.settings.aiproviderspane.7")}
             </span>
             <span className="ai-optin__desc">
               Required by Anthropic for direct browser access. Off = the agent is unavailable on web
@@ -801,7 +800,7 @@ function ProviderDetail({
       )}
       <BaseUrlField row={row} ctl={ctl} danger={urlDanger} />
       <div className="ai-field ai-field--models" data-pen="GESY1">
-        <span className="ai-field__label">Models</span>
+        <span className="ai-field__label">{tr("ai.models")}</span>
         {(["agent", "fast"] as const).map((role) => (
           <span key={role} className="ai-model" data-role={role}>
             <span className="ai-model__role">{role === "agent" ? "Agent" : "Fast"}</span>
@@ -854,7 +853,7 @@ function ProviderDetail({
               onRemoved()
             }}
           >
-            Remove endpoint
+            {tr("ui.ai.settings.aiproviderspane.8")}
           </GhostButton>
         </div>
       )}
@@ -872,7 +871,7 @@ function ProviderDetail({
         <Banner
           className="ai-detail__banner"
           tone="warning"
-          title="Stored in this browser only"
+          title={tr("ai.storedBrowser")}
           body="Not synced or encrypted at rest. Anyone with this browser profile can read it; the desktop app uses the Keychain."
           onDismiss={() => setBannerHidden(true)}
         />
@@ -931,7 +930,7 @@ function KeyField({
   return (
     <div className="ai-field" data-pen={desktop ? "vfqoC" : "E0Zog5"}>
       <label className="ai-field__label" htmlFor={`key-${row.id}`}>
-        API key
+        {tr("ui.ai.settings.aiproviderspane.9")}
       </label>
       <span
         className={`ai-value-field${editing ? " is-editing" : ""}${danger && !editing ? " is-danger" : ""}`}
@@ -982,20 +981,20 @@ function KeyField({
               setTimeout(() => input.current?.focus(), 0)
             }}
           >
-            Re-enter key
+            {tr("ui.ai.settings.aiproviderspane.10")}
           </button>
         )}
         {!editing && (
           <>
             <FieldIcon
-              label="Reveal key"
+              label={tr("ai.revealKey")}
               icon={<Eye />}
               disabled={desktop}
               title={desktop ? "Keys never leave the keychain" : "Reveal for 5 s"}
               onClick={() => report("show the key", ctl.revealKey(row.id).then(setRevealed))}
             />
             <FieldIcon
-              label="Replace key"
+              label={tr("ai.replaceKey")}
               icon={<Pencil />}
               onClick={() => {
                 setEditing(true)
@@ -1003,7 +1002,7 @@ function KeyField({
               }}
             />
             <FieldIcon
-              label="Remove key"
+              label={tr("ai.removeKey")}
               icon={<Trash2 />}
               onClick={() => report("delete the key", ctl.deleteKey(row.id))}
             />
@@ -1031,7 +1030,7 @@ function BaseUrlField({
   if (row.kind !== "custom")
     return (
       <div className="ai-field" data-pen="sogTB">
-        <span className="ai-field__label">Base URL</span>
+        <span className="ai-field__label">{tr("ai.baseUrl")}</span>
         <span
           className="ai-value-field ai-value-field--url"
           data-pen="RrLvC"
@@ -1046,7 +1045,7 @@ function BaseUrlField({
     <>
       <div className="ai-field" data-pen="sogTB">
         <label className="ai-field__label" htmlFor={`url-${row.id}`}>
-          Base URL
+          {tr("ui.ai.settings.aiproviderspane.11")}
         </label>
         <span
           className={`ai-value-field ai-value-field--url${danger ? " is-danger" : ""}`}
@@ -1104,11 +1103,11 @@ function UsageCard({ s }: { s: AiSettingsState }) {
       <div className="ai-usage__top" data-pen="nvLT2">
         <span className="ai-usage__spent">{money(u.costUsd)}</span>
         <span className="ai-usage__of">
-          {limit > 0 ? `of ${money(limit)} monthly limit` : "no monthly limit"}
+          {limit > 0 ? tr("ai.usageOf", { amount: money(limit) }) : tr("ai.noLimit")}
         </span>
         <span className="ai-spacer" />
         <span className="ai-usage__tokens">
-          {formatTokensLong(u.tokens)} · {u.sessions} session{u.sessions === 1 ? "" : "s"}
+          {formatTokensLong(u.tokens)} · {tn("ai.sessionOne", "ai.session", u.sessions)}
         </span>
       </div>
       <div className="ai-usage__meter" data-pen="GIpCW" aria-hidden="true">
@@ -1136,9 +1135,9 @@ function UsageCard({ s }: { s: AiSettingsState }) {
               <span className="ai-usage__name">{p.label}</span>
               <span className="ai-usage__value">
                 {p.billing === "subscription"
-                  ? `${formatTokensLong(p.tokens)} · subscription`
+                  ? `${formatTokensLong(p.tokens)} · ${tr("ai.subscription")}`
                   : p.billing === "local"
-                    ? `${money(p.costUsd ?? 0)} · local`
+                    ? `${money(p.costUsd ?? 0)} · ${tr("ai.local")}`
                     : p.costUsd === null
                       ? "—"
                       : money(p.costUsd)}
@@ -1153,9 +1152,9 @@ function UsageCard({ s }: { s: AiSettingsState }) {
 
 /** "2.31M tokens" (board 23 ON3Kl). */
 function formatTokensLong(n: number): string {
-  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(2)}M tokens`
-  if (n >= 10_000) return `${Math.round(n / 1000)}k tokens`
-  return `${n} tokens`
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(2)}M${tr("ai.tokens")}`
+  if (n >= 10_000) return `${Math.round(n / 1000)}k${tr("ai.tokens")}`
+  return `${n}${tr("ai.tokens")}`
 }
 
 /** Amount Field (pdL0w): 96 × 28, gap 4, padding [0, 8], bg-app, stroke 1 border, radius-sm. */

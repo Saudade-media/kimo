@@ -11,6 +11,7 @@
 import { promptFooter } from "@kimo/ai-agent"
 import type { LayoutResult, Rect } from "@kimo/layout"
 import { OVERLAY_SPEC_M6, type Overlay, type Viewport } from "@kimo/renderer"
+import { t as tr } from "../lib/i18n"
 import type { SectionCursorView, SectionFlashView } from "./AgentSectionCursor"
 import { cursorFlip } from "./AgentSectionCursor"
 import {
@@ -295,7 +296,12 @@ export class AgentCanvasModel {
           key: `${s.origin}/${id}`,
           left: r.x - o,
           top: r.y + r.h + o + 7,
-          text: `Iterate · pass ${s.iterate.pass} of ${s.iterate.of}${s.iterate.reviewing ? " · review" : ""}`,
+          text: tr(
+            s.iterate.reviewing
+              ? "ui.canvas.agentcanvas.iterateReview"
+              : "ui.canvas.agentcanvas.iterate",
+            { pass: String(s.iterate.pass), of: String(s.iterate.of) },
+          ),
         })
       }
     }

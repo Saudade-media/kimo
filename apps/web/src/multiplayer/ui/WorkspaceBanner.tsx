@@ -15,6 +15,7 @@
 import { Banner } from "@kimo/ui"
 import { useState } from "react"
 import { failureText } from "../../editor/errors"
+import { t } from "../../lib/i18n"
 import { Icon } from "../../lib/icons"
 import { roomOfKey } from "../backend"
 import { firstName, type WorkspaceBannerKind, workspaceBannerKind } from "../cloud/workspace-view"
@@ -103,13 +104,25 @@ export function WorkspaceBanner({ docKey, room, onSaveCopy }: WorkspaceBannerPro
         body={
           kind === "ended-owner"
             ? "Files are read-only."
-            : `Files are read-only until ${owner ? firstName(owner.email) : "the Owner"} renews.`
+            : t("ui.mp.wsbanner.readOnlyUntil", {
+                owner: owner ? firstName(owner.email) : t("ui.mp.wsbanner.theOwner"),
+              })
         }
         actions={
-          kind === "ended-owner" ? [{ id: "renew", label: "Renew", variant: "primary" }] : []
+          kind === "ended-owner"
+            ? [
+                {
+                  id: "renew",
+                  label: t("ui.multiplayer.ui.workspacebanner.renew"),
+                  variant: "primary",
+                },
+              ]
+            : []
         }
         onAction={() =>
-          void run("open checkout", () => store.checkout(workspaceId, w?.plan.interval ?? "month"))
+          void run(t("errors.openCheckout"), () =>
+            store.checkout(workspaceId, w?.plan.interval ?? "month"),
+          )
         }
         onDismiss={dismiss}
       />
@@ -121,10 +134,16 @@ export function WorkspaceBanner({ docKey, room, onSaveCopy }: WorkspaceBannerPro
         tone="danger"
         className="ws-banner"
         data-banner={kind}
-        title="Payment failed"
+        title={t("ui.multiplayer.ui.workspacebanner.1")}
         body="Update the card to keep editing."
-        actions={[{ id: "card", label: "Update card", variant: "primary" }]}
-        onAction={() => void run("open billing", () => store.openPortal(workspaceId))}
+        actions={[
+          {
+            id: "card",
+            label: t("ui.multiplayer.ui.workspacebanner.update-card"),
+            variant: "primary",
+          },
+        ]}
+        onAction={() => void run(t("errors.openBilling"), () => store.openPortal(workspaceId))}
         onDismiss={dismiss}
       />
     )
@@ -134,10 +153,20 @@ export function WorkspaceBanner({ docKey, room, onSaveCopy }: WorkspaceBannerPro
       className="ws-banner"
       data-banner={kind}
       icon={<Icon name={kind === "deleted" ? "trash-2" : "user-minus"} size={16} />}
-      title={kind === "deleted" ? `${name} was deleted` : `You're no longer in ${name}`}
+      title={
+        kind === "deleted"
+          ? t("ui.mp.wsbanner.deleted", { name })
+          : t("ui.mp.wsbanner.left", { name })
+      }
       body="This copy is read-only."
-      actions={[{ id: "copy", label: "Save a copy", variant: "primary" }]}
-      onAction={() => void run("save a copy", onSaveCopy)}
+      actions={[
+        {
+          id: "copy",
+          label: t("ui.multiplayer.ui.workspacebanner.save-a-copy"),
+          variant: "primary",
+        },
+      ]}
+      onAction={() => void run(t("errors.saveCopy"), onSaveCopy)}
       onDismiss={dismiss}
     />
   )

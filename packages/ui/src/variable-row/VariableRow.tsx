@@ -1,3 +1,4 @@
+import { t } from "@kimo/i18n"
 import { ChevronDown, Ellipsis, Layers2, TriangleAlert } from "lucide-react"
 import type { ComponentPropsWithRef, CSSProperties, ReactNode } from "react"
 import { cx } from "../internal/util"
@@ -66,7 +67,7 @@ export function VariableRow({
           <button
             type="button"
             className="kimo-variable-row__disclosure"
-            aria-label="Hide entries"
+            aria-label={t("ui.pkg.variable.row.variablerow.hide-entries")}
             aria-expanded
             onClick={onToggleEntries}
           >

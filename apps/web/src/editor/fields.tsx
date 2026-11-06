@@ -7,9 +7,10 @@
 import type { Op } from "@kimo/editor-state"
 import { PropField, Toggle } from "@kimo/ui"
 import { useEffect, useId, useRef } from "react"
+import { t } from "../lib/i18n"
 import { Icon } from "../lib/icons"
 import type { BindSlot } from "./bind"
-import { MIXED, MIXED_LABEL, type Mixed } from "./props"
+import { MIXED, type Mixed } from "./props"
 import type { FileSession, Gesture } from "./session"
 
 /**
@@ -92,7 +93,7 @@ interface NumberFieldProps {
  * are intercepted (capture phase) to route anything else through `onText`.
  */
 export function NumberField(p: NumberFieldProps) {
-  const display = p.value === MIXED ? MIXED_LABEL : p.value
+  const display = p.value === MIXED ? t("insp.mixed") : p.value
   const label = `Set ${p.label}`
   /** The scrub's snapshot (relative mode); arrows snapshot per press. */
   const rel = useRef<((delta: number) => readonly Op[]) | null>(null)

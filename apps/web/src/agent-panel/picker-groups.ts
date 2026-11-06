@@ -22,6 +22,7 @@ import {
   type ProviderConfig,
   type ProviderKind,
 } from "@kimo/ai-agent"
+import { t } from "../lib/i18n"
 import type { ModelPickerGroup, ModelPickerModel } from "../platform/contract"
 
 /** Board 23 detection order, also the chip order of the CLI row. */
@@ -101,7 +102,11 @@ export function pickerGroups(input: {
       if (!d.installed) continue
       const adapter = BUILTIN_CLI_ADAPTERS.find((a) => a.def.id === d.id)
       const signedIn = d.signedIn === true
-      const models = (adapter?.def.models ?? [{ id: "default", label: "Default (CLI decides)" }])
+      const models = (
+        adapter?.def.models ?? [
+          { id: "default", label: t("ui.agent.panel.picker.groups.default-cli-decides") },
+        ]
+      )
         .filter((m) => m.listed !== false)
         .map(
           (m): ModelPickerModel => ({

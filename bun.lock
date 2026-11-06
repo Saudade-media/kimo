@@ -45,6 +45,7 @@
         "@kimo/editor-state": "workspace:*",
         "@kimo/exporters": "workspace:*",
         "@kimo/figma": "workspace:*",
+        "@kimo/i18n": "workspace:*",
         "@kimo/layout": "workspace:*",
         "@kimo/mcp-server": "workspace:*",
         "@kimo/platform": "workspace:*",
@@ -142,6 +143,10 @@
         "fzstd": "^0.1.1",
       },
     },
+    "packages/i18n": {
+      "name": "@kimo/i18n",
+      "version": "1.2.1-beta.6",
+    },
     "packages/layout": {
       "name": "@kimo/layout",
       "version": "1.2.1-beta.4",
@@ -217,6 +222,7 @@
       "version": "1.2.1-beta.4",
       "dependencies": {
         "@kimo/design-tokens": "workspace:*",
+        "@kimo/i18n": "workspace:*",
         "lucide-react": "^1.59.0",
         "react": "^19.3.1",
       },
@@ -326,6 +332,8 @@
     "@kimo/exporters": ["@kimo/exporters@workspace:packages/exporters"],
 
     "@kimo/figma": ["@kimo/figma@workspace:packages/figma"],
+
+    "@kimo/i18n": ["@kimo/i18n@workspace:packages/i18n"],
 
     "@kimo/layout": ["@kimo/layout@workspace:packages/layout"],
 

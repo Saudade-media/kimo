@@ -3,6 +3,7 @@
  * `apps/web/scripts/gen-notices.ts` from bun.lock + Cargo.lock + the bundled fonts. The texts are
  * a lazy chunk: only a row's sheet loads them.
  */
+import { t } from "../lib/i18n"
 import list from "./generated/notices.json"
 
 export interface Notice {
@@ -18,7 +19,9 @@ export const NOTICES: readonly Notice[] = (list as { packages: Notice[] }).packa
 
 /** Count badge (ifabF): "513 packages". */
 export function noticeCount(n: number): string {
-  return `${n} package${n === 1 ? "" : "s"}`
+  return t(n === 1 ? "settings.about.packagesOne" : "settings.about.packages", {
+    count: String(n),
+  })
 }
 
 /** Filter packages (sUdQd): matches name, version or licence, case-insensitive. */

@@ -28,6 +28,7 @@ import {
 import { type KeyboardEvent, useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { AiProvidersPane } from "../ai-settings/AiProvidersPane"
 import { causeOf } from "../editor/errors"
+import { t } from "../lib/i18n"
 import { MultiplayerPane } from "../multiplayer/ui/MultiplayerPane"
 import { WorkspacePane } from "../multiplayer/ui/WorkspacePane"
 import { useOptionalRuntime } from "../platform/runtime"
@@ -109,7 +110,11 @@ export function SettingsView({
   setRef.current = set
   const fail = useCallback<SettingsFail>((what, error, retry) => {
     const body = causeOf(error)
-    setFailure({ title: `Couldn't ${what}`, body, ...(retry ? { retry } : {}) })
+    setFailure({
+      title: t("errors.couldnt", { what }),
+      body,
+      ...(retry ? { retry } : {}),
+    })
   }, [])
   // biome-ignore lint/correctness/useExhaustiveDependencies: a new pane drops the old failure.
   useEffect(() => setFailure(null), [pane])
@@ -123,7 +128,9 @@ export function SettingsView({
         data-testid="settings-write-error"
         title={failure.title}
         {...(failure.body ? { body: failure.body } : {})}
-        actions={failure.retry ? [{ id: "retry", label: "Retry", variant: "primary" }] : []}
+        actions={
+          failure.retry ? [{ id: "retry", label: t("settings.retry"), variant: "primary" }] : []
+        }
         onAction={() => {
           setFailure(null)
           failure.retry?.()
@@ -166,17 +173,17 @@ export function SettingsView({
       className={`settings-window settings-window--${variant}`}
       data-pen="XmeDB"
       {...(variant === "dialog"
-        ? { role: "dialog", "aria-modal": true, "aria-label": "Settings" }
+        ? { role: "dialog", "aria-modal": true, "aria-label": t("settings.title") }
         : {})}
     >
-      <nav className="settings-sidebar" aria-label="Settings sections">
+      <nav className="settings-sidebar" aria-label={t("settings.sections")}>
         <div className="settings-lights" data-pen="L2zCG" data-tauri-drag-region="">
           {drawLights && (
             <>
               <button
                 type="button"
                 className="settings-light settings-light--close"
-                aria-label="Close settings"
+                aria-label={t("settings.close")}
                 disabled={!onClose}
                 onClick={onClose}
               />
@@ -206,7 +213,7 @@ export function SettingsView({
                 onKeyDown={(e) => onNavKey(e, i)}
               >
                 <Icon className="settings-nav-item__icon" aria-hidden="true" />
-                <span className="settings-nav-item__label">{p.label}</span>
+                <span className="settings-nav-item__label">{t(p.label)}</span>
               </button>
             )
           })}

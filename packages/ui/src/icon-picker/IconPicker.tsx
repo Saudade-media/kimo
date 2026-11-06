@@ -1,3 +1,4 @@
+import { t } from "@kimo/i18n"
 import { Search, SearchX, X } from "lucide-react"
 import {
   type KeyboardEvent,
@@ -77,16 +78,16 @@ export const ICON_LICENSES: Record<IconLibraryId, string> = {
 }
 
 const LIBRARIES = [
-  { value: "lucide", label: "Lucide" },
-  { value: "phosphor", label: "Phosphor" },
-  { value: "material", label: "Material" },
-  { value: "feather", label: "Feather" },
+  { value: "lucide", label: "ui.pkg.iconLib.lucide" },
+  { value: "phosphor", label: "ui.pkg.iconLib.phosphor" },
+  { value: "material", label: "ui.pkg.iconLib.material" },
+  { value: "feather", label: "ui.pkg.iconLib.feather" },
 ] as const
 
 const STYLES = [
-  { value: "outlined", label: "Outlined" },
-  { value: "rounded", label: "Rounded" },
-  { value: "sharp", label: "Sharp" },
+  { value: "outlined", label: "ui.pkg.iconStyle.outlined" },
+  { value: "rounded", label: "ui.pkg.iconStyle.rounded" },
+  { value: "sharp", label: "ui.pkg.iconStyle.sharp" },
 ] as const
 
 /** Grid geometry from the node: 8 columns of 32 with gap 2; rows 32 with gap 4 (pitch 36). */
@@ -357,7 +358,7 @@ export function IconPicker({
 
   return (
     <Popover
-      title="Icon"
+      title={t("ui.pkg.icon.picker.iconpicker.icon")}
       wide
       onClose={onClose}
       anchor={anchor}
@@ -370,7 +371,7 @@ export function IconPicker({
         dense
         icon={<Search />}
         placeholder={placeholder}
-        aria-label="Search icons"
+        aria-label={t("ui.pkg.icon.picker.iconpicker.search-icons")}
         value={query}
         onChange={(e) => setQuery(e.currentTarget.value)}
         onKeyDown={(e) => {
@@ -383,8 +384,8 @@ export function IconPicker({
       />
       <Segmented
         fill
-        label="Icon library"
-        options={LIBRARIES}
+        label={t("ui.pkg.icon.picker.iconpicker.icon-library")}
+        options={LIBRARIES.map((l) => ({ value: l.value, label: t(l.label) }))}
         value={library}
         onChange={setLibrary}
       />
@@ -392,8 +393,8 @@ export function IconPicker({
         <>
           <Segmented
             fill
-            label="Material style"
-            options={STYLES}
+            label={t("ui.pkg.icon.picker.iconpicker.material-style")}
+            options={STYLES.map((s) => ({ value: s.value, label: t(s.label) }))}
             value={style}
             onChange={setStyle}
           />
@@ -402,7 +403,7 @@ export function IconPicker({
               Weight
             </span>
             <Slider
-              aria-label="Weight"
+              aria-label={t("ui.pkg.icon.picker.iconpicker.weight")}
               aria-labelledby={`${id}-weight`}
               min={100}
               max={700}

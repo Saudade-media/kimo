@@ -1,3 +1,4 @@
+import { t } from "@kimo/i18n"
 import { ChevronDown, ChevronUp, Folder, FolderGit2, GitBranch } from "lucide-react"
 import type { ComponentPropsWithRef, MouseEvent, ReactElement, ReactNode } from "react"
 import { cx } from "../internal/util"
@@ -111,7 +112,7 @@ export function DesktopBreadcrumb({
   const Chevron = fileOpen ? ChevronUp : ChevronDown
   return (
     <nav
-      aria-label="File location"
+      aria-label={t("ui.pkg.window.chrome.windowchrome.file-location")}
       {...rest}
       className={cx(
         "kimo-desktop-breadcrumb",

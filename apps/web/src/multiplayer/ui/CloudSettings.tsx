@@ -9,6 +9,7 @@
 import { Button } from "@kimo/ui"
 import { useState } from "react"
 import { failureText } from "../../editor/errors"
+import { t } from "../../lib/i18n"
 import { Icon } from "../../lib/icons"
 import type { CloudState, CloudStore } from "../cloud/store"
 import type { CloudDevice } from "../cloud/types"
@@ -47,9 +48,13 @@ export function CloudSettings({ cloud, state, onChange, onSignedOut, now }: Clou
     setBusy(true)
     try {
       await cloud.openPortal()
-      toast({ tone: "component", icon: "external-link", text: "Billing opened in your browser" })
+      toast({
+        tone: "component",
+        icon: "external-link",
+        text: t("ui.multiplayer.ui.cloudsettings.billing-opened-in-your-browser"),
+      })
     } catch (e) {
-      toast({ tone: "danger", text: failureText("open billing", e) })
+      toast({ tone: "danger", text: failureText(t("errors.openBilling"), e) })
     } finally {
       setBusy(false)
     }
@@ -62,7 +67,7 @@ export function CloudSettings({ cloud, state, onChange, onSignedOut, now }: Clou
         await onSignedOut()
       } else await cloud.signOutDevice(target.pub)
     } catch (e) {
-      toast({ tone: "danger", text: failureText("sign out", e) })
+      toast({ tone: "danger", text: failureText(t("errors.signOut"), e) })
     }
   }
   const rename = async (device: CloudDevice, name: string) => {
@@ -72,7 +77,7 @@ export function CloudSettings({ cloud, state, onChange, onSignedOut, now }: Clou
     try {
       await cloud.renameDevice(device.pub, next)
     } catch (e) {
-      toast({ tone: "danger", text: failureText("rename the device", e) })
+      toast({ tone: "danger", text: failureText(t("errors.renameDevice"), e) })
     }
   }
 
@@ -89,9 +94,7 @@ export function CloudSettings({ cloud, state, onChange, onSignedOut, now }: Clou
       <div className="mp-setting" data-setting="relay">
         <div className="mp-text mp-text--2">
           <p className="mp-setting__label">Relay</p>
-          <p className="mp-desc">
-            Used when you start sharing a file. Files already shared keep the relay they started on.
-          </p>
+          <p className="mp-desc">{t("ui.multiplayer.ui.cloudsettings.3")}</p>
         </div>
         <div className="mp-input-row">
           <div className="mp-cloud-relay">
@@ -103,7 +106,7 @@ export function CloudSettings({ cloud, state, onChange, onSignedOut, now }: Clou
             {account ? (
               <PlanPill account={account} />
             ) : state.offline ? (
-              <Pill tone="danger" label="Offline" />
+              <Pill tone="danger" label={t("ui.multiplayer.ui.cloudsettings.2")} />
             ) : null}
           </div>
           <Button
@@ -113,7 +116,7 @@ export function CloudSettings({ cloud, state, onChange, onSignedOut, now }: Clou
             icon={<Icon name="repeat" size={14} />}
             onClick={onChange}
           >
-            Change
+            {t("ui.multiplayer.ui.cloudsettings.4")}
           </Button>
         </div>
       </div>
@@ -121,7 +124,7 @@ export function CloudSettings({ cloud, state, onChange, onSignedOut, now }: Clou
         <div className="mp-setting" data-setting="account">
           <div className="mp-text mp-text--2">
             <p className="mp-setting__label">Account</p>
-            <p className="mp-desc">You pay for Kimo Cloud here. Guests never need an account.</p>
+            <p className="mp-desc">{t("ui.multiplayer.ui.cloudsettings.t1")}</p>
           </div>
           <div className="mp-kv" data-row="email">
             <span className="mp-kv__key">Email</span>
@@ -145,7 +148,7 @@ export function CloudSettings({ cloud, state, onChange, onSignedOut, now }: Clou
                 disabled={busy}
                 onClick={() => void portal()}
               >
-                Manage billing
+                {t("ui.multiplayer.ui.cloudsettings.5")}
               </Button>
             )}
             <Button
@@ -155,7 +158,7 @@ export function CloudSettings({ cloud, state, onChange, onSignedOut, now }: Clou
               icon={<Icon name="log-out" size={16} />}
               onClick={() => setSigningOut("self")}
             >
-              Sign out
+              {t("ui.multiplayer.ui.cloudsettings.6")}
             </Button>
           </div>
           {notice && (
@@ -178,11 +181,9 @@ export function CloudSettings({ cloud, state, onChange, onSignedOut, now }: Clou
         <div className="mp-setting" data-setting="devices">
           <div className="mp-text mp-text--2">
             <p className="mp-setting__label">Devices</p>
-            <p className="mp-desc">
-              Devices signed in to your account. Each one can start sharing on Kimo Cloud.
-            </p>
+            <p className="mp-desc">{t("ui.multiplayer.ui.cloudsettings.7")}</p>
           </div>
-          <ul className="mp-device-list" aria-label="Devices">
+          <ul className="mp-device-list" aria-label={t("ui.multiplayer.ui.cloudsettings.1")}>
             {account.devices.map((d) => (
               <CloudDeviceRow
                 key={d.pub}
@@ -200,9 +201,7 @@ export function CloudSettings({ cloud, state, onChange, onSignedOut, now }: Clou
             <span className="mp-cloud-hint__icon" aria-hidden="true">
               <Icon name="info" size={14} />
             </span>
-            <p className="mp-cloud-hint__text">
-              To add a device, sign in on it with the same email.
-            </p>
+            <p className="mp-cloud-hint__text">{t("ui.multiplayer.ui.cloudsettings.8")}</p>
           </div>
         </div>
       )}

@@ -5,6 +5,7 @@
  */
 import { SaveStatus, type SaveStatusKind, Tooltip } from "@kimo/ui"
 import { useRef, useState } from "react"
+import { t } from "../lib/i18n"
 import { type SaveStatus as Status, savedTooltip, saveStatusLabel } from "../platform/contract"
 import { displayPath, formatClock } from "../platform/format"
 import type { FileDocumentSession } from "../platform/session"
@@ -15,7 +16,7 @@ import { LockDetailsPopover } from "./LockDetailsPopover"
 function statusTooltip(s: Status, ref: string): string {
   if (s.kind === "saved") return savedTooltip(formatClock(s.savedAt), displayPath(s.ref || ref))
   if (s.kind === "failed") return s.failure.message
-  if (s.kind === "unsaved" && s.target === "recovery") return "Autosave goes to a recovery file"
+  if (s.kind === "unsaved" && s.target === "recovery") return t("save.autosaveRecovery")
   return saveStatusLabel(s)
 }
 

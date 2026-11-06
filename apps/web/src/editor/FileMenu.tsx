@@ -26,6 +26,7 @@ import type { FileRef, HostOS, RecentFile } from "@kimo/platform"
 import { basenameOf } from "@kimo/platform"
 import { MenuDense, MenuDivider, MenuItemDense } from "@kimo/ui"
 import { Fragment, type KeyboardEvent, useEffect, useRef, useState } from "react"
+import { t } from "../lib/i18n"
 import { Icon } from "../lib/icons"
 import { revealLabel } from "../platform/contract"
 import { type HelpAction, helpItems } from "../settings/help"
@@ -90,7 +91,7 @@ export function newWindowAction(
   fail: (action: string, e: unknown) => void,
 ): (() => void) | undefined {
   if ((os !== "windows" && os !== "linux") || !openNewWindow) return undefined
-  return () => void openNewWindow().catch((e: unknown) => fail("open a new window", e))
+  return () => void openNewWindow().catch((e: unknown) => fail(t("errors.openNewWindow"), e))
 }
 
 /** Menu shortcut text per OS (board 20 note VJFSo: "Ctrl/Shift+Ctrl off macOS"). */
@@ -177,7 +178,7 @@ export function FileMenu(props: FileMenuProps) {
       anchor={anchor}
       placement={{ side: "bottom", align: "start", offset: FILE_MENU_OFFSET }}
       width={FILE_MENU_WIDTH}
-      label="File"
+      label={t("file.label")}
       autoFocus
       onClose={onClose}
       className="file-menu"
@@ -188,7 +189,7 @@ export function FileMenu(props: FileMenuProps) {
           <MenuItemDense
             className="file-menu__home"
             icon={<Icon name="house" size={14} />}
-            label="Back to files"
+            label={t("file.backToFiles")}
             onPointerEnter={hoverOther}
             onSelect={run(props.onHome)}
           />
@@ -197,7 +198,7 @@ export function FileMenu(props: FileMenuProps) {
       )}
       <MenuItemDense
         icon={<Icon name="file-plus" size={14} />}
-        label="New file"
+        label={t("file.new")}
         meta={menuShortcut(os, "N")}
         onPointerEnter={hoverOther}
         onSelect={run(props.onNewFile)}
@@ -206,14 +207,14 @@ export function FileMenu(props: FileMenuProps) {
         <MenuItemDense
           className="file-menu__new-window"
           icon={<Icon name="app-window" size={14} />}
-          label="New window"
+          label={t("file.newWindow")}
           onPointerEnter={hoverOther}
           onSelect={run(props.onNewWindow)}
         />
       )}
       <MenuItemDense
         icon={<Icon name="folder-open" size={14} />}
-        label="Open…"
+        label={t("file.open")}
         meta={menuShortcut(os, "O")}
         onPointerEnter={hoverOther}
         onSelect={run(props.onOpenFile)}
@@ -221,7 +222,7 @@ export function FileMenu(props: FileMenuProps) {
       <MenuItemDense
         ref={recentItem}
         icon={<Icon name="history" size={14} />}
-        label="Open recent"
+        label={t("file.openRecent")}
         submenu
         aria-expanded={sub?.kind === "recent"}
         highlighted={sub?.kind === "recent"}
@@ -237,7 +238,7 @@ export function FileMenu(props: FileMenuProps) {
       {props.onSave && (
         <MenuItemDense
           icon={<Icon name="save" size={14} />}
-          label="Save"
+          label={t("file.save")}
           meta={menuShortcut(os, "S")}
           onPointerEnter={hoverOther}
           onSelect={run(props.onSave)}
@@ -246,7 +247,7 @@ export function FileMenu(props: FileMenuProps) {
       {props.onSaveAs && (
         <MenuItemDense
           icon={<Icon name="file-output" size={14} />}
-          label="Save as…"
+          label={t("file.saveAs")}
           meta={menuShortcut(os, "S", true)}
           onPointerEnter={hoverOther}
           onSelect={run(props.onSaveAs)}
@@ -256,7 +257,7 @@ export function FileMenu(props: FileMenuProps) {
       {props.onExportDialog && (
         <MenuItemDense
           icon={<Icon name="download" size={14} />}
-          label="Export…"
+          label={t("file.export")}
           meta={menuShortcut(os, "E", true)}
           onPointerEnter={hoverOther}
           onSelect={run(props.onExportDialog)}
@@ -265,7 +266,7 @@ export function FileMenu(props: FileMenuProps) {
       {props.onCopyPng && (
         <MenuItemDense
           icon={<Icon name="image" size={14} />}
-          label="Copy selection as PNG"
+          label={t("file.copyPng")}
           meta={menuShortcut(os, "C", true)}
           onPointerEnter={hoverOther}
           onSelect={run(props.onCopyPng)}
@@ -283,7 +284,7 @@ export function FileMenu(props: FileMenuProps) {
       {props.onCleanUpAssets && (
         <MenuItemDense
           icon={<Icon name="brush-cleaning" size={14} />}
-          label="Clean up assets…"
+          label={t("file.cleanUpAssets")}
           onPointerEnter={hoverOther}
           onSelect={run(props.onCleanUpAssets)}
         />
@@ -291,7 +292,7 @@ export function FileMenu(props: FileMenuProps) {
       {(props.onReveal || props.onCleanUpAssets) && <MenuDivider />}
       <MenuItemDense
         icon={<Icon name="settings" size={14} />}
-        label="Settings…"
+        label={t("file.settings")}
         meta={menuShortcut(os, ",")}
         onPointerEnter={hoverOther}
         onSelect={run(props.onSettings)}
@@ -302,7 +303,7 @@ export function FileMenu(props: FileMenuProps) {
           <MenuItemDense
             ref={helpItem}
             icon={<Icon name="circle-help" size={14} />}
-            label="Help"
+            label={t("file.help")}
             submenu
             aria-expanded={sub?.kind === "help"}
             highlighted={sub?.kind === "help"}
@@ -382,7 +383,7 @@ function RecentSubmenu({
       anchor={anchor}
       placement={{ side: "right", align: "start", offset: -SUBMENU_OVERLAP }}
       width={RECENT_MENU_WIDTH}
-      label="Open recent"
+      label={t("file.openRecent")}
       autoFocus={autoFocus}
       className="file-menu__recent"
       data-testid="file-menu-recent"
@@ -404,9 +405,13 @@ function RecentSubmenu({
           onSelect={() => onOpen(f.ref)}
         />
       ))}
-      {list.length === 0 && <MenuItemDense label="No recent files" disabled />}
+      {list.length === 0 && <MenuItemDense label={t("file.noRecent")} disabled />}
       <MenuDivider />
-      <MenuItemDense label="Clear recent" disabled={list.length === 0} onSelect={onClear} />
+      <MenuItemDense
+        label={t("file.clearRecent")}
+        disabled={list.length === 0}
+        onSelect={onClear}
+      />
     </MenuDense>
   )
 }
@@ -434,7 +439,7 @@ function HelpSubmenu({
       anchor={anchor}
       placement={{ side: "right", align: "start", offset: -SUBMENU_OVERLAP }}
       width={HELP_MENU_WIDTH}
-      label="Help"
+      label={t("file.help")}
       autoFocus={autoFocus}
       className="file-menu__help"
       data-testid="file-menu-help"

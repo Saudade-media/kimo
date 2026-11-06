@@ -28,6 +28,7 @@ import {
   saveFile,
   trashFile,
 } from "../lib/files"
+import { t, t as tr } from "../lib/i18n"
 import { Icon } from "../lib/icons"
 import { useHomeCommands } from "../lib/native-menu"
 import { useOpenSettings } from "../platform/runtime"
@@ -67,8 +68,8 @@ import { createTemplateInBrowser, TEMPLATES, type Template } from "./templates"
 import { useWorkspaceTitle, WorkspaceFiles, WorkspaceHeaderButtons } from "./WorkspaceHome"
 
 const VIEWS = [
-  { value: "grid", label: "Grid view", icon: <Icon name="layout-grid" size={14} /> },
-  { value: "list", label: "List view", icon: <Icon name="list" size={14} /> },
+  { value: "grid", label: "ui.view.grid", icon: <Icon name="layout-grid" size={14} /> },
+  { value: "list", label: "ui.view.list", icon: <Icon name="list" size={14} /> },
 ] as const
 
 /** Recents shows the most recently edited files (the library has no open history). */
@@ -145,7 +146,7 @@ export function WebHomeView({
     purgeTrash()
       .catch(() => 0)
       .then(() => reload())
-      .catch((e: unknown) => live && setError(failure("list your files", e)))
+      .catch((e: unknown) => live && setError(failure(t("errors.listFiles"), e)))
     return () => {
       live = false
     }
@@ -157,7 +158,7 @@ export function WebHomeView({
       void platform.recents
         .listFolders()
         .then((d) => live && setFolders(d))
-        .catch((e: unknown) => live && setError(failure("list your folders", e)))
+        .catch((e: unknown) => live && setError(failure(t("errors.listFolders"), e)))
     load()
     const off = platform.recents.onChange(load)
     return () => {
@@ -184,7 +185,10 @@ export function WebHomeView({
     platform.recents
       .scanFolder(folder.ref)
       .then((f) => live && setFolderFiles(f))
-      .catch((e: unknown) => live && setError(failure(`list ${folder.label}`, e)))
+      .catch(
+        (e: unknown) =>
+          live && setError(failure(t("errors.listFolder", { name: folder.label }), e)),
+      )
     return () => {
       live = false
     }
@@ -192,9 +196,9 @@ export function WebHomeView({
 
   const newFile = useCallback(async () => {
     try {
-      navigate(`/file/${await createFile("Untitled")}`)
+      navigate(`/file/${await createFile(t("file.untitled"))}`)
     } catch (e) {
-      fail(failure("create a file", e))
+      fail(failure(t("errors.createFile"), e))
     }
   }, [fail])
   const openFile = useCallback(async () => {
@@ -203,7 +207,7 @@ export function WebHomeView({
     try {
       navigate(`/file/${(await importFile(file)).id}`)
     } catch (e) {
-      fail(failure(`open ${file.name}`, e))
+      fail(failure(t("errors.openNamed", { name: file.name }), e))
     }
   }, [fail])
   // B9: ⌘N / ⌘O and the desktop menu bar's File › New file / Open….
@@ -225,9 +229,9 @@ export function WebHomeView({
       show({
         tone: "success",
         kind: "trashed",
-        text: `Moved “${f.name}” to the Trash`,
+        text: t("ui.home.movedToTrashQuoted", { name: f.name }),
         action: {
-          label: "Undo",
+          label: t("ui.editor.clipboard.undo"),
           run: () => void act(`restore “${f.name}”`, () => restoreFile(f.id)),
         },
       })
@@ -252,11 +256,21 @@ export function WebHomeView({
       }
     })
   const menuItems = (f: FileMeta): FileMenuEntry[] => [
-    { id: "open", label: "Open", icon: MENU_ICONS.open, run: () => navigate(`/file/${f.id}`) },
-    { id: "rename", label: "Rename", icon: MENU_ICONS.rename, run: () => setRenaming(f.id) },
+    {
+      id: "open",
+      label: t("ui.home.webhomeview.open"),
+      icon: MENU_ICONS.open,
+      run: () => navigate(`/file/${f.id}`),
+    },
+    {
+      id: "rename",
+      label: t("ui.editor.pages.pagesstrip.6"),
+      icon: MENU_ICONS.rename,
+      run: () => setRenaming(f.id),
+    },
     {
       id: "duplicate",
-      label: "Duplicate",
+      label: t("ui.editor.m3.componentdialogs.1"),
       icon: MENU_ICONS.duplicate,
       run: () =>
         void act(`duplicate “${f.name}”`, async () => {
@@ -269,14 +283,14 @@ export function WebHomeView({
     },
     {
       id: "download",
-      label: "Download .kimo",
+      label: t("ui.home.webhomeview.download-kimo"),
       icon: MENU_ICONS.download,
       run: () => void download(f),
     },
     "divider",
     {
       id: "trash",
-      label: "Move to Trash",
+      label: t("ui.home.webhomeview.move-to-trash"),
       icon: MENU_ICONS.trash,
       danger: true,
       run: () => void moveToTrash(f),
@@ -290,7 +304,7 @@ export function WebHomeView({
     try {
       navigate(`/file/${(await createTemplateInBrowser(t)).id}`)
     } catch (e) {
-      fail(failure(`create “${t.name}”`, e), "template")
+      fail(failure(tr("errors.createQuoted", { name: t.name }), e), "template")
     } finally {
       setBusy(null)
     }
@@ -312,18 +326,18 @@ export function WebHomeView({
   const workspaceTitle = useWorkspaceTitle(section.kind === "workspace" ? section.id : "")
   const title =
     section.kind === "folder"
-      ? (folder?.label ?? "Folder")
+      ? (folder?.label ?? t("home.folderFallback"))
       : section.kind === "workspace"
         ? (workspaceTitle ?? "")
-        : SECTION_TITLE[section.kind]
+        : t(SECTION_TITLE[section.kind])
   const placeholder =
     section.kind === "templates"
-      ? "Search templates"
+      ? t("home.searchTemplates")
       : section.kind === "libraries"
         ? "Search design systems"
         : section.kind === "trash"
           ? "Search trash"
-          : "Search files"
+          : t("home.search")
   const list = section.kind === "recents" ? all.slice(0, RECENTS_LIMIT) : all
   const shown = searchFiles(list, query)
 
@@ -377,7 +391,14 @@ export function WebHomeView({
       </ul>
     )
   const filesInfo = (f: FileMeta) => `${editedLabel(f.updatedAt)} · ${framesLabel(f.frames)}`
-  const viewToggle = <Segmented label="View" options={VIEWS} value={view} onChange={setView} />
+  const viewToggle = (
+    <Segmented
+      label={tr("ui.home.webhomeview.6")}
+      options={VIEWS.map((v) => ({ ...v, label: t(v.label) }))}
+      value={view}
+      onChange={setView}
+    />
+  )
 
   let body: React.ReactNode
   if (section.kind === "workspace") {
@@ -398,17 +419,15 @@ export function WebHomeView({
       <>
         <div className="kimo-files-recent-header">
           <h2 className="kimo-files-recent-header__title">{countLabel(trashed?.length ?? 0)}</h2>
-          <span className="kimo-files-recent-header__note">
-            Deleted files stay here for 30 days
-          </span>
+          <span className="kimo-files-recent-header__note">{tr("ui.home.webhomeview.7")}</span>
           <span className="kimo-files-recent-header__spacer" aria-hidden="true" />
         </div>
         {trashed && trashed.length === 0 ? (
           <HomeEmpty
             kind="trash"
             icon={<Trash2 />}
-            title="Trash is empty"
-            description="Files you delete show up here for 30 days."
+            title={tr("ui.home.webhomeview.5")}
+            description={tr("ui.home.webhomeview.4")}
           />
         ) : trashed && t.length === 0 ? (
           <NoMatch query={query} onClear={() => setQuery("")} />
@@ -431,10 +450,10 @@ export function WebHomeView({
                 }
                 onDelete={() =>
                   setConfirm({
-                    title: `Delete “${f.name}” forever?`,
-                    description: "You can't restore it after this.",
-                    confirmLabel: "Delete forever",
-                    failTitle: `Couldn't delete “${f.name}”`,
+                    title: tr("ui.home.deleteForeverTitle", { name: f.name }),
+                    description: tr("ui.home.deleteForeverDesc"),
+                    confirmLabel: tr("ui.home.deleteForeverConfirm"),
+                    failTitle: tr("ui.home.deleteFailedQuoted", { name: f.name }),
                     run: async () => {
                       await deleteFile(f.id)
                       await reload()
@@ -455,9 +474,7 @@ export function WebHomeView({
     body = (
       <>
         <div className="home-files-header">
-          <h2 className="home-files-header__title">
-            {countLabel(libraries.length, "library", "libraries")}
-          </h2>
+          <h2 className="home-files-header__title">{countLabel(libraries.length, "library")}</h2>
           <span className="home-files-header__note">
             files that other files import, or that publish components
           </span>
@@ -468,8 +485,8 @@ export function WebHomeView({
           <HomeEmpty
             kind="libraries"
             icon={<SwatchBook />}
-            title="No design systems yet"
-            description="A file shows up here when another file imports it or it publishes components."
+            title={tr("ui.home.webhomeview.3")}
+            description={tr("ui.home.webhomeview.2")}
           />
         ) : files && libShown.length === 0 ? (
           <NoMatch query={query} onClear={() => setQuery("")} />
@@ -490,14 +507,14 @@ export function WebHomeView({
         <RecentFilesHeader
           folderCount={folders?.length ?? 0}
           title={countLabel(folderFiles?.length ?? 0)}
-          note="in this folder and its subfolders · sorted by modified"
+          note={t("home.folderNote")}
         />
         {folderFiles && folderFiles.length === 0 && folder ? (
           <HomeEmpty
             kind="folder"
             icon={<FolderOpen />}
-            title={`No .kimo files in ${folder.label}`}
-            description="Files you save in this folder or its subfolders show up here."
+            title={t("ui.home.noFilesIn", { folder: folder.label })}
+            description={tr("ui.home.webhomeview.1")}
           />
         ) : folderFiles && ff.length === 0 ? (
           <NoMatch query={query} onClear={() => setQuery("")} />
@@ -517,10 +534,10 @@ export function WebHomeView({
         {section.kind === "recents" && <HomeComposer platform={platform} />}
         <div className="home-files-header">
           <h2 className="home-files-header__title">
-            {section.kind === "recents" ? "Recent files" : countLabel(all.length)}
+            {section.kind === "recents" ? t("home.recentFiles") : countLabel(all.length)}
           </h2>
           {section.kind === "all" && (
-            <span className="home-files-header__note">in this browser · sorted by modified</span>
+            <span className="home-files-header__note">{t("home.note.browser")}</span>
           )}
           <span className="home-files-header__spacer" />
           {viewToggle}
@@ -529,12 +546,12 @@ export function WebHomeView({
           <HomeEmpty
             kind="no-files"
             icon={<FilePlus />}
-            title="No files yet"
-            description="Create a file or open a .kimo file from your computer. Files stay in this browser."
+            title={t("home.empty.browserFiles.title")}
+            description={t("home.empty.browserFiles.desc")}
             actions={[
-              { label: "New file", variant: "primary", onClick: () => void newFile() },
+              { label: t("home.newFile"), variant: "primary", onClick: () => void newFile() },
               {
-                label: "Open…",
+                label: t("home.open"),
                 variant: "secondary",
                 icon: <FolderOpen />,
                 onClick: () => void openFile(),
@@ -566,9 +583,11 @@ export function WebHomeView({
                 menuRef: folderMenu?.folder.ref ?? null,
                 onAdd: () =>
                   void (async () => {
-                    const ref = await platform.dialogs.pickFolder({ title: "Add folder" })
+                    const ref = await platform.dialogs.pickFolder({
+                      title: t("home.addFolderTitle"),
+                    })
                     if (ref) await platform.recents.addFolder(ref)
-                  })().catch((e: unknown) => fail(failure("add the folder", e))),
+                  })().catch((e: unknown) => fail(failure(t("errors.addTheFolder"), e))),
                 onOpen: (f) => navigate(homeSectionPath({ kind: "folder", ref: f.ref })),
                 onMenu: (f, from) =>
                   setFolderMenu({
@@ -605,10 +624,12 @@ export function WebHomeView({
               disabled={!trashed?.length}
               onClick={() =>
                 setConfirm({
-                  title: "Empty the Trash?",
-                  description: `Kimo deletes the ${countLabel(trashed?.length ?? 0)} in the Trash. You can't restore them after this.`,
-                  confirmLabel: "Empty trash",
-                  failTitle: "Couldn't empty the Trash",
+                  title: t("ui.home.emptyTrashTitle"),
+                  description: t("ui.home.emptyTrashDesc", {
+                    files: countLabel(trashed?.length ?? 0),
+                  }),
+                  confirmLabel: t("ui.home.emptyTrashConfirm"),
+                  failTitle: t("ui.home.emptyTrashFailed"),
                   run: async () => {
                     for (const f of trashed ?? []) await deleteFile(f.id)
                     await reload()
@@ -616,7 +637,7 @@ export function WebHomeView({
                 })
               }
             >
-              Empty trash…
+              {t("home.emptyTrash")}
             </Button>
           ) : (
             <>
@@ -625,14 +646,14 @@ export function WebHomeView({
                 icon={<Icon name="folder-open" size={16} />}
                 onClick={() => void openFile()}
               >
-                Open file
+                {t("home.openFile")}
               </Button>
               <Button
                 variant="primary"
                 icon={<Icon name="plus" size={16} />}
                 onClick={() => void newFile()}
               >
-                New file
+                {t("home.newFile")}
               </Button>
             </>
           )}
@@ -663,12 +684,13 @@ export function WebHomeView({
           items={[
             {
               id: "remove-folder",
-              label: "Remove from Kimo",
+              label: t("ui.home.webhomeview.remove-from-kimo"),
               icon: MENU_ICONS.removeFolder,
               run: () =>
                 void platform.recents.removeFolder(folderMenu.folder.ref).then(
                   () => folder?.ref === folderMenu.folder.ref && navigate("/all"),
-                  (e: unknown) => fail(failure(`remove ${folderMenu.folder.label}`, e)),
+                  (e: unknown) =>
+                    fail(failure(t("errors.removeNamed", { name: folderMenu.folder.label }), e)),
                 ),
             },
           ]}

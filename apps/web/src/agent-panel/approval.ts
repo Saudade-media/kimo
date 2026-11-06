@@ -5,6 +5,7 @@
  * and `variable` (a global); the others are chosen here (not drawn).
  */
 import type { McpApprovalRequest } from "@kimo/platform"
+import { t } from "../lib/i18n"
 
 export type ApprovalOpIcon =
   | "trash-2"
@@ -56,19 +57,39 @@ export function approvalOps(
   if (r.kind === "grant") {
     switch (r.grant) {
       case "globals":
-        return [{ icon: "variable", label: "Edit global variables", meta: "global" }]
+        return [
+          {
+            icon: "variable",
+            label: t("ui.agent.panel.approval.edit-global-variables"),
+            meta: "global",
+          },
+        ]
       case "components":
-        return [{ icon: "component", label: "Edit components", meta: "library" }]
+        return [
+          {
+            icon: "component",
+            label: t("ui.agent.panel.approval.edit-components"),
+            meta: "library",
+          },
+        ]
       case "save":
         return [
-          { icon: "save", label: "Save the file", ...(req.path ? { meta: base(req.path) } : {}) },
+          {
+            icon: "save",
+            label: t("ui.agent.panel.approval.save-the-file"),
+            ...(req.path ? { meta: base(req.path) } : {}),
+          },
         ]
       case "export":
         return [
-          { icon: "download", label: "Export", ...(req.path ? { meta: base(req.path) } : {}) },
+          {
+            icon: "download",
+            label: t("editor.export"),
+            ...(req.path ? { meta: base(req.path) } : {}),
+          },
         ]
       case "files.create":
-        return [{ icon: "file-plus", label: "Create a file" }]
+        return [{ icon: "file-plus", label: t("ui.agent.panel.approval.create-a-file") }]
     }
   }
   const p = req.preview
@@ -150,5 +171,5 @@ export function autoApprovalLine(
     })
     return `${verbs.join(", ")}${meta ? ` ${meta}` : ""}`
   })()
-  return `Approved automatically: ${what}`
+  return t("ui.agent.panel.approval.auto", { what })
 }

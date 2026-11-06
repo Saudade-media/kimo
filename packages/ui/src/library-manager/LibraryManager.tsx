@@ -1,3 +1,4 @@
+import { t } from "@kimo/i18n"
 import { Info, Link2 } from "lucide-react"
 import type { ReactNode } from "react"
 import { Button } from "../button/Button"
@@ -33,7 +34,7 @@ export function LibraryManager({
   return (
     <Popover
       {...rest}
-      title="Libraries"
+      title={t("ui.pkg.library.manager.librarymanager.libraries")}
       onClose={onClose}
       className={cx("kimo-library-manager", className)}
       bodyProps={{

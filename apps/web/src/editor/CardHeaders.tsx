@@ -25,6 +25,7 @@ import { createContext, type ReactNode, useEffect, useState } from "react"
 import type { CanvasHandle, UiStore } from "../canvas/contract"
 import { useCanvasViewPrefs } from "../canvas/view-prefs"
 import { useUi } from "../lib/hooks"
+import { type MessageKey, t } from "../lib/i18n"
 import { Icon } from "../lib/icons"
 import { useRuntime } from "../platform/runtime"
 import { runHelpAction } from "../settings/help"
@@ -87,7 +88,9 @@ function useFileMenu(actions: FileMenuActions) {
           run: runHelpAction,
         }}
         onClearRecent={() =>
-          void platform.recents.clearFiles().catch((e: unknown) => fail("clear recent files", e))
+          void platform.recents
+            .clearFiles()
+            .catch((e: unknown) => fail(t("errors.clearRecentFiles"), e))
         }
         onClose={() => {
           close()
@@ -103,9 +106,9 @@ function useFileMenu(actions: FileMenuActions) {
  * label 12 text-tertiary), only while it needs attention: "Not saved" and "Read-only". Saving
  * and saved stay quiet (every edit autosaves to IndexedDB).
  */
-const LIBRARY_ATTENTION: Partial<Record<SyncStatus, [icon: string, label: string]>> = {
-  error: ["cloud-alert", "Not saved"],
-  "read-only": ["cloud-alert", "Read-only"],
+const LIBRARY_ATTENTION: Partial<Record<SyncStatus, [icon: string, label: MessageKey]>> = {
+  error: ["cloud-alert", "editor.notSaved"],
+  "read-only": ["cloud-alert", "editor.readOnly"],
 }
 
 export function LibrarySaveStatus({ status }: { status: SyncStatus }) {
@@ -116,7 +119,7 @@ export function LibrarySaveStatus({ status }: { status: SyncStatus }) {
       <span className="topbar__saved-icon">
         <Icon name={attention[0]} size={14} />
       </span>
-      <span className="topbar__saved-label">{attention[1]}</span>
+      <span className="topbar__saved-label">{t(attention[1])}</span>
     </span>
   )
 }
@@ -188,7 +191,7 @@ export function LeftCardHeader({
         <input
           className="topbar__file-input"
           style={lights > 0 ? { marginLeft: lights } : undefined}
-          aria-label="File name"
+          aria-label={t("ui.editor.cardheaders.3")}
           defaultValue={fileName}
           // biome-ignore lint/a11y/noAutofocus: rename was explicitly requested
           autoFocus
@@ -288,7 +291,7 @@ export function RightCardHeader({
         <button
           type="button"
           className="topbar__zoom card-header__zoom"
-          aria-label="Zoom"
+          aria-label={t("ui.editor.cardheaders.2")}
           aria-haspopup="menu"
           aria-expanded={viewAnchor !== null}
           onClick={(e) => {
@@ -334,7 +337,7 @@ export function RightCardHeader({
           <button
             type="button"
             className="card-header__icon-button topbar__preview"
-            aria-label="Preview"
+            aria-label={t("ui.editor.cardheaders.1")}
             aria-disabled={previewTarget === null || undefined}
             onClick={() => {
               if (previewTarget !== null) onPreview()

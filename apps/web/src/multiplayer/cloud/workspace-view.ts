@@ -6,6 +6,7 @@
  * email's local part: "maya.rossi@studio.design" is "Maya Rossi", "sam@acme.co" is "Sam".
  */
 
+import { t, t as tr } from "../../lib/i18n"
 import type {
   BillingInterval,
   CloudPlan,
@@ -189,7 +190,10 @@ export function memberMeta(m: Member, now: number): string {
 
 /** 2A invite meta: "Invited by Maya · expires Nov 4". */
 export const inviteMeta = (invitedBy: string, expiresAt: number) =>
-  `Invited by ${firstName(invitedBy)} · expires ${shortDate(expiresAt)}`
+  t("ui.mp.workspace.inviteMeta", {
+    name: firstName(invitedBy),
+    date: shortDate(expiresAt),
+  })
 
 /** 2A request meta: "jo@acme.co · from Landing". */
 export const requestMeta = (email: string, fileName: string | null) =>
@@ -207,13 +211,19 @@ export function removeDesc(email: string, plan: CloudPlan): string {
 export function transferPriceLine(
   t: Pick<Transfer, "amountCents" | "currency" | "interval" | "seats">,
 ) {
-  return `You'll pay ${money(t.amountCents, t.currency)} a ${t.interval === "year" ? "year" : "month"} for ${seats(t.seats)}.`
+  const interval =
+    t.interval === "year" ? tr("ui.mp.workspace.intervalYear") : tr("ui.mp.workspace.intervalMonth")
+  return tr("ui.mp.workspace.transferPrice", {
+    price: money(t.amountCents, t.currency),
+    interval,
+    seats: seats(t.seats),
+  })
 }
 
 /** 6D footnote: "Plan ends Nov 28" (when the plan has a period). */
 export function planEndsLine(plan: CloudPlan): string | null {
   const at = plan.renewsAt ?? plan.endsAt
-  return at ? `Plan ends ${shortDate(at)}` : null
+  return at ? t("ui.mp.workspace.planEnds", { date: shortDate(at) }) : null
 }
 
 /** The editor banner of a workspace file (board 46 5A to 5D, 6E); null shows none. */
@@ -243,7 +253,7 @@ export type FileStatus = { label: string; tone: "untracked" | "clean" | "none" }
 
 export function fileStatus(here: readonly string[], local: boolean, os: string): FileStatus {
   if (here.length) return { label: hereLine(here), tone: "untracked" }
-  if (local) return { label: "Synced", tone: "clean" }
+  if (local) return { label: t("ui.multiplayer.cloud.workspace.view.synced"), tone: "clean" }
   return { label: os === "macos" ? "Not on this Mac" : "Not on this device", tone: "none" }
 }
 

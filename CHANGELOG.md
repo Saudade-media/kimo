@@ -14,6 +14,31 @@ the dates are those of the milestone commits.
 
 ## [Unreleased]
 
+## [1.2.1-beta.5] - 2026-11-06
+
+Selection fixes, per-corner radius and layer rename in the right panel. For installs on the Beta
+channel.
+
+### Added
+
+- Set each corner's radius on its own: the corners toggle beside the radius field shows four
+  fields.
+- Double-click the layer name in the right panel to rename it.
+- Arrow keys reorder the children of an auto-layout frame.
+- Hold ⇧ and click quickly on a layer to drill into it and add it to the selection.
+- Agents in a file opened from a share link show as in a file: avatars, Activity, cursor and
+  approval prompts.
+
+### Fixed
+
+- Clicking inside a selected frame keeps the frame, so a drag moves it. Before, it picked a layer
+  inside.
+- Dragging inside a multi-selection moves all the selected layers.
+- Opening a .pen file keeps the layers of instances that have their own children. Before, they
+  were dropped.
+- A missing image shows "unavailable" unless it is really being fetched, and an image an agent
+  saves to disk shows up.
+
 ## [1.2.1-beta.4] - 2026-10-29
 
 Rename files from Home and the editor, and reload a window with ⌘R. For installs on the Beta

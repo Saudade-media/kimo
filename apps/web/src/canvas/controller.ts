@@ -175,6 +175,7 @@ import {
   toggleAnchorKind,
 } from "./path-tools"
 import { cssColor, runCss } from "./rich-text/css"
+import { mirrorFontFace } from "./rich-text/dom-fonts"
 import { createLiveText } from "./rich-text/live"
 import { type Attrs, runsOf, virtualNode } from "./rich-text/model"
 import type { RichEditGeometry, RunCss } from "./rich-text/RichTextEditor"
@@ -374,7 +375,7 @@ interface Reloc {
   flowStart: boolean
   /**
    * The nodes come from different parents and some are flow children: they move as one block
-   * into the frame under the pointer (`parent` is null); over no frame the move is cancelled.
+   * into the frame under the pointer (`parent` is null), or onto the canvas over no frame.
    */
   mixed: boolean
   /** ⌥-drag: the ops move copies of the originals. */
@@ -415,7 +416,7 @@ interface Reloc {
   /** The original parent's children in the order the ops apply to (copies after originals). */
   base: string[]
   last: {
-    mode: "free" | "absolute" | "reparent" | "flow" | "none"
+    mode: "free" | "absolute" | "reparent" | "flow"
     target: string | null
     slot: number
     flow: FlowFrame | null
@@ -812,7 +813,9 @@ export class CanvasController {
         this.schedule()
       }),
       this.ui.subscribe((s, prev) => this.onUi(s, prev)),
-      r.fonts.onFontLoaded(() => {
+      r.fonts.onFontLoaded((key) => {
+        // A text being edited picks up the face as soon as it arrives.
+        if (this.editing) mirrorFontFace(r.fonts, key.family, key.weight, key.style === "italic")
         this.fullPending = true
         this.schedule()
       }),
@@ -3435,9 +3438,9 @@ export class CanvasController {
     let mode: NonNullable<Reloc["last"]>["mode"] = "free"
     let target: string | null = r.parent
     if (r.mixed) {
-      // A block from several parents: into the frame under the pointer, or nowhere.
+      // A block from several parents: into the frame under the pointer, or onto the canvas.
       target = this.relocTarget(w, p, r)
-      mode = target === null ? "none" : "reparent"
+      mode = "reparent"
     } else if (r.parent !== null && meta) mode = r.flowStart ? "absolute" : "free"
     else if (r.parent !== null) {
       const t = this.relocTarget(w, p, r)
@@ -5102,6 +5105,7 @@ export class CanvasController {
         attrs.fill !== undefined
           ? attrs.fill
           : defaultTextFill({ ...(this.header as object), nodes: {} } as never)
+      mirrorFontFace(this.renderer.fonts, style.fontFamily, style.fontWeight, style.italic)
       return runCss(style, fixedColor ?? cssColor(deep(fill)) ?? "#000000")
     }
   }

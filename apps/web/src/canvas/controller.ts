@@ -178,7 +178,7 @@ import { createLiveText } from "./rich-text/live"
 import { type Attrs, runsOf, virtualNode } from "./rich-text/model"
 import type { RichEditGeometry, RunCss } from "./rich-text/RichTextEditor"
 import { publishTextSession, RichTextSession } from "./rich-text/session"
-import { drillStep, enterTarget, pickTarget } from "./selection"
+import { addDrillStep, drillStep, enterTarget, pickTarget } from "./selection"
 import { candidatesIn, fmtUnits, snap, snapPoint } from "./snapping"
 import type { CanvasToolStore } from "./tool-state"
 
@@ -572,13 +572,24 @@ export class CanvasController {
   private raf = 0
   private pendingPointer: { e: PointerEvent; p: Point } | null = null
   /** The plain press being handled (set by `onDown`, read by the `mousedown` that follows it). */
-  private downInfo: { path: string[] } | null = null
+  /**
+   * A ⇧ press also records the layer it added (`add`, null when it toggled one off) and the
+   * selection it started from (`before`).
+   */
+  private downInfo: { path: string[]; add?: string | null; before?: readonly string[] } | null =
+    null
   /**
    * Multi-click drilling: the path to the leaf under the FIRST click of a rapid sequence, fixed
    * for the whole sequence (later clicks never re-hit-test), and the depth selected so far.
+   * `add`: a ⇧ sequence, which drills one layer of a larger selection.
    */
-  private drillSeq: { path: string[]; level: number; enter: boolean; skipDbl: boolean } | null =
-    null
+  private drillSeq: {
+    path: string[]
+    level: number
+    enter: boolean
+    skipDbl: boolean
+    add: boolean
+  } | null = null
 
   private el: HTMLElement | null = null
   private size = { w: 0, h: 0, dpr: 1 }
@@ -2078,6 +2089,30 @@ export class CanvasController {
     const before = ui.selection
     // SHORTCUTS "Add to selection" (⇧ click) / "Select inside group" (⌘ click).
     const add = pointerHeld("addToSelection", e)
+    // A press inside the multi-selection box keeps the selection so a drag moves all of it; a
+    // release without a drag collapses to the selected layer under the pointer. ⇧ and ⌘ clicks skip this.
+    if (before.length > 1 && !add && !pointerHeld("selectInside", e)) {
+      const box = unionRects(
+        before.map((id) => this.layoutResult?.nodes.get(id)?.world).filter((b): b is Rect => !!b),
+      )
+      const w = this.toWorld(p)
+      if (box && w.x >= box.x && w.x <= box.x + box.w && w.y >= box.y && w.y <= box.y + box.h) {
+        const picked = deepest ? this.pick(deepest, before, false) : null
+        // A layer that is not itself selected needs drill-down: keep the multi-selection.
+        const under = picked !== null && before.includes(picked) ? picked : null
+        this.drag = {
+          kind: "press",
+          start: p,
+          startWorld: w,
+          target: under ?? (before[0] as string),
+          before: [],
+          scope: null,
+          collapse: under !== null,
+          toggle: false,
+        }
+        return
+      }
+    }
     if (!deepest) {
       if (!add) ui.clearSelection()
       this.drag = {
@@ -2111,6 +2146,9 @@ export class CanvasController {
     if (add) {
       if (before.includes(target)) toggle = true
       else ui.toggleSelection(target)
+      // ⇧ multi-click drilling (onMultiDown): only a press that adds a layer starts a sequence.
+      if (!artboard && !pointerHeld("selectInside", e) && !e.altKey)
+        this.downInfo = { path: pathOf(this.vdoc, deepest), add: toggle ? null : target, before }
     } else if (!before.includes(target)) ui.select([target])
     else collapse = before.length > 1
     this.drag = {
@@ -2578,14 +2616,26 @@ export class CanvasController {
       // A new sequence: the press just selected a layer on the path to the pointer's deepest hit.
       this.drillSeq = null
       const sel = this.ui.getState().selection
-      if (!info || sel.length !== 1 || this.pathEdit || this.armed) return
-      const level = info.path.indexOf(sel[0] as string)
-      if (level >= 0) this.drillSeq = { path: info.path, level, enter: false, skipDbl: false }
+      if (!info || this.pathEdit || this.armed) return
+      const id = info.add !== undefined ? info.add : sel.length === 1 ? sel[0] : null
+      const level = id ? info.path.indexOf(id) : -1
+      if (level >= 0)
+        this.drillSeq = {
+          path: info.path,
+          level,
+          enter: false,
+          skipDbl: false,
+          add: info.add !== undefined,
+        }
       return
     }
     const q = this.drillSeq
     if (!q || this.ui.getState().tool !== "select" || this.pathEdit || this.armed || this.editing)
       return
+    if (q.add) {
+      this.addDrill(q, info, e)
+      return
+    }
     if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) {
       this.drillSeq = null
       return
@@ -2609,6 +2659,40 @@ export class CanvasController {
     }
   }
 
+  /**
+   * ⇧ multi-click drilling: each ⇧-click after the first swaps the drilled layer for the next
+   * level down and keeps the rest of the selection.
+   */
+  private addDrill(
+    q: NonNullable<CanvasController["drillSeq"]>,
+    info: CanvasController["downInfo"],
+    e: MouseEvent,
+  ): void {
+    const ui = this.ui.getState()
+    // The press of this click already ran: start from the selection it saw.
+    const base = info?.before ?? ui.selection
+    if (
+      !pointerHeld("addToSelection", e) ||
+      pointerHeld("selectInside", e) ||
+      e.altKey ||
+      !base.includes(q.path[q.level] as string)
+    ) {
+      this.drillSeq = null
+      return
+    }
+    const step = addDrillStep(base, q.path, q.level)
+    q.level = step.level
+    q.skipDbl = true
+    ui.select(step.selection)
+    // The press would toggle the old level on release: the drill replaces that.
+    const d = this.drag
+    if (d?.kind === "press") {
+      d.target = step.id
+      d.toggle = false
+      d.collapse = false
+    }
+  }
+
   private onMultiClick(e: MouseEvent): void {
     const q = this.drillSeq
     if (!q?.enter || e.detail < 2) return
@@ -2625,6 +2709,8 @@ export class CanvasController {
       return
     }
     if (this.isOverlayTarget(e.target) || this.ui.getState().tool !== "select") return
+    // A quick ⇧-click is another add to the selection: it must not replace it by entering a layer.
+    if (e.shiftKey && !this.pathEdit) return
     if (this.pathEdit) {
       // Board 27 §5 (J5Vng): double-click an anchor toggles Sharp ⇄ Smooth.
       const pe = this.pathEdit

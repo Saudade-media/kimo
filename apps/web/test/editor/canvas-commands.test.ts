@@ -20,6 +20,7 @@ import {
   resizeOps,
   resizeStart,
   topLevel,
+  treeOrder,
 } from "../../src/canvas/commands"
 import {
   contentBox,
@@ -307,6 +308,37 @@ describe("reorder and clone drags", () => {
     expect(sequentialIndices(["a", "b", "c", "d"], ["d"], "b")).toEqual([1])
     expect(slotAnchor(["a", "b", "x", "c"], ["a", "c"], 2, new Set(["b"]))).toBeNull()
     expect(slotAnchor(["a", "b", "x", "c"], ["a"], 1, new Set(["b"]))).toBe("x")
+  })
+
+  test("a block from two auto-layout parents drops into one of them in document order", () => {
+    const s = createDocStore()
+    const row = { type: "frame", layout: { dir: "row" } }
+    const box = { type: "rect", w: 10, h: 10 }
+    s.apply(
+      [
+        { op: "insert", id: "Root000001", parent: null, node: { type: "frame" } },
+        { op: "insert", id: "CardOne001", parent: "Root000001", node: row },
+        { op: "insert", id: "CardTwo001", parent: "Root000001", node: row },
+        { op: "insert", id: "RectA10001", parent: "CardOne001", node: box },
+        { op: "insert", id: "RectA20001", parent: "CardOne001", node: box },
+        { op: "insert", id: "RectB10001", parent: "CardTwo001", node: box },
+        { op: "insert", id: "RectB20001", parent: "CardTwo001", node: box },
+      ],
+      { origin: "user" },
+    )
+    // Selected B1 then A1; dropped at the end of CardTwo, which already holds B1.
+    const ids = treeOrder(s, ["RectB10001", "RectA10001"])
+    expect(ids).toEqual(["RectA10001", "RectB10001"])
+    const idx = sequentialIndices(s.children("CardTwo001"), ids, null)
+    const ops: Op[] = ids.map((id, i) => ({
+      op: "move",
+      id,
+      parent: "CardTwo001",
+      index: idx[i] as number,
+    }))
+    expect(s.apply(ops, { origin: "user" }).ok).toBe(true)
+    expect(s.children("CardTwo001")).toEqual(["RectB20001", "RectA10001", "RectB10001"])
+    expect(s.children("CardOne001")).toEqual(["RectA20001"])
   })
 
   test("option-drag copies each subtree right after its original, same fields", () => {

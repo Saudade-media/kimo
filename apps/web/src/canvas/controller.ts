@@ -97,6 +97,7 @@ import {
   toLocal,
   toParentDelta,
   topLevel,
+  treeOrder,
 } from "./commands"
 import type {
   AgentCanvasProps,
@@ -174,6 +175,7 @@ import {
   toggleAnchorKind,
 } from "./path-tools"
 import { cssColor, runCss } from "./rich-text/css"
+import { mirrorFontFace } from "./rich-text/dom-fonts"
 import { createLiveText } from "./rich-text/live"
 import { type Attrs, runsOf, virtualNode } from "./rich-text/model"
 import type { RichEditGeometry, RunCss } from "./rich-text/RichTextEditor"
@@ -371,6 +373,11 @@ interface Reloc {
   parentBox: Rect | null
   /** Every moved node started as a flow child of an auto-layout parent. */
   flowStart: boolean
+  /**
+   * The nodes come from different parents and some are flow children: they move as one block
+   * into the frame under the pointer (`parent` is null), or onto the canvas over no frame.
+   */
+  mixed: boolean
   /** ⌥-drag: the ops move copies of the originals. */
   alt: boolean
   originals: string[]
@@ -806,7 +813,9 @@ export class CanvasController {
         this.schedule()
       }),
       this.ui.subscribe((s, prev) => this.onUi(s, prev)),
-      r.fonts.onFontLoaded(() => {
+      r.fonts.onFontLoaded((key) => {
+        // A text being edited picks up the face as soon as it arrives.
+        if (this.editing) mirrorFontFace(r.fonts, key.family, key.weight, key.style === "italic")
         this.fullPending = true
         this.schedule()
       }),
@@ -3300,23 +3309,38 @@ export class CanvasController {
     const sel = topLevel(this.store, ui.selection)
     const first = sel[0] ? this.store.getNode(sel[0]) : undefined
     if (!first) return
-    const parent = typeof first.parent === "string" ? first.parent : null
-    const ok = sel.every((id) => {
+    const parentOf = (id: string) => {
+      const p = this.store.getNode(id)?.parent
+      return typeof p === "string" ? p : null
+    }
+    const movable = (id: string) => {
       const n = this.store.getNode(id)
       return (
         !!n &&
         n.locked !== true &&
         !this.src.isVirtual(id) &&
         typeof n.at !== "string" &&
-        (n.parent ?? null) === parent &&
         !!layout.nodes.get(id)
       )
-    })
+    }
+    const parents = new Set(sel.map(parentOf))
+    // Layers from different parents move as a block only when some of them flow (free ones
+    // already move in place) and every parent is a real frame (not the page, not an instance).
+    const mixed =
+      parents.size > 1 &&
+      !alt &&
+      sel.every(movable) &&
+      [...parents].every((p) => p !== null && this.store.getNode(p)?.type !== "instance") &&
+      sel.some((id) => layout.nodes.get(id)?.inFlow === true)
+    const parent = mixed ? null : parentOf(sel[0] as string)
+    const ok = mixed || sel.every((id) => movable(id) && parentOf(id) === parent)
     if (!ok || (parent !== null && this.store.getNode(parent)?.type === "instance")) return
-    if (parent === null && !alt) return
-    const originals = this.store.children(parent).filter((id) => sel.includes(id))
+    if (parent === null && !alt && !mixed) return
+    const originals = mixed
+      ? treeOrder(this.store, sel)
+      : this.store.children(parent).filter((id) => sel.includes(id))
     const flowStart =
-      parent !== null && originals.every((id) => layout.nodes.get(id)?.inFlow === true)
+      (mixed || parent !== null) && originals.every((id) => layout.nodes.get(id)?.inFlow === true)
     let ids = originals
     let clone: Op[] = []
     let ask: Reloc["ask"] = null
@@ -3363,6 +3387,7 @@ export class CanvasController {
       parent,
       parentBox: parent ? (layout.nodes.get(parent)?.world ?? null) : null,
       flowStart,
+      mixed,
       alt,
       originals,
       ids,
@@ -3372,7 +3397,9 @@ export class CanvasController {
       starts,
       noTarget,
       moving: new Set(ids),
-      ancestors: new Set(parent ? pathOf(this.store, parent) : []),
+      ancestors: new Set(
+        [...parents].flatMap((p) => (p && (mixed || p === parent) ? pathOf(this.store, p) : [])),
+      ),
       size: { w: startBox?.w ?? 0, h: startBox?.h ?? 0 },
       dwell: null,
       pointer: null,
@@ -3410,7 +3437,11 @@ export class CanvasController {
     const meta = e.metaKey || e.ctrlKey
     let mode: NonNullable<Reloc["last"]>["mode"] = "free"
     let target: string | null = r.parent
-    if (r.parent !== null && meta) mode = r.flowStart ? "absolute" : "free"
+    if (r.mixed) {
+      // A block from several parents: into the frame under the pointer, or onto the canvas.
+      target = this.relocTarget(w, p, r)
+      mode = "reparent"
+    } else if (r.parent !== null && meta) mode = r.flowStart ? "absolute" : "free"
     else if (r.parent !== null) {
       const t = this.relocTarget(w, p, r)
       const inside = !r.parentBox || insideRect(r.parentBox, w)
@@ -3477,8 +3508,9 @@ export class CanvasController {
     const last = r.last
     if (last?.mode !== "flow" || !last.flow || last.target === null) return
     const target = last.target
-    const base =
-      target === r.parent ? r.base : this.store.children(target).filter((id) => !r.moving.has(id))
+    // Every sibling as it stands: `sequentialIndices` takes out moving ones already in `target`
+    // (a block from several parents can include some of its children).
+    const base = target === r.parent ? r.base : this.store.children(target)
     const flowIds = last.flow.children.map((c) => c.id)
     const anchor = slotAnchor(base, flowIds, last.slot, r.moving)
     const idx = sequentialIndices(base, r.ids, anchor)
@@ -3582,7 +3614,7 @@ export class CanvasController {
       }
     } else if (d?.kind === "move" && d.reloc) {
       const r = d.reloc
-      if (r.flowStart)
+      if (r.flowStart && !r.mixed)
         hint = { icon: "move", text: `Outside → to Canvas · ${modKeyHint()} keeps it absolute` }
       const last = r.last
       if (last?.mode === "flow" && last.flow) {
@@ -5073,6 +5105,7 @@ export class CanvasController {
         attrs.fill !== undefined
           ? attrs.fill
           : defaultTextFill({ ...(this.header as object), nodes: {} } as never)
+      mirrorFontFace(this.renderer.fonts, style.fontFamily, style.fontWeight, style.italic)
       return runCss(style, fixedColor ?? cssColor(deep(fill)) ?? "#000000")
     }
   }

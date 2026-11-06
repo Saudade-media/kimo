@@ -1279,6 +1279,12 @@ export class OverlayPainter {
 
     // Path edit mode replaces the selection chrome with the path's own anchors.
     if (selQuad && !overlay.pathEdit) {
+      // A multi-selection outlines each layer under the shared box.
+      if (layout && overlay.selection.length > 1)
+        for (const id of overlay.selection) {
+          const lq = this.quad(layout, id, v)
+          if (lq) this.outline(canvas, lq, OVERLAY_SPEC.hoverWidth, sel, c)
+        }
       const q = selQuad
       this.outline(canvas, q, OVERLAY_SPEC.outlineWidth, sel, c)
       if (overlay.handles !== false) for (const p of q) this.handle(canvas, p, selTheme, c)

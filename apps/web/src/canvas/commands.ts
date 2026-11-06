@@ -53,6 +53,23 @@ export function topLevel(doc: DocReader, ids: readonly string[]): string[] {
   )
 }
 
+/** `ids` in document order: depth first, each parent's children in their order. */
+export function treeOrder(doc: DocReader, ids: readonly string[]): string[] {
+  const key = (id: string) =>
+    pathOf(doc, id).map((a) => {
+      const p = doc.getNode(a)?.parent
+      return doc.children(typeof p === "string" ? p : null).indexOf(a)
+    })
+  const keys = new Map(ids.map((id) => [id, key(id)]))
+  return [...ids].sort((a, b) => {
+    const ka = keys.get(a) as number[]
+    const kb = keys.get(b) as number[]
+    for (let i = 0; i < Math.min(ka.length, kb.length); i++)
+      if (ka[i] !== kb[i]) return (ka[i] as number) - (kb[i] as number)
+    return ka.length - kb.length
+  })
+}
+
 /** World → parent-local delta for a node (parent rotation/flip undone). */
 export function toParentDelta(layout: LayoutResult, parent: unknown, d: Point): Point {
   const t = typeof parent === "string" ? layout.nodes.get(parent)?.transform : undefined

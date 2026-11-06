@@ -2668,6 +2668,8 @@ export class CanvasController {
       return
     }
     if (this.isOverlayTarget(e.target) || this.ui.getState().tool !== "select") return
+    // A quick ⇧-click is another add to the selection: it must not replace it by entering a layer.
+    if (e.shiftKey && !this.pathEdit) return
     if (this.pathEdit) {
       // Board 27 §5 (J5Vng): double-click an anchor toggles Sharp ⇄ Smooth.
       const pe = this.pathEdit

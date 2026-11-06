@@ -51,3 +51,22 @@ export function drillStep(
   const next = Math.min(level + 1, last)
   return { level: next, id: path[next] as string, atLeaf: level >= last }
 }
+
+/**
+ * ⇧ multi-click drilling: like `drillStep`, but `path[level]` is one layer of a larger
+ * `selection`. It is swapped in place for the next level down; the other layers stay selected.
+ */
+export function addDrillStep(
+  selection: readonly string[],
+  path: readonly string[],
+  level: number,
+): { level: number; id: string; atLeaf: boolean; selection: string[] } {
+  const step = drillStep(path, level)
+  const from = path[level]
+  let next = [...selection]
+  if (step.id !== from)
+    next = selection.includes(step.id)
+      ? selection.filter((s) => s !== from)
+      : selection.map((s) => (s === from ? step.id : s))
+  return { ...step, selection: next }
+}

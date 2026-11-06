@@ -14,6 +14,22 @@ the dates are those of the milestone commits.
 
 ## [Unreleased]
 
+## [1.2.1-beta.6] - 2026-11-06
+
+Clearer multi-selection, and text keeps its font while you edit it. For installs on the Beta
+channel.
+
+### Changed
+
+- With several layers selected, each one is outlined inside the selection box.
+
+### Fixed
+
+- Layers selected from different auto-layout frames move together. Drop them in a frame or on
+  the canvas.
+- Text keeps its font while you edit it. Before, a web font showed as the default font until you
+  finished.
+
 ## [1.2.1-beta.5] - 2026-11-06
 
 Selection fixes, per-corner radius and layer rename in the right panel. For installs on the Beta

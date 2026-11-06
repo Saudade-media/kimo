@@ -1,3 +1,4 @@
+import { t } from "@kimo/i18n"
 import { CircleDollarSign } from "lucide-react"
 import type { ComponentPropsWithRef } from "react"
 import { cx } from "../internal/util"
@@ -47,14 +48,18 @@ export function CostWarningCard({
           className="kimo-cost-warning__button kimo-cost-warning__button--send"
           onClick={onSendAnyway}
         >
-          <span className="kimo-cost-warning__label">Send anyway</span>
+          <span className="kimo-cost-warning__label">
+            {t("ui.pkg.cost.warning.card.costwarningcard.send-anyway")}
+          </span>
         </button>
         <button
           type="button"
           className="kimo-cost-warning__button kimo-cost-warning__button--edit"
           onClick={onEditMessage}
         >
-          <span className="kimo-cost-warning__label">Edit message</span>
+          <span className="kimo-cost-warning__label">
+            {t("ui.pkg.cost.warning.card.costwarningcard.edit-message")}
+          </span>
         </button>
         <span className="kimo-cost-warning__spacer" aria-hidden="true" />
         {onSettings && (

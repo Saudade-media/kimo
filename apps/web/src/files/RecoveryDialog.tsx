@@ -7,6 +7,7 @@
 import { Dialog, DialogScrim, RecoveryItem, Toast } from "@kimo/ui"
 import { LifeBuoy } from "lucide-react"
 import { useCallback, useEffect, useState } from "react"
+import { t, tn } from "../lib/i18n"
 import type { RecoveryCandidate, RecoveryChoice } from "../platform/contract"
 import { displayPath } from "../platform/format"
 import type { FileDocumentSession, FileSessionManager } from "../platform/session"
@@ -40,10 +41,13 @@ function RecoveryDialogView({
       data-pen="Fyy0m"
       className="kimo-files-recovery"
       icon={<LifeBuoy />}
-      title="Recover unsaved changes?"
-      description={`Kimo quit unexpectedly while ${n} file${n === 1 ? "" : "s"} had unsaved edits. The recovery files stay in ${dir} until you choose.`}
+      title={t("ui.files.recoverydialog.1")}
+      description={t("ui.files.recovery.desc", {
+        files: tn("ui.files.recovery.fileOne", "ui.files.recovery.file", n),
+        dir,
+      })}
       footnote="Kept for 30 days"
-      tertiary={{ label: "Discard all", onClick: onDiscardAll }}
+      tertiary={{ label: t("ui.files.recoverydialog.discard-all"), onClick: onDiscardAll }}
       cancelLabel="Decide later"
       confirmLabel="Restore all"
       onCancel={onDecideLater}

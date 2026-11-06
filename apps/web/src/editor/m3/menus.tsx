@@ -5,6 +5,7 @@
  */
 import { MenuDense, MenuDivider, type PlacementOptions, type PopoverAnchor } from "@kimo/ui"
 import { useState } from "react"
+import { t } from "../../lib/i18n"
 import { Icon } from "../../lib/icons"
 import { keyHint } from "../kbd"
 import {
@@ -97,7 +98,7 @@ export function InstanceMenu({
   return (
     <MenuDense
       width={240}
-      label="Instance"
+      label={t("ui.editor.m3.menus.20")}
       anchor={anchor}
       placement={placement}
       onClose={onClose}
@@ -106,34 +107,34 @@ export function InstanceMenu({
     >
       <M3MenuItem
         icon="arrow-up-right"
-        label="Go to main component"
+        label={t("ui.editor.m3.menus.19")}
         meta={keyHint("goToMain", "⌥⏎")}
         onSelect={run(() => goToMain(m3, id))}
       />
       <M3MenuItem
         icon="scan"
-        label="Select all instances"
+        label={t("ui.editor.m3.menus.18")}
         meta={String(count)}
         onSelect={run(() => selectAllInstances(m3, id))}
       />
       <MenuDivider />
       <M3MenuItem
         icon="component"
-        label="Create derived component"
+        label={t("ui.editor.m3.menus.17")}
         meta={keyHint("createComponent", "⌥⌘K")}
         disabled={!real || !!n?.component}
         onSelect={run(() => createComponent(m3, [id], null))}
       />
       <M3MenuItem
         icon="repeat"
-        label="Swap instance…"
+        label={t("ui.editor.m3.menus.16")}
         disabled={!real}
         onSelect={() => setSwap(true)}
       />
       <MenuDivider />
       <M3MenuItem
         icon="rotate-ccw"
-        label="Reset all overrides"
+        label={t("ui.editor.m3.menus.15")}
         disabled={!real}
         onSelect={run(() =>
           m3.run({ cmd: "resetAllOverrides", instance: id }, "Reset all overrides"),
@@ -141,7 +142,7 @@ export function InstanceMenu({
       />
       <M3MenuItem
         icon="unlink"
-        label="Detach instance"
+        label={t("ui.editor.m3.menus.14")}
         meta={keyHint("detachInstance", "⌥⌘B")}
         disabled={!real}
         onSelect={run(() => void detachInstance(m3, id))}
@@ -187,7 +188,7 @@ export function ChildMenu({
         m3={m3}
         instance={id}
         anchor={anchor}
-        title="Replace with component"
+        title={t("ui.editor.m3.menus.13")}
         onPick={(of) => {
           onClose()
           replaceWithComponent(m3, loc?.instance ? id : `${instance}/${path}`, of)
@@ -203,7 +204,7 @@ export function ChildMenu({
   return (
     <MenuDense
       width={260}
-      label="Layer in instance"
+      label={t("ui.editor.m3.menus.12")}
       anchor={anchor}
       onClose={onClose}
       autoFocus
@@ -212,13 +213,13 @@ export function ChildMenu({
       <MenuLabel>{`${name} · in ${nameOf(top)}`}</MenuLabel>
       <M3MenuItem
         icon="replace"
-        label="Replace with component…"
+        label={t("ui.editor.m3.menus.11")}
         disabled={!instance || path === null || !!owned}
         onSelect={() => setReplace(true)}
       />
       <M3MenuItem
         icon="copy-plus"
-        label="Replace with selection"
+        label={t("ui.editor.m3.menus.10")}
         disabled={!instance || path === null || !!owned || selected === null}
         onSelect={run(() => {
           if (instance && path !== null && selected)
@@ -227,7 +228,7 @@ export function ChildMenu({
       />
       <M3MenuItem
         icon="eye-off"
-        label="Hide layer"
+        label={t("ui.editor.m3.menus.9")}
         meta="⌫"
         disabled={!loc?.instance}
         onSelect={run(() => {
@@ -238,14 +239,17 @@ export function ChildMenu({
       <MenuDivider />
       <M3MenuItem
         icon="rotate-ccw"
-        label={`Reset overrides on ${name}`}
+        label={t("ui.editor.m3.menus.resetOverrides", { name })}
         disabled={!instance || path === null}
         onSelect={run(() => {
           if (instance && path !== null)
-            m3.run({ cmd: "resetOverride", instance, path }, `Reset overrides on ${name}`)
+            m3.run(
+              { cmd: "resetOverride", instance, path },
+              t("ui.editor.m3.menus.resetOverrides", { name }),
+            )
         })}
       />
-      <M3MenuItem icon="trash-2" label="Delete (not in instances)" disabled />
+      <M3MenuItem icon="trash-2" label={t("ui.editor.m3.menus.8")} disabled />
     </MenuDense>
   )
 }
@@ -267,20 +271,30 @@ export function AddPropMenu({
   return (
     <MenuDense
       width={200}
-      label="Add prop"
+      label={t("ui.editor.m3.menus.7")}
       anchor={anchor}
       placement={{ side: "bottom", align: "end", offset: 4 }}
       onClose={onClose}
       autoFocus
       data-testid="add-prop-menu"
     >
-      <MenuLabel>Add prop</MenuLabel>
-      <M3MenuItem icon="type" label="Text" meta="T" onSelect={pick("text")} />
-      <M3MenuItem icon="toggle-left" label="Boolean" meta="B" onSelect={pick("boolean")} />
-      <M3MenuItem icon="list" label="Enum" meta="E" onSelect={pick("enum")} />
-      <M3MenuItem icon="diamond" label="Instance swap" meta="I" onSelect={pick("instance")} />
+      <MenuLabel>{t("ui.editor.m3.menus.t1")}</MenuLabel>
+      <M3MenuItem icon="type" label={t("ui.editor.m3.menus.6")} meta="T" onSelect={pick("text")} />
+      <M3MenuItem
+        icon="toggle-left"
+        label={t("ui.editor.m3.menus.5")}
+        meta="B"
+        onSelect={pick("boolean")}
+      />
+      <M3MenuItem icon="list" label={t("ui.editor.m3.menus.4")} meta="E" onSelect={pick("enum")} />
+      <M3MenuItem
+        icon="diamond"
+        label={t("ui.editor.m3.menus.3")}
+        meta="I"
+        onSelect={pick("instance")}
+      />
       <MenuDivider />
-      <M3MenuItem icon="square-dashed" label="Slot (mark a frame)" onSelect={pick("slot")} />
+      <M3MenuItem icon="square-dashed" label={t("ui.editor.m3.menus.2")} onSelect={pick("slot")} />
     </MenuDense>
   )
 }
@@ -324,7 +338,7 @@ export function TargetMenu({
       {!frames && (
         <M3MenuItem
           icon="component"
-          label="Root"
+          label={t("ui.editor.m3.menus.1")}
           onSelect={() => {
             onClose()
             onPick(component)

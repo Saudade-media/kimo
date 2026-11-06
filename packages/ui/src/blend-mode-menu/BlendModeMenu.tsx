@@ -1,3 +1,4 @@
+import { type MessageKey, t } from "@kimo/i18n"
 import { Fragment, useRef } from "react"
 import { MenuDense, MenuDivider, MenuItemDense } from "../menu-dense/MenuDense"
 import type { PlacementOptions } from "../popover/position"
@@ -26,43 +27,46 @@ export type LayerBlendMode =
   | "luminosity"
 
 /** Menu groups in board 09 order (`YFOTX`), separated by dividers. */
-export const BLEND_MODE_GROUPS: readonly (readonly { value: LayerBlendMode; label: string }[])[] = [
+export const BLEND_MODE_GROUPS: readonly (readonly {
+  value: LayerBlendMode
+  label: MessageKey
+}[])[] = [
   [
-    { value: "normal", label: "Normal" },
-    { value: "pass-through", label: "Pass through" },
+    { value: "normal", label: "ui.blend.normal" },
+    { value: "pass-through", label: "ui.blend.passThrough" },
   ],
   [
-    { value: "darken", label: "Darken" },
-    { value: "multiply", label: "Multiply" },
-    { value: "linear-burn", label: "Plus darker" },
-    { value: "color-burn", label: "Color burn" },
+    { value: "darken", label: "ui.blend.darken" },
+    { value: "multiply", label: "ui.blend.multiply" },
+    { value: "linear-burn", label: "ui.blend.linearBurn" },
+    { value: "color-burn", label: "ui.blend.colorBurn" },
   ],
   [
-    { value: "lighten", label: "Lighten" },
-    { value: "screen", label: "Screen" },
-    { value: "linear-dodge", label: "Plus lighter" },
-    { value: "color-dodge", label: "Color dodge" },
+    { value: "lighten", label: "ui.blend.lighten" },
+    { value: "screen", label: "ui.blend.screen" },
+    { value: "linear-dodge", label: "ui.blend.linearDodge" },
+    { value: "color-dodge", label: "ui.blend.colorDodge" },
   ],
   [
-    { value: "overlay", label: "Overlay" },
-    { value: "soft-light", label: "Soft light" },
-    { value: "hard-light", label: "Hard light" },
+    { value: "overlay", label: "ui.blend.overlay" },
+    { value: "soft-light", label: "ui.blend.softLight" },
+    { value: "hard-light", label: "ui.blend.hardLight" },
   ],
   [
-    { value: "difference", label: "Difference" },
-    { value: "exclusion", label: "Exclusion" },
+    { value: "difference", label: "ui.blend.difference" },
+    { value: "exclusion", label: "ui.blend.exclusion" },
   ],
   [
-    { value: "hue", label: "Hue" },
-    { value: "saturation", label: "Saturation" },
-    { value: "color", label: "Color" },
-    { value: "luminosity", label: "Luminosity" },
+    { value: "hue", label: "ui.blend.hue" },
+    { value: "saturation", label: "ui.blend.saturation" },
+    { value: "color", label: "ui.blend.color" },
+    { value: "luminosity", label: "ui.blend.luminosity" },
   ],
 ]
 
 /** Display label of a mode (`linear-burn` → "Plus darker"). */
 export function blendModeLabel(mode: LayerBlendMode): string {
-  for (const g of BLEND_MODE_GROUPS) for (const m of g) if (m.value === mode) return m.label
+  for (const g of BLEND_MODE_GROUPS) for (const m of g) if (m.value === mode) return t(m.label)
   return mode
 }
 
@@ -110,7 +114,7 @@ export function BlendModeMenu({
   }
   return (
     <MenuDense
-      label="Blend mode"
+      label={t("ui.blend.menuLabel")}
       width={width}
       anchor={anchor}
       placement={placement}
@@ -123,7 +127,7 @@ export function BlendModeMenu({
           {g.map((m) => (
             <MenuItemDense
               key={m.value}
-              label={m.label}
+              label={t(m.label)}
               checked={m.value === value}
               onHighlight={() => onPreview?.(m.value)}
               onSelect={() => {

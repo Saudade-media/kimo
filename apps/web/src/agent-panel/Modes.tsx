@@ -10,6 +10,7 @@
 import { AgentMark, CompactButton, type Persona, personaVar, SegmentedText } from "@kimo/ui"
 import { Check, LayoutGrid, Lock, Repeat, Square, Undo2 } from "lucide-react"
 import { type CSSProperties, useState } from "react"
+import { t, tn } from "../lib/i18n"
 import type { AgentPanelControllerExt, ModeAgentRow, ModeRunView, PlanLogRow } from "./controller"
 import { costLabel } from "./format"
 import { useAgentPanelState } from "./hooks"
@@ -24,16 +25,16 @@ const usd = (v: number | null) => costLabel({ costUsd: v, billing: "api" })
 const tok = (n: number) => (n >= 1000 ? `${Math.round(n / 1000)}k tok` : `${n} tok`)
 
 function statusOf(a: ModeAgentRow): { label: string; tone: "done" | "neutral" | "danger" } {
-  if (a.discarded) return { label: "Discarded", tone: "neutral" }
+  if (a.discarded) return { label: t("ui.agent.panel.modes.discarded"), tone: "neutral" }
   switch (a.state) {
     case "done":
-      return { label: "Done", tone: "done" }
+      return { label: t("settings.about.done"), tone: "done" }
     case "error":
-      return { label: "Error", tone: "danger" }
+      return { label: t("ui.agent.panel.modes.error"), tone: "danger" }
     case "stopped":
-      return { label: "Stopped", tone: "neutral" }
+      return { label: t("ui.agent.panel.modes.stopped"), tone: "neutral" }
     case "paused":
-      return { label: "Paused", tone: "neutral" }
+      return { label: t("ui.agent.panel.modes.paused"), tone: "neutral" }
     default:
       return { label: a.ops === 0 ? "Placeholder" : "Working", tone: "neutral" }
   }
@@ -83,10 +84,11 @@ export function PlanCard({
   controller: AgentPanelControllerExt
   run: ModeRunView
 }) {
-  const title =
-    run.mode === "split"
-      ? `Split · ${run.agents.length} agents`
-      : `Side by side · ${run.agents.length} agents`
+  const title = tn(
+    run.mode === "split" ? "ui.agent.panel.modes.splitOne" : "ui.agent.panel.modes.sideBySideOne",
+    run.mode === "split" ? "ui.agent.panel.modes.split" : "ui.agent.panel.modes.sideBySide",
+    run.agents.length,
+  )
   return (
     <section className="agent-plan" data-testid="agent-plan" data-mode={run.mode}>
       <div className="agent-plan__head">
@@ -100,7 +102,7 @@ export function PlanCard({
         {run.running && (
           <button type="button" className="agent-plan__stop" onClick={() => controller.stopAll()}>
             <Square className="agent-plan__stop-icon" aria-hidden="true" />
-            <span className="agent-plan__stop-label">Stop all</span>
+            <span className="agent-plan__stop-label">{t("ui.agent.panel.modes.t1")}</span>
           </button>
         )}
       </div>
@@ -190,10 +192,10 @@ function VariantActions({
       {!compact && <StatusDot label={showCost ? `Done · ${usd(cost)}` : "Done"} tone="done" />}
       {!compact && <span className="agent-plan__spacer" aria-hidden="true" />}
       <CompactButton variant="ghost" height={26} padX={10} onClick={onDiscard}>
-        Discard
+        {t("ui.agent.panel.modes.4")}
       </CompactButton>
       <CompactButton variant="primary" height={26} padX={10} icon={<Check />} onClick={onKeep}>
-        Keep
+        {t("ui.agent.panel.modes.5")}
       </CompactButton>
     </div>
   )
@@ -210,6 +212,7 @@ export function ReviewCard({
   const it = run.iterate
   const [steer, setSteer] = useState("")
   if (!it) return null
+  const disabled = run.running || it.pass === 0
   const passes = Array.from({ length: it.of + 1 }, (_, i) => i)
   return (
     <section className="agent-review" data-testid="agent-review">
@@ -217,7 +220,9 @@ export function ReviewCard({
         <AgentMark size={24} state={it.reviewing ? "done" : "working"} />
         <div className="agent-review__text">
           <span className="agent-review__title">
-            {it.reviewing ? `Pass ${it.pass} ready for review` : `Pass ${it.pass} running…`}
+            {it.reviewing
+              ? t("ui.agent.panel.modes.passReady", { pass: String(it.pass) })
+              : t("ui.agent.panel.modes.passRunning", { pass: String(it.pass) })}
           </span>
           <span className="agent-review__sub">
             “{it.goal}” · {it.changes} changes
@@ -226,11 +231,11 @@ export function ReviewCard({
         </div>
         <SegmentedText
           className="agent-seg-sm"
-          label="Before / After"
+          label={t("ui.agent.panel.modes.3")}
           // Pass 0 (the original) has nothing to compare; a running pass can't be toggled.
           options={[
-            { value: "before", label: "Before", disabled: run.running || it.pass === 0 },
-            { value: "after", label: "After", disabled: run.running || it.pass === 0 },
+            { value: "before", label: t("ui.agent.panel.modes.before"), disabled },
+            { value: "after", label: t("ui.agent.panel.modes.after"), disabled },
           ]}
           value={it.view}
           onChange={(v) => void controller.setIterateView(v)}
@@ -278,8 +283,8 @@ export function ReviewCard({
       <div className="agent-review__next">
         <input
           className="agent-review__steer"
-          placeholder="Steer the next pass (optional), e.g. “less contrast on the button”"
-          aria-label="Steer the next pass"
+          placeholder={t("ui.agent.panel.modes.2")}
+          aria-label={t("ui.agent.panel.modes.1")}
           value={steer}
           onChange={(e) => setSteer(e.currentTarget.value)}
           disabled={!it.reviewing}
@@ -293,7 +298,7 @@ export function ReviewCard({
             disabled={!it.reviewing}
             onClick={() => void controller.review({ action: "revert", toPass: it.pass - 1 })}
           >
-            Undo pass
+            {t("ui.agent.panel.modes.6")}
           </CompactButton>
           <span className="agent-plan__spacer" aria-hidden="true" />
           <CompactButton
@@ -334,11 +339,22 @@ export function ReviewCard({
 function modeSummaryLabel(run: ModeRunView): string {
   const it = run.iterate
   if (run.mode === "iterate" && it)
-    return `Iterate · pass ${it.pass} of ${it.of}${it.reviewing ? " · review" : ""}`
-  const name =
-    run.mode === "split" ? "Split" : run.mode === "side-by-side" ? "Side by side" : "Iterate"
-  const n = run.agents.length
-  return `${name} · ${n} ${n === 1 ? "agent" : "agents"} · ${run.done} done`
+    return t(
+      it.reviewing ? "ui.agent.panel.modes.iteratePassReview" : "ui.agent.panel.modes.iteratePass",
+      { pass: String(it.pass), of: String(it.of) },
+    )
+  const name = t(
+    run.mode === "split"
+      ? "ui.agent.panel.modes.split"
+      : run.mode === "side-by-side"
+        ? "ui.agent.panel.modes.sideBySide"
+        : "ui.agent.panel.modes.iterate",
+    { n: String(run.agents.length) },
+  )
+  return tn("ui.agent.panel.modes.summaryOne", "ui.agent.panel.modes.summary", run.agents.length, {
+    name,
+    done: String(run.done),
+  })
 }
 
 /** Mode Summary (jDKaM): h 28, gap 8, padding [0, 10, 0, 6], bg-app, 1 px border, pill. */
@@ -369,7 +385,7 @@ function ModeSummaryPill({
       {showCost && <span className="agent-mode-summary__cost">{usd(run.costUsd)}</span>}
       {run.running && onStopAll && (
         <button type="button" className="agent-mode-summary__stop" onClick={onStopAll}>
-          Stop all
+          {t("ui.agent.panel.modes.7")}
         </button>
       )}
     </div>

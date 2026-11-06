@@ -1,3 +1,4 @@
+import { t } from "@kimo/i18n"
 import { CircleAlert, ExternalLink, Info, Link, Unlink } from "lucide-react"
 import { useEffect, useId, useRef, useState } from "react"
 import { Button } from "../button/Button"
@@ -123,7 +124,7 @@ export function LinkPopover({
     <Popover
       {...rest}
       className={["kimo-link-popover", className].filter(Boolean).join(" ")}
-      label="Link"
+      label={t("ui.pkg.link.popover.linkpopover.link")}
       initialFocus="first"
       onClose={onClose}
       headerLeading={
@@ -136,7 +137,7 @@ export function LinkPopover({
     >
       <Input
         icon={<Link />}
-        aria-label="Link URL"
+        aria-label={t("ui.pkg.link.popover.linkpopover.link-url")}
         placeholder="https://"
         value={text}
         aria-invalid={invalid || undefined}

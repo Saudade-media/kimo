@@ -28,6 +28,7 @@
 import { Button, Dialog, DialogScrim, IconButton, Input, useFocusTrap } from "@kimo/ui"
 import { type ReactNode, useCallback, useEffect, useRef, useState } from "react"
 import { createPortal } from "react-dom"
+import { t, t as tr } from "../../lib/i18n"
 import { Icon } from "../../lib/icons"
 import { priceFor, priceLine, readyMeta } from "../cloud/view"
 import { defaultWorkspaceName } from "../cloud/workspace-view"
@@ -176,7 +177,10 @@ export function RelayWizard(props: RelayWizardProps) {
         await services.copy(text)
         toast({ tone: "success", icon: "copy", text: what })
       } catch {
-        toast({ tone: "danger", text: "Couldn't copy to the clipboard" })
+        toast({
+          tone: "danger",
+          text: t("ui.multiplayer.ui.relaywizard.couldn-t-copy-to-the-clipboard"),
+        })
       }
     },
     [services, toast],
@@ -286,7 +290,11 @@ export function RelayWizard(props: RelayWizardProps) {
       hostname: reach === "named" ? hostname.trim().toLowerCase() : null,
     })
     if (state.status === "running") setLocalView("running")
-    else toast({ tone: "danger", text: `Couldn't start the relay. ${state.error ?? ""}`.trim() })
+    else
+      toast({
+        tone: "danger",
+        text: tr("ui.mp.relay.startFailed", { error: state.error ?? "" }).trim(),
+      })
   }
 
   const cloudflareLogin = async () => {
@@ -483,7 +491,9 @@ export function RelayWizard(props: RelayWizardProps) {
     } catch (e) {
       toast({
         tone: "danger",
-        text: `Couldn't save the relay: ${e instanceof Error ? e.message : e}`,
+        text: tr("ui.mp.relay.saveFailed", {
+          message: e instanceof Error ? e.message : String(e),
+        }),
       })
     } finally {
       setSaving(false)
@@ -536,7 +546,9 @@ export function RelayWizard(props: RelayWizardProps) {
     } catch (e) {
       toast({
         tone: "danger",
-        text: `Couldn't save Kimo Cloud: ${e instanceof Error ? e.message : e}`,
+        text: tr("ui.mp.relay.saveCloudFailed", {
+          message: e instanceof Error ? e.message : String(e),
+        }),
       })
     } finally {
       savingCloud.current = false
@@ -655,7 +667,7 @@ export function RelayWizard(props: RelayWizardProps) {
       disabled={disabled}
       onClick={to}
     >
-      Back
+      {tr("ui.multiplayer.ui.relaywizard.39")}
     </Button>
   )
   const primary = (
@@ -692,7 +704,7 @@ export function RelayWizard(props: RelayWizardProps) {
   )
 
   const urlField = (help?: string, placeholder?: string) => (
-    <Field label="Relay URL" {...(help ? { help } : {})}>
+    <Field label={tr("ui.multiplayer.ui.relaywizard.38")} {...(help ? { help } : {})}>
       {(id) => (
         <RelayUrlInput
           id={id}
@@ -721,7 +733,9 @@ export function RelayWizard(props: RelayWizardProps) {
       },
       {
         value: "docker",
-        desc: "A ready docker run command with a volume filled in, origins added for you.",
+        desc: t(
+          "ui.multiplayer.ui.relaywizard.a-ready-docker-run-command-with-a-volume-filled-in-origins-added-for-you",
+        ),
         badges: cloud ? ["Free"] : ["Always on"],
       },
       {
@@ -738,7 +752,7 @@ export function RelayWizard(props: RelayWizardProps) {
           : "Deploy on Railway from the Kimo template, paste the variables, then the URL.",
         badges: ["Free tier"],
       },
-      { value: "existing", desc: "Enter its URL.", badges: [] },
+      { value: "existing", desc: t("ui.multiplayer.ui.relaywizard.enter-its-url"), badges: [] },
     ]
     const selfRows = options.map((o) => (
       <RadioRow
@@ -782,7 +796,7 @@ export function RelayWizard(props: RelayWizardProps) {
         <div
           className="rw-options"
           role="radiogroup"
-          aria-label="Where the relay runs"
+          aria-label={tr("ui.multiplayer.ui.relaywizard.37")}
           style={{ display: "contents" }}
           onKeyDown={(e) => {
             if ((e.target as HTMLElement).getAttribute("role") !== "radio") return
@@ -806,10 +820,10 @@ export function RelayWizard(props: RelayWizardProps) {
               <Icon name="cloud" size={16} />
             </span>
             <span className="rw-text">
-              <span className="rw-option__title">Kimo Cloud</span>
+              <span className="rw-option__title">{tr("ui.multiplayer.ui.relaywizard.t12")}</span>
               <span className="rw-option__desc">
                 {ready && account
-                  ? `Signed in as ${account.account.email}. Your plan is active.`
+                  ? tr("ui.mp.relay.signedIn", { email: account.account.email })
                   : "We run the relay for you. Sign in, subscribe, share."}
               </span>
             </span>
@@ -817,7 +831,7 @@ export function RelayWizard(props: RelayWizardProps) {
               <Badge className="rw-badge">Active</Badge>
             ) : (
               <>
-                <Badge className="rw-badge">No setup</Badge>
+                <Badge className="rw-badge">{tr("ui.multiplayer.ui.relaywizard.t11")}</Badge>
                 {month && <Badge className="rw-badge">{priceLine(month)}</Badge>}
               </>
             )}
@@ -837,18 +851,12 @@ export function RelayWizard(props: RelayWizardProps) {
               <Icon name={hostOpen ? "chevron-down" : "chevron-right"} size={16} />
             </span>
             <span className="rw-text">
-              <span className="rw-option__title">Host your own, free</span>
-              <span className="rw-option__desc">
-                This computer, Docker, Fly.io, Railway or a relay you have
-              </span>
+              <span className="rw-option__title">{tr("ui.multiplayer.ui.cloudshare.t2")}</span>
+              <span className="rw-option__desc">{tr("ui.multiplayer.ui.relaywizard.40")}</span>
             </span>
           </button>
           {hostOpen && selfRows}
-          {hostOpen && web && (
-            <Note icon="info">
-              A browser tab can't run a server. Get the desktop app to host from this computer.
-            </Note>
-          )}
+          {hostOpen && web && <Note icon="info">{tr("ui.multiplayer.ui.relaywizard.41")}</Note>}
         </div>
       )
       footer = (
@@ -874,22 +882,18 @@ export function RelayWizard(props: RelayWizardProps) {
           <div
             className="rw-options"
             role="radiogroup"
-            aria-label="Where the relay runs"
+            aria-label={tr("ui.multiplayer.ui.relaywizard.36")}
             style={{ display: "contents" }}
             onKeyDown={(e) => radioKeys(e, options, path, (v) => setPath(v as RelayPath))}
           >
             {selfRows}
           </div>
-          {web && (
-            <Note icon="info">
-              A browser tab can't run a server. Get the desktop app to host from this computer.
-            </Note>
-          )}
+          {web && <Note icon="info">{tr("ui.multiplayer.ui.relaywizard.42")}</Note>}
         </>
       )
       footer = (
         <>
-          <span className="rw-footnote">Kimo runs no servers for you</span>
+          <span className="rw-footnote">{tr("ui.multiplayer.ui.relaywizard.t9")}</span>
           <Spacer />
           {primary("Continue", () => goSetup(), { name: "continue" })}
         </>
@@ -929,21 +933,31 @@ export function RelayWizard(props: RelayWizardProps) {
         c?.bun ? (
           <CheckRow
             status="ok"
-            label={`Bun${c.bun.version ? ` ${c.bun.version}` : ""}`}
+            label={tr("ui.mp.relay.bun", {
+              version: c.bun.version ? ` ${c.bun.version}` : "",
+            })}
             meta={tildePath(c.bun.path)}
           />
         ) : (
-          <CheckRow status="warning" label="Bun" meta="not found on PATH" />
+          <CheckRow
+            status="warning"
+            label={tr("ui.multiplayer.ui.relaywizard.35")}
+            meta="not found on PATH"
+          />
         )
       const portRow = (c: LocalChecks | null) =>
         c?.bun ? (
           c.port ? (
-            <CheckRow status="ok" label={`Port ${c.port} free`} />
+            <CheckRow status="ok" label={tr("ui.mp.relay.portFree", { port: String(c.port) })} />
           ) : (
-            <CheckRow status="failed" label="Port 8787 free" meta="8787 to 8806 are taken" />
+            <CheckRow
+              status="failed"
+              label={tr("ui.multiplayer.ui.relaywizard.34")}
+              meta="8787 to 8806 are taken"
+            />
           )
         ) : (
-          <CheckRow status="pending" label="Port 8787 free" />
+          <CheckRow status="pending" label={tr("ui.multiplayer.ui.relaywizard.33")} />
         )
       const cfRow = (c: LocalChecks | null) =>
         c?.bun && c.cloudflared ? (
@@ -969,9 +983,9 @@ export function RelayWizard(props: RelayWizardProps) {
             <Icon name="triangle-alert" size={16} />
           </span>
           <div className="rw-text">
-            <p className="rw-title">Bun is not installed</p>
+            <p className="rw-title">{tr("ui.multiplayer.ui.relaywizard.t8")}</p>
             <p className="rw-desc">
-              Kimo uses Bun to run the relay. Kimo can run the official installer for you, or you
+              {tr("ui.multiplayer.ui.relaywizard.43")}
               can install it yourself.
             </p>
           </div>
@@ -1018,7 +1032,7 @@ export function RelayWizard(props: RelayWizardProps) {
               </span>
               <CodeBlock
                 text={BUN_INSTALL_COMMAND}
-                label="install command"
+                label={tr("ui.multiplayer.ui.relaywizard.32")}
                 onCopy={() => void copy(BUN_INSTALL_COMMAND, "Command copied")}
               />
               <button
@@ -1026,7 +1040,7 @@ export function RelayWizard(props: RelayWizardProps) {
                 className="rw-link"
                 onClick={() => void services.openUrl(BUN_INSTALL_URL)}
               >
-                <span>Windows and other options on bun.sh</span>
+                <span>{tr("ui.multiplayer.ui.relaywizard.t7")}</span>
                 <span className="rw-link__icon" aria-hidden="true">
                   <Icon name="arrow-up-right" size={12} />
                 </span>
@@ -1057,9 +1071,9 @@ export function RelayWizard(props: RelayWizardProps) {
           <>
             <div className="rw-status">
               {failed ? (
-                <Pill tone="danger" label="Install failed" />
+                <Pill tone="danger" label={tr("ui.multiplayer.ui.relaywizard.31")} />
               ) : (
-                <Pill tone="muted" label="Installing Bun" />
+                <Pill tone="muted" label={tr("ui.multiplayer.ui.relaywizard.30")} />
               )}
               <Spacer />
               <Elapsed
@@ -1068,7 +1082,7 @@ export function RelayWizard(props: RelayWizardProps) {
                 stop={failed}
               />
             </div>
-            <ul className="rw-log" aria-label="Installer">
+            <ul className="rw-log" aria-label={tr("ui.multiplayer.ui.relaywizard.29")}>
               {(install?.lines ?? []).map((l) => (
                 <LogLine key={l.id} status={l.status} text={l.label} />
               ))}
@@ -1148,7 +1162,7 @@ export function RelayWizard(props: RelayWizardProps) {
                     className="rw-btn--26"
                     onClick={() => void cloudflareLogin()}
                   >
-                    Switch account
+                    {tr("ui.multiplayer.ui.relaywizard.44")}
                   </Button>
                 ) : (
                   <Button
@@ -1164,7 +1178,7 @@ export function RelayWizard(props: RelayWizardProps) {
               </div>
             </div>
             <Field
-              label="Hostname"
+              label={tr("ui.multiplayer.ui.relaywizard.28")}
               help="Pick any subdomain on a domain in this Cloudflare account. Kimo creates the tunnel and its DNS record with cloudflared."
             >
               {(id) => <HostnameInput id={id} value={hostname} onChange={setHostname} />}
@@ -1197,7 +1211,7 @@ export function RelayWizard(props: RelayWizardProps) {
         body = (
           <>
             <div className="rw-status">
-              <Pill tone="success" label="Running" />
+              <Pill tone="success" label={tr("ui.multiplayer.ui.relaywizard.27")} />
               <span className="rw-mono rw-mono--secondary">
                 <Uptime
                   since={localState.startedAt ?? services.clock.now()}
@@ -1210,7 +1224,7 @@ export function RelayWizard(props: RelayWizardProps) {
               {localState.lanUrl && (
                 <AddressRow
                   icon="wifi"
-                  label="Same network"
+                  label={tr("ui.multiplayer.ui.relaywizard.26")}
                   url={localState.lanUrl}
                   onCopy={() => void copy(localState.lanUrl ?? "", "Address copied")}
                 />
@@ -1226,7 +1240,7 @@ export function RelayWizard(props: RelayWizardProps) {
             </div>
             {quick && (
               <Note icon="triangle-alert" tone="warning">
-                This address changes when the relay restarts. Links made with it stop working. Use a
+                {tr("ui.multiplayer.ui.relaywizard.45")}
                 named tunnel to keep them.
               </Note>
             )}
@@ -1244,7 +1258,7 @@ export function RelayWizard(props: RelayWizardProps) {
                 void local?.stop().then(() => void enterLocal())
               }}
             >
-              Stop relay
+              {tr("ui.multiplayer.ui.relaywizard.46")}
             </Button>
             {primary("Continue to test", goTest, { name: "continue-test" })}
           </>
@@ -1261,21 +1275,27 @@ export function RelayWizard(props: RelayWizardProps) {
         }[] = [
           {
             value: "lan",
-            title: "Same network only",
-            desc: `People on this Wi-Fi or LAN use ws://${lanAddress ?? "127.0.0.1"}:${checks?.port ?? 8787}. Nothing leaves your network.`,
+            title: t("ui.multiplayer.ui.relaywizard.same-network-only"),
+            desc: tr("ui.mp.relay.lanUse", {
+              url: `ws://${lanAddress ?? "127.0.0.1"}:${checks?.port ?? 8787}`,
+            }),
           },
           {
             value: "quick",
-            title: "Internet · Quick tunnel",
+            title: t("ui.multiplayer.ui.relaywizard.internet-quick-tunnel"),
             badge: "No account",
-            desc: "A free trycloudflare.com address. It changes every time the relay restarts, so links you shared stop working.",
+            desc: t(
+              "ui.multiplayer.ui.relaywizard.a-free-trycloudflare-com-address-it-changes-every-time-the-relay-restarts-so-links-you-shared-stop-working",
+            ),
             disabled: !cf,
           },
           {
             value: "named",
-            title: "Internet · Named tunnel",
+            title: t("ui.multiplayer.ui.relaywizard.internet-named-tunnel"),
             badge: "Free Cloudflare account",
-            desc: "A stable address on your domain. Links keep working across restarts.",
+            desc: t(
+              "ui.multiplayer.ui.relaywizard.a-stable-address-on-your-domain-links-keep-working-across-restarts",
+            ),
             disabled: !cf,
           },
         ]
@@ -1285,11 +1305,11 @@ export function RelayWizard(props: RelayWizardProps) {
             <div
               className="rw-group"
               role="radiogroup"
-              aria-label="Who can reach it"
+              aria-label={tr("ui.multiplayer.ui.relaywizard.25")}
               data-group="reach"
               onKeyDown={(e) => radioKeys(e, reachRows, reach, (v) => setReach(v as Reach))}
             >
-              <span className="rw-label">Who can reach it</span>
+              <span className="rw-label">{tr("ui.multiplayer.ui.relaywizard.t6")}</span>
               {reachRows.map((r) => (
                 <RadioRow
                   key={r.value}
@@ -1311,8 +1331,8 @@ export function RelayWizard(props: RelayWizardProps) {
               ))}
             </div>
             <Note icon="power">
-              Reachable only while this computer is on and Kimo is open. For always-on sharing pick
-              Docker, Fly.io or Railway.
+              {tr("ui.multiplayer.ui.relaywizard.47")}
+              {tr("ui.multiplayer.ui.relaywizard.48")}
             </Note>
           </>
         )
@@ -1340,10 +1360,10 @@ export function RelayWizard(props: RelayWizardProps) {
             <OriginsGroup kind="web" auto={auto} extra={extraOrigins} onChange={setExtraOrigins} />
           )}
           <div className="rw-group" data-group="run">
-            <span className="rw-label">Run on your server</span>
+            <span className="rw-label">{tr("ui.multiplayer.ui.relaywizard.t5")}</span>
             <CodeBlock
               text={dockerRunCommand(input, { masked: true })}
-              label="docker run command"
+              label={tr("ui.multiplayer.ui.relaywizard.24")}
               onCopy={() => void copy(dockerRunCommand(input, { masked: false }), "Command copied")}
             />
             <p className="rw-desc rw-desc--tertiary">
@@ -1387,19 +1407,19 @@ export function RelayWizard(props: RelayWizardProps) {
               <span className="rw-label">Commands</span>
               <CodeBlock
                 text={shown.launch}
-                label="launch command"
+                label={tr("ui.multiplayer.ui.relaywizard.23")}
                 onCopy={() => void copy(real.launch, "Command copied")}
               />
               {shown.secrets && (
                 <CodeBlock
                   text={shown.secrets}
-                  label="owner key command"
+                  label={tr("ui.multiplayer.ui.relaywizard.22")}
                   onCopy={() => void copy(real.secrets, "Command copied")}
                 />
               )}
               <CodeBlock
                 text={shown.deploy}
-                label="deploy command"
+                label={tr("ui.multiplayer.ui.relaywizard.21")}
                 onCopy={() => void copy(real.deploy, "Command copied")}
               />
             </div>
@@ -1453,10 +1473,10 @@ export function RelayWizard(props: RelayWizardProps) {
               </div>
             </div>
             <Field
-              label="App name"
+              label={tr("ui.multiplayer.ui.relaywizard.20")}
               help={
                 appOk
-                  ? `Becomes ${flyApp}.fly.dev. Region picked by flyctl, closest to you.`
+                  ? tr("ui.mp.relay.flyBecomes", { app: flyApp })
                   : "Lowercase letters, digits and dashes, starting with a letter."
               }
             >
@@ -1484,11 +1504,11 @@ export function RelayWizard(props: RelayWizardProps) {
           <>
             <div className="rw-status">
               {failed ? (
-                <Pill tone="danger" label="Deploy failed" />
+                <Pill tone="danger" label={tr("ui.multiplayer.ui.relaywizard.19")} />
               ) : done ? (
-                <Pill tone="success" label="Deployed" />
+                <Pill tone="success" label={tr("ui.multiplayer.ui.relaywizard.18")} />
               ) : (
-                <Pill tone="muted" label="Deploying" />
+                <Pill tone="muted" label={tr("ui.multiplayer.ui.relaywizard.17")} />
               )}
               <span className="rw-mono rw-mono--secondary">
                 {flyApp} · {flyRegion ?? "iad"}
@@ -1500,7 +1520,7 @@ export function RelayWizard(props: RelayWizardProps) {
                 stop={!!run?.done}
               />
             </div>
-            <ul className="rw-log" aria-label="Deploy">
+            <ul className="rw-log" aria-label={tr("ui.multiplayer.ui.relaywizard.16")}>
               {(run?.lines ?? []).map((l) => (
                 <LogLine
                   key={l.id}
@@ -1515,7 +1535,7 @@ export function RelayWizard(props: RelayWizardProps) {
             ) : null}
             {run && run.output.length > 0 && (
               <details className="rw-output">
-                <summary>Full output</summary>
+                <summary>{tr("ui.multiplayer.ui.relaywizard.t4")}</summary>
                 <pre>{run.output.join("\n")}</pre>
               </details>
             )}
@@ -1544,7 +1564,7 @@ export function RelayWizard(props: RelayWizardProps) {
                 setFlyView("login")
               }}
             >
-              Cancel
+              {tr("ui.multiplayer.ui.relaywizard.49")}
             </Button>
             {primary("Continue to test", goTest, { disabled: !done, name: "continue-test" })}
           </>
@@ -1562,11 +1582,11 @@ export function RelayWizard(props: RelayWizardProps) {
               style={{ alignSelf: "flex-start" }}
               onClick={() => void services.openUrl(railwayDeployUrl(ownerKey))}
             >
-              Deploy on Railway
+              {tr("ui.multiplayer.ui.relaywizard.50")}
             </Button>
             <p className="rw-desc rw-desc--tertiary">
-              Opens railway.com with the Kimo template. Sign in or create a free account there, then
-              Deploy.
+              {tr("ui.multiplayer.ui.relaywizard.51")}
+              {tr("ui.multiplayer.ui.relaywizard.52")}
             </p>
           </div>
           <div className="rw-group" data-group="domain">
@@ -1596,7 +1616,10 @@ export function RelayWizard(props: RelayWizardProps) {
             <div className="rw-probe" data-probe={r.kind === "ok" ? (r.owner ?? "ok") : r.kind}>
               {r.kind === "ok" ? (
                 <>
-                  <Pill tone="success" label={`Kimo relay · ${r.protocol}`} />
+                  <Pill
+                    tone="success"
+                    label={tr("ui.mp.relay.protocol", { protocol: r.protocol })}
+                  />
                   {r.owner && (
                     <span className="rw-mono">
                       {r.owner === "unclaimed"
@@ -1610,11 +1633,11 @@ export function RelayWizard(props: RelayWizardProps) {
                   )}
                 </>
               ) : r.kind === "too-old" ? (
-                <Pill tone="warning" label="Older protocol" />
+                <Pill tone="warning" label={tr("ui.multiplayer.ui.relaywizard.15")} />
               ) : r.kind === "not-a-relay" ? (
-                <Pill tone="warning" label="Not a relay" />
+                <Pill tone="warning" label={tr("ui.multiplayer.ui.relaywizard.14")} />
               ) : (
-                <Pill tone="danger" label="Unreachable" />
+                <Pill tone="danger" label={tr("ui.multiplayer.ui.relaywizard.13")} />
               )}
             </div>
           )}
@@ -1623,9 +1646,7 @@ export function RelayWizard(props: RelayWizardProps) {
               <span className="rw-none__icon" aria-hidden="true">
                 <Icon name="circle-check" size={14} />
               </span>
-              <p className="rw-desc">
-                Nobody has claimed this relay yet. The test makes it yours, nothing to enter.
-              </p>
+              <p className="rw-desc">{tr("ui.multiplayer.ui.relaywizard.53")}</p>
             </div>
           )}
           {r?.kind === "ok" && r.owner === "other" && (
@@ -1660,17 +1681,17 @@ export function RelayWizard(props: RelayWizardProps) {
           : t.checks.slice(0, 2)
     const pill =
       outcome === "testing" ? (
-        <Pill tone="muted" label="Testing" />
+        <Pill tone="muted" label={tr("ui.multiplayer.ui.relaywizard.12")} />
       ) : outcome === "ok" ? (
-        <Pill tone="success" label="Ready" />
+        <Pill tone="success" label={tr("ui.multiplayer.ui.relaywizard.11")} />
       ) : outcome === "not-yours" ? (
-        <Pill tone="warning" label="Not yours" />
+        <Pill tone="warning" label={tr("ui.multiplayer.ui.relaywizard.10")} />
       ) : outcome === "not-a-relay" ? (
-        <Pill tone="warning" label="Not a relay" />
+        <Pill tone="warning" label={tr("ui.multiplayer.ui.relaywizard.9")} />
       ) : outcome === "too-old" ? (
-        <Pill tone="warning" label="Older protocol" />
+        <Pill tone="warning" label={tr("ui.multiplayer.ui.relaywizard.8")} />
       ) : (
-        <Pill tone="danger" label="Unreachable" />
+        <Pill tone="danger" label={tr("ui.multiplayer.ui.relaywizard.7")} />
       )
     const editUrl = () => {
       setStep("setup")
@@ -1706,10 +1727,8 @@ export function RelayWizard(props: RelayWizardProps) {
         )}
         {outcome === "ok" && t?.owned === "already" && (
           <div className="rw-message" data-message="already-yours">
-            <p className="rw-title">Already yours</p>
-            <p className="rw-desc">
-              Kimo set up this relay for this device, so it is already yours. Save and use as usual.
-            </p>
+            <p className="rw-title">{tr("ui.multiplayer.ui.relaywizard.t3")}</p>
+            <p className="rw-desc">{tr("ui.multiplayer.ui.relaywizard.54")}</p>
           </div>
         )}
         {failure && (
@@ -1740,7 +1759,7 @@ export function RelayWizard(props: RelayWizardProps) {
                 data-action="test-again"
                 onClick={() => void runTest()}
               >
-                Test again
+                {tr("ui.multiplayer.ui.relaywizard.55")}
               </Button>
               {outcome === "too-old" ? (
                 <Button
@@ -1749,7 +1768,7 @@ export function RelayWizard(props: RelayWizardProps) {
                   icon={<Icon name="book-open" size={16} />}
                   onClick={() => void services.openUrl(RELAY_GUIDE_URL)}
                 >
-                  Update guide
+                  {tr("ui.multiplayer.ui.relaywizard.56")}
                 </Button>
               ) : (
                 <Button
@@ -1758,7 +1777,7 @@ export function RelayWizard(props: RelayWizardProps) {
                   icon={<Icon name="pencil" size={16} />}
                   onClick={editUrl}
                 >
-                  Edit URL
+                  {tr("ui.multiplayer.ui.relaywizard.57")}
                 </Button>
               )}
             </div>
@@ -1791,7 +1810,7 @@ export function RelayWizard(props: RelayWizardProps) {
         className="rw-shell rw-shell--saved"
         role="dialog"
         aria-modal={props.inline ? undefined : "true"}
-        aria-label="Kimo Cloud is ready"
+        aria-label={tr("ui.multiplayer.ui.relaywizard.6")}
         data-step="ready"
         tabIndex={-1}
         onKeyDown={(e) => {
@@ -1808,7 +1827,7 @@ export function RelayWizard(props: RelayWizardProps) {
             <Icon name="circle-check" size={18} />
           </span>
           <div className="rw-saved__text">
-            <h2 className="rw-head__title">Kimo Cloud is ready</h2>
+            <h2 className="rw-head__title">{tr("ui.multiplayer.ui.relaywizard.t2")}</h2>
             <p className="rw-saved__desc">
               Saved to Settings › Multiplayer. Start sharing from the Share button.
             </p>
@@ -1825,7 +1844,7 @@ export function RelayWizard(props: RelayWizardProps) {
                   data-action="close"
                   onClick={props.onClose}
                 >
-                  Close
+                  {tr("ui.multiplayer.ui.relaywizard.58")}
                 </Button>
                 <Button
                   variant="primary"
@@ -1836,7 +1855,7 @@ export function RelayWizard(props: RelayWizardProps) {
                     if (savedUrl) void props.onStartSharing?.(savedUrl).then(props.onClose)
                   }}
                 >
-                  Start sharing
+                  {tr("ui.multiplayer.ui.relaywizard.59")}
                 </Button>
               </>
             ) : (
@@ -1846,7 +1865,7 @@ export function RelayWizard(props: RelayWizardProps) {
                 data-action="close"
                 onClick={props.onClose}
               >
-                Close
+                {tr("ui.multiplayer.ui.relaywizard.60")}
               </Button>
             )}
           </div>
@@ -1858,7 +1877,7 @@ export function RelayWizard(props: RelayWizardProps) {
         className="rw-shell rw-shell--saved"
         role="dialog"
         aria-modal={props.inline ? undefined : "true"}
-        aria-label="Relay setup"
+        aria-label={tr("ui.multiplayer.ui.relaywizard.5")}
         data-step="saved"
         tabIndex={-1}
         onKeyDown={(e) => {
@@ -1875,7 +1894,7 @@ export function RelayWizard(props: RelayWizardProps) {
             <Icon name="circle-check" size={18} />
           </span>
           <div className="rw-saved__text">
-            <h2 className="rw-head__title">Your relay is ready</h2>
+            <h2 className="rw-head__title">{tr("ui.multiplayer.ui.relaywizard.t1")}</h2>
             <p className="rw-saved__desc">
               Saved to Settings › Multiplayer. This relay is yours now.{" "}
               {from === "share"
@@ -1897,7 +1916,7 @@ export function RelayWizard(props: RelayWizardProps) {
                   if (savedUrl) void props.onStartSharing?.(savedUrl).then(props.onClose)
                 }}
               >
-                Start sharing
+                {tr("ui.multiplayer.ui.relaywizard.61")}
               </Button>
             ) : (
               <Button
@@ -1906,7 +1925,7 @@ export function RelayWizard(props: RelayWizardProps) {
                 data-action="close"
                 onClick={props.onClose}
               >
-                Close
+                {tr("ui.multiplayer.ui.relaywizard.62")}
               </Button>
             )}
           </div>
@@ -1937,20 +1956,20 @@ export function RelayWizard(props: RelayWizardProps) {
           </span>
           <div className="rw-head__text">
             <h2 id="rw-title" className="rw-head__title">
-              Set up a relay
+              {tr("ui.multiplayer.ui.relaywizard.63")}
             </h2>
             <p className="rw-head__sub">{sub}</p>
           </div>
           <IconButton
             className="rw-close"
-            label="Close"
+            label={tr("ui.multiplayer.ui.relaywizard.4")}
             icon={<Icon name="x" size={14} />}
             size="sm"
             tone="ghost"
             onClick={props.onClose}
           />
         </div>
-        <ol className="rw-stepper" aria-label="Steps">
+        <ol className="rw-stepper" aria-label={tr("ui.multiplayer.ui.relaywizard.3")}>
           {(onCloudPath ? ["Choose", "Sign in", "Subscribe"] : ["Choose", "Set up", "Test"]).map(
             (label, i) => {
               const state = i < stepIndex ? "done" : i === stepIndex ? "current" : "next"
@@ -1987,8 +2006,8 @@ export function RelayWizard(props: RelayWizardProps) {
             <Dialog
               className="rw-install-dialog"
               icon={<Icon name="download" size={16} />}
-              title="Install Bun?"
-              description="Kimo runs the official bun.sh installer, which needs network access. Bun goes in ~/.bun for you only, no admin password."
+              title={tr("ui.multiplayer.ui.relaywizard.2")}
+              description={tr("ui.multiplayer.ui.relaywizard.1")}
               footnote="About 30 MB, under a minute."
               confirmLabel="Install Bun"
               onCancel={() => setConfirmInstall(false)}
@@ -2050,7 +2069,11 @@ function AddressRow({
         </span>
         <span className="rw-mono rw-mono--primary">{url}</span>
       </div>
-      <SmallIconButton icon="copy" label={`Copy ${label.toLowerCase()} address`} onClick={onCopy} />
+      <SmallIconButton
+        icon="copy"
+        label={tr("ui.mp.relay.copyAddress", { label: label.toLowerCase() })}
+        onClick={onCopy}
+      />
     </div>
   )
 }

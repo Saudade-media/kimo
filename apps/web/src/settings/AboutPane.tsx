@@ -40,6 +40,7 @@ import {
   Shield,
 } from "lucide-react"
 import { useContext, useEffect, useMemo, useState } from "react"
+import { t } from "../lib/i18n"
 import { aboutLinks } from "./help"
 import { useUpdaterStatus } from "./hooks"
 import {
@@ -85,7 +86,7 @@ export function AboutPane({
   }, [copied])
   const shown = filterNotices(notices, query)
   const open = (url: string) =>
-    void platform.files.openExternalUrl(url).catch((e: unknown) => fail("open the link", e))
+    void platform.files.openExternalUrl(url).catch((e: unknown) => fail(t("errors.openLink"), e))
   const openFile = () => {
     // Web: the file is served next to index.html; desktop: it is inside the app bundle, so it
     // opens in the same sheet.
@@ -95,7 +96,7 @@ export function AboutPane({
   return (
     <>
       <div className="settings-title-bar" data-tauri-drag-region="deep">
-        <h2 className="settings-title settings-title--about">About & licenses</h2>
+        <h2 className="settings-title settings-title--about">{t("settings.nav.about")}</h2>
       </div>
       <div className="about-identity" data-pen="urFVA">
         <span className="about-identity__icon" aria-hidden="true">
@@ -104,11 +105,9 @@ export function AboutPane({
         <div className="about-identity__text">
           <span className="about-identity__name">Kimo</span>
           <span className="about-identity__version" data-testid="about-version">
-            {`Version ${versionLine(info)}`}
+            {t("settings.about.version", { version: versionLine(info) })}
           </span>
-          <span className="about-identity__tagline">
-            Local-first design canvas for you and your agents · MIT
-          </span>
+          <span className="about-identity__tagline">{t("settings.about.tagline")}</span>
         </div>
         <div className="about-identity__actions">
           <Button
@@ -119,10 +118,10 @@ export function AboutPane({
             onClick={() =>
               void writeClipboard(versionString(info))
                 .then(() => setCopied(true))
-                .catch((e: unknown) => fail("copy the version info", e))
+                .catch((e: unknown) => fail(t("errors.copyVersionInfo"), e))
             }
           >
-            {copied ? "Copied" : "Copy version info"}
+            {copied ? t("settings.about.copied") : t("settings.about.copy")}
           </Button>
           {platform.capabilities.updater && (
             <Button
@@ -132,10 +131,12 @@ export function AboutPane({
               icon={<RefreshCw />}
               disabled={status.state === "checking" || status.state === "downloading"}
               onClick={() =>
-                void platform.updater.check().catch((e: unknown) => fail("check for updates", e))
+                void platform.updater
+                  .check()
+                  .catch((e: unknown) => fail(t("errors.checkForUpdates"), e))
               }
             >
-              Check for updates…
+              {t("settings.about.check")}
             </Button>
           )}
         </div>
@@ -162,7 +163,7 @@ export function AboutPane({
         })}
       </div>
       <div className="about-licenses-header" data-pen="sdWA6">
-        <h3 className="about-licenses-header__title">Open-source licenses</h3>
+        <h3 className="about-licenses-header__title">{t("settings.about.licenses")}</h3>
         <Badge className="about-count" data-testid="about-license-count">
           {noticeCount(notices.length)}
         </Badge>
@@ -170,14 +171,14 @@ export function AboutPane({
         <Input
           dense
           icon={<Search />}
-          placeholder="Filter packages"
-          aria-label="Filter packages"
+          placeholder={t("settings.about.filter")}
+          aria-label={t("settings.about.filter")}
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           frameProps={{ className: "about-filter" }}
         />
       </div>
-      <ul className="about-license-list" data-pen="QmPSy" aria-label="Open-source licenses">
+      <ul className="about-license-list" data-pen="QmPSy" aria-label={t("settings.about.licenses")}>
         {shown.map((n) => (
           <li key={`${n.source}:${n.name}@${n.version}`} className="about-license-item">
             <button
@@ -194,16 +195,18 @@ export function AboutPane({
             </button>
           </li>
         ))}
-        {shown.length === 0 && <li className="about-license-empty">No packages match.</li>}
+        {shown.length === 0 && (
+          <li className="about-license-empty">{t("settings.about.noMatch")}</li>
+        )}
       </ul>
       <div className="about-licenses-footer" data-pen="ILW2H">
         <FileText className="about-licenses-footer__icon" aria-hidden="true" />
         <span className="about-licenses-footer__note">
-          {`Full texts ship with the app as ${NOTICES_FILE}`}
+          {t("settings.about.fullTexts", { file: NOTICES_FILE })}
         </span>
         <span className="about-spacer" />
         <button type="button" className="about-licenses-footer__link" onClick={openFile}>
-          Open file
+          {t("settings.about.openFile")}
         </button>
       </div>
       {sheet && <LicenseSheet notice={sheet} onClose={() => setSheet(null)} />}
@@ -234,8 +237,14 @@ function LicenseSheet({ notice, onClose }: { notice: Notice | "all"; onClose(): 
   const title = notice === "all" ? NOTICES_FILE : `${notice.name} ${notice.version}`
   const description =
     notice === "all"
-      ? "Every third-party licence that ships with Kimo."
-      : `${notice.license} · ${notice.source === "cargo" ? "Rust crate" : notice.source === "font" ? "Bundled font" : "JavaScript package"}`
+      ? t("settings.about.allLicences")
+      : `${notice.license} · ${t(
+          notice.source === "cargo"
+            ? "settings.about.crate"
+            : notice.source === "font"
+              ? "settings.about.bundledFont"
+              : "settings.about.npm",
+        )}`
   return (
     <div className="kimo-dialog-scrim">
       <Dialog
@@ -244,16 +253,18 @@ function LicenseSheet({ notice, onClose }: { notice: Notice | "all"; onClose(): 
         title={title}
         description={description}
         cancelLabel={null}
-        confirmLabel="Done"
+        confirmLabel={t("settings.about.done")}
         onCancel={onClose}
         onConfirm={onClose}
         data-testid="license-sheet"
       >
         <pre className="about-license-text" data-testid="license-text">
           {text === undefined
-            ? "Loading…"
+            ? t("settings.about.loading")
             : text === null
-              ? `This package ships no licence file. It is distributed under ${notice === "all" ? "the licences listed" : notice.license}.`
+              ? t("settings.about.noLicenceFile", {
+                  license: notice === "all" ? t("settings.about.theLicences") : notice.license,
+                })
               : text}
         </pre>
       </Dialog>

@@ -19,6 +19,7 @@ import { RoomEditor } from "../editor/Editor"
 import { failureText } from "../editor/errors"
 import { RecentFilesHeader, type RecentView } from "../files"
 import { createFile } from "../lib/files"
+import { t } from "../lib/i18n"
 import { Icon } from "../lib/icons"
 import { roomKeyOf } from "../multiplayer/backend"
 import type { CloudFile } from "../multiplayer/cloud/types"
@@ -63,11 +64,11 @@ export function CloudGroup({ section }: { section: HomeSection }) {
     <>
       {/* Cloud Header (FsfqvtpYQ1): the Folders Header's layout, padding [20, 4, 6, 10]. */}
       <div className="kimo-files-folders-header home-cloud-header" data-pen="FsfqvtpYQ1">
-        <span className="kimo-files-folders-header__label">KIMO CLOUD</span>
+        <span className="kimo-files-folders-header__label">{t("ui.home.workspacehome.t1")}</span>
         {/* Add (uUoM1jPXvt): Add Folder's 20 × 20, transparent, `plus` 14 text-tertiary. */}
         <IconButton
           className="kimo-files-folders-header__add"
-          label="New workspace"
+          label={t("ui.home.workspacehome.1")}
           icon={<Icon name="plus" size={14} />}
           tone="quiet"
           data-action="new-workspace"
@@ -149,12 +150,12 @@ export function WorkspaceHeaderButtons({
         await store.shareFile({ ref: s.ref, store: s.store }, { workspaceId })
         navigate(diskPath(s.ref))
       } else {
-        const id = await createFile("Untitled")
+        const id = await createFile(t("file.untitled"))
         pendingShares.set(libraryKeyOf(id), workspaceId)
         navigate(`/file/${id}`)
       }
     } catch (e) {
-      toast({ tone: "danger", text: failureText("create a file", e) })
+      toast({ tone: "danger", text: failureText(t("errors.createFile"), e) })
     } finally {
       setBusy(false)
     }
@@ -167,7 +168,7 @@ export function WorkspaceHeaderButtons({
         data-action="members"
         onClick={() => void openSettings("workspace", workspaceId)}
       >
-        Members
+        {t("home.members")}
       </Button>
       <Button
         variant="primary"
@@ -176,7 +177,7 @@ export function WorkspaceHeaderButtons({
         disabled={busy}
         onClick={() => void newFile()}
       >
-        New file
+        {t("home.newFile")}
       </Button>
     </>
   )
@@ -251,7 +252,7 @@ export function WorkspaceFiles({
       if (path) navigate(diskPath(path))
       else navigate(`/cloud/${f.room}`)
     } catch (e) {
-      toast({ tone: "danger", text: failureText(`open ${f.name}`, e) })
+      toast({ tone: "danger", text: failureText(t("errors.openNamed", { name: f.name }), e) })
     }
   }
   // For everyone in the workspace, and this device's copy so the editor shows it too.
@@ -264,7 +265,7 @@ export function WorkspaceFiles({
         next,
       )
     } catch (e) {
-      toast({ tone: "danger", text: failureText(`rename ${fileName(f)}`, e) })
+      toast({ tone: "danger", text: failureText(t("errors.rename", { name: fileName(f) }), e) })
     }
   }
   const onMenu = (f: CloudFile, at: MenuAt) => setMenu({ file: f, at })
@@ -289,7 +290,7 @@ export function WorkspaceFiles({
       <RecentFilesHeader
         folderCount={0}
         title={countLabel(files?.length ?? 0)}
-        note={`Everyone in ${w.name} can edit these`}
+        note={t("ui.home.everyoneCanEdit", { name: w.name })}
         view={view}
         onViewChange={setView}
       />
@@ -355,7 +356,7 @@ export function WorkspaceFiles({
           items={[
             {
               id: "open",
-              label: "Open",
+              label: t("ui.home.workspacehome.open"),
               icon: MENU_ICONS.open,
               meta: "↵",
               run: () => void open(menu.file),
@@ -363,7 +364,7 @@ export function WorkspaceFiles({
             "divider",
             {
               id: "rename",
-              label: "Rename",
+              label: t("ui.editor.pages.pagesstrip.6"),
               icon: MENU_ICONS.rename,
               run: () => {
                 // Rename happens in a list row.
@@ -404,7 +405,7 @@ export function CloudFileRoute({ room }: { room: string }) {
       .then((session) => live && setState({ phase: "open", session }))
       .catch(
         (e: unknown) =>
-          live && setState({ phase: "failed", text: failureText("open the file", e) }),
+          live && setState({ phase: "failed", text: failureText(t("errors.openTheFile"), e) }),
       )
     return () => {
       live = false

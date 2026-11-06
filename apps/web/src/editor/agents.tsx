@@ -23,6 +23,7 @@ import {
 import type { CanvasHandle } from "../canvas/contract"
 import type { HostClient } from "../host/client"
 import { type Bus, createBus } from "../lib/hooks"
+import { t } from "../lib/i18n"
 import { roomKeyOf } from "../multiplayer/backend"
 import type { FileDocumentSession } from "../platform/session"
 import { failureText } from "./errors"
@@ -204,7 +205,7 @@ export function useEditorAgents({
             .catch((e: unknown) => {
               // Cancel in the save dialog is the user's choice, not a failure.
               if (isPlatformError(e, "CANCELLED")) return
-              errorRef.current({ text: failureText("export the activity log", e) })
+              errorRef.current({ text: failureText(t("errors.exportActivityLog"), e) })
             })
         }}
       />

@@ -24,6 +24,7 @@ import {
 } from "@kimo/ui"
 import { Ellipsis, FileX, Folder, FolderGit2, LayoutGrid, List, Plus } from "lucide-react"
 import type { MouseEvent, ReactNode } from "react"
+import { t } from "../lib/i18n"
 import { displayDir, modifiedLabel } from "../platform/format"
 import { PreviewFileCard } from "../thumbnails/PreviewFileCard"
 
@@ -80,11 +81,11 @@ export function LocalFolders({
   return (
     <>
       <div className="kimo-files-folders-header" data-pen="fgqWk">
-        <span className="kimo-files-folders-header__label">LOCAL FOLDERS</span>
+        <span className="kimo-files-folders-header__label">{t("home.localFolders")}</span>
         {onAdd && (
           <IconButton
             className="kimo-files-folders-header__add"
-            label="Add folder"
+            label={t("home.addFolderTitle")}
             icon={<Plus />}
             tone="quiet"
             onClick={onAdd}
@@ -135,7 +136,7 @@ export function LocalFolders({
             {onMenu && (
               <IconButton
                 className="kimo-files-folder__menu"
-                label={`More actions for ${f.label}`}
+                label={t("ui.files.desktophome.moreActions", { name: f.label })}
                 aria-haspopup="menu"
                 aria-expanded={menuRef === f.ref}
                 icon={<Ellipsis />}
@@ -159,8 +160,8 @@ const cx = (...c: (string | false | null | undefined)[]) => c.filter(Boolean).jo
 export type RecentView = "list" | "grid"
 
 const VIEWS = [
-  { value: "grid", label: "Grid view", icon: <LayoutGrid size={14} /> },
-  { value: "list", label: "List view", icon: <List size={14} /> },
+  { value: "grid", label: "ui.view.grid", icon: <LayoutGrid size={14} /> },
+  { value: "list", label: "ui.view.list", icon: <List size={14} /> },
 ] as const
 
 export interface RecentFilesHeaderProps {
@@ -177,21 +178,30 @@ export interface RecentFilesHeaderProps {
 /** "Recent files" · "from 3 folders on disk · sorted by modified" · view toggle. */
 export function RecentFilesHeader({
   folderCount,
-  title = "Recent files",
+  title,
   note,
   view,
   onViewChange,
 }: RecentFilesHeaderProps) {
   return (
     <div className="kimo-files-recent-header" data-pen="Xp6lo">
-      <h2 className="kimo-files-recent-header__title">{title}</h2>
+      <h2 className="kimo-files-recent-header__title">
+        {title ?? t("ui.files.desktophome.recentFiles")}
+      </h2>
       <span className="kimo-files-recent-header__note">
         {note ??
-          `from ${folderCount} folder${folderCount === 1 ? "" : "s"} on disk · sorted by modified`}
+          t(folderCount === 1 ? "home.recentNoteOne" : "home.recentNote", {
+            count: String(folderCount),
+          })}
       </span>
       <span className="kimo-files-recent-header__spacer" aria-hidden="true" />
       {onViewChange && view && (
-        <Segmented label="View" options={VIEWS} value={view} onChange={onViewChange} />
+        <Segmented
+          label={t("ui.files.desktophome.1")}
+          options={VIEWS.map((v) => ({ ...v, label: t(v.label) }))}
+          value={view}
+          onChange={onViewChange}
+        />
       )}
     </div>
   )
@@ -331,7 +341,7 @@ export function RecentFilesGrid({
 
 /** Adds a watched folder through the folder picker. Resolves to the folder or null. */
 export async function addWatchedFolder(platform: KimoPlatform): Promise<string | null> {
-  const ref = await platform.dialogs.pickFolder({ title: "Add folder" })
+  const ref = await platform.dialogs.pickFolder({ title: t("home.addFolderTitle") })
   if (ref) await platform.recents.addFolder(ref)
   return ref
 }

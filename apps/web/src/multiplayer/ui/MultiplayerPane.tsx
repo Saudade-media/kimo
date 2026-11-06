@@ -20,6 +20,7 @@
 import type { KimoPlatform } from "@kimo/platform"
 import { Button, Input, Select, SettingRow, Toggle } from "@kimo/ui"
 import { useEffect, useMemo, useRef, useState } from "react"
+import { t } from "../../lib/i18n"
 import { Icon } from "../../lib/icons"
 import { PaneTitle } from "../../settings/panes"
 import { emptySnapshot, type ShareBackend } from "../backend"
@@ -46,9 +47,9 @@ import { Pill } from "./relay-parts"
 import { copyText, GuideLink, openRelayGuide } from "./shared"
 import "./share-ui.css"
 
-const FETCH_OPTIONS = [
-  { value: "on-demand" as const, label: "On demand" },
-  { value: "never" as const, label: "Never" },
+const fetchOptions = () => [
+  { value: "on-demand" as const, label: t("ui.multiplayer.ui.multiplayerpane.fetchOnDemand") },
+  { value: "never" as const, label: t("ui.multiplayer.ui.multiplayerpane.fetchNever") },
 ]
 
 /** Settings only reads settings and tests relays: a backend for a window without one. */
@@ -193,11 +194,7 @@ function Pane({ platform, model }: { platform: KimoPlatform; model: MultiplayerM
           <Icon name="server" size={16} />
         </span>
         <div className="mp-text">
-          <p className="mp-desc">
-            A relay passes encrypted updates between people in a file. It cannot read them, keeps no
-            accounts, and Kimo does not run one for you. Host kimo-relay on any small server, or use
-            one a teammate runs.
-          </p>
+          <p className="mp-desc">{t("ui.multiplayer.ui.multiplayerpane.10")}</p>
           <div className="mp-relay-box__actions" data-pen="TPCDP">
             {relaySetup && (
               <Button
@@ -206,11 +203,11 @@ function Pane({ platform, model }: { platform: KimoPlatform; model: MultiplayerM
                 icon={<Icon name="wand-sparkles" size={16} />}
                 onClick={() => setWizard(true)}
               >
-                Set up a relay
+                {t("ui.multiplayer.ui.multiplayerpane.11")}
               </Button>
             )}
             <GuideLink
-              label="Self-hosting guide"
+              label={t("ui.multiplayer.ui.multiplayerpane.9")}
               leadingIcon={false}
               className="mp-guide--settings"
               onOpen={() => void openRelayGuide(platform)}
@@ -221,11 +218,9 @@ function Pane({ platform, model }: { platform: KimoPlatform; model: MultiplayerM
       <div className="mp-setting" data-pen="pXQUm">
         <div className="mp-text mp-text--2">
           <label className="mp-setting__label" htmlFor="mp-relay-url">
-            Relay URL
+            {t("ui.multiplayer.ui.multiplayerpane.12")}
           </label>
-          <p className="mp-desc">
-            Used when you start sharing a file. Files already shared keep the relay they started on.
-          </p>
+          <p className="mp-desc">{t("ui.multiplayer.ui.multiplayerpane.13")}</p>
         </div>
         <div className="mp-input-row">
           <Input
@@ -252,7 +247,7 @@ function Pane({ platform, model }: { platform: KimoPlatform; model: MultiplayerM
             disabled={test.kind === "testing" || url.trim() === ""}
             onClick={() => void runTest()}
           >
-            Test
+            {t("ui.multiplayer.ui.multiplayerpane.14")}
           </Button>
         </div>
         {result?.kind === "ok" && (result.owner === "unclaimed" || result.owner === "other") ? (
@@ -328,7 +323,7 @@ function Pane({ platform, model }: { platform: KimoPlatform; model: MultiplayerM
   // relay switches between them.
   return (
     <>
-      <PaneTitle>Multiplayer</PaneTitle>
+      <PaneTitle>{t("settings.nav.multiplayer")}</PaneTitle>
       {cloudRelay && cloud && cloudState ? (
         <CloudSettings
           cloud={cloud}
@@ -361,14 +356,14 @@ function PersonalRows({
   return (
     <>
       <SettingRow
-        label="Your name"
-        description="Shown on your cursor and in the list, kept on this device. Leave it empty to appear as a guest."
+        label={t("ui.multiplayer.ui.multiplayerpane.8")}
+        description={t("ui.multiplayer.ui.multiplayerpane.7")}
         control={(ids) => (
           <Input
             frameProps={{ className: "mp-name-input" }}
             aria-labelledby={ids.labelId}
             aria-describedby={ids.descriptionId}
-            placeholder="Guest"
+            placeholder={t("ui.multiplayer.ui.multiplayerpane.6")}
             value={name}
             maxLength={80}
             onChange={(e) => setName(e.currentTarget.value)}
@@ -383,8 +378,8 @@ function PersonalRows({
         )}
       />
       <SettingRow
-        label="Show other cursors"
-        description="Names and selections of people and agents on the canvas."
+        label={t("ui.multiplayer.ui.multiplayerpane.5")}
+        description={t("ui.multiplayer.ui.multiplayerpane.4")}
         control={(ids) => (
           <Toggle
             checked={settings.showCursors}
@@ -396,14 +391,14 @@ function PersonalRows({
       />
       <SettingRow
         last
-        label="Fetch images and fonts"
-        description="On demand, when a frame that uses them comes into view."
+        label={t("ui.multiplayer.ui.multiplayerpane.3")}
+        description={t("ui.multiplayer.ui.multiplayerpane.2")}
         control={
           <Select
             dense
             className="mp-fetch-select"
-            label="Fetch images and fonts"
-            options={FETCH_OPTIONS}
+            label={t("ui.multiplayer.ui.multiplayerpane.1")}
+            options={fetchOptions()}
             value={settings.fetchAssets ? "on-demand" : "never"}
             onChange={(v) => void model.settings.setFetchAssets(v === "on-demand")}
           />

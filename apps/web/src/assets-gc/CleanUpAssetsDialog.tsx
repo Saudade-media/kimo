@@ -10,6 +10,7 @@
 
 import { Dialog } from "@kimo/ui"
 import { CircleCheck, ImageIcon, Images, PenTool, Trash2, Type } from "lucide-react"
+import { t } from "../lib/i18n"
 import {
   type AssetFile,
   formatBytes,
@@ -67,7 +68,7 @@ export function CleanUpAssetsDialog({
       onConfirm={onConfirm}
       data-pen="Vqeu7"
     >
-      <ul className="gc-body" aria-label="Unused assets">
+      <ul className="gc-body" aria-label={t("ui.assets.gc.cleanupassetsdialog.1")}>
         {shown.map((f) => (
           <li key={f.name} className="gc-row">
             <span className="gc-row__thumb" aria-hidden="true">

@@ -7,6 +7,7 @@
  * spec default so the canonical file stays minimal.
  */
 import type { NodeData } from "@kimo/editor-state"
+import { t } from "../lib/i18n"
 import { formatNumber, paintColor, refLabel, splitHex, titleCase } from "./props"
 
 const isObj = (v: unknown): v is Record<string, unknown> =>
@@ -227,8 +228,10 @@ export function paintRowLabel(p: unknown): { label: string; font: "mono" | "sans
   if (c) return { label: c.$ref, font: "sans" }
   if (isObj(p)) {
     const color = p.kind === "solid" ? p.color : p
-    if (isObj(color) && color.space === "oklch") return { label: "OKLCH", font: "sans" }
-    if (isObj(color) && color.space === "display-p3") return { label: "Display P3", font: "sans" }
+    if (isObj(color) && color.space === "oklch")
+      return { label: t("ui.editor.style.oklch"), font: "sans" }
+    if (isObj(color) && color.space === "display-p3")
+      return { label: t("ui.editor.style.display-p3"), font: "sans" }
     if (p.kind === "image")
       return {
         label: `Image · ${Array.isArray(p.crop) ? "Crop" : (FIT_LABEL[String(p.fit ?? "cover")] ?? "Cover")}`,

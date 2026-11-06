@@ -1,3 +1,4 @@
+import { t } from "@kimo/i18n"
 import { ArrowUp, ChevronDown, Ellipsis, Paperclip, Square } from "lucide-react"
 import {
   type ClipboardEventHandler,
@@ -99,7 +100,7 @@ export interface ComposerAgentProps
 export function ComposerAgent({
   value,
   onChange,
-  placeholder = "Ask Kimo to design or edit…",
+  placeholder = t("ui.pkg.composer.agent.composeragent.ask-kimo-to-design-or-edit"),
   attachments,
   onAttach,
   modeChip,
@@ -143,7 +144,7 @@ export function ComposerAgent({
         rows={1}
         value={value}
         placeholder={placeholder}
-        aria-label="Message the agent"
+        aria-label={t("ui.pkg.composer.agent.composeragent.message-the-agent")}
         disabled={disabled}
         onChange={(e) => onChange?.(e.target.value)}
         onKeyDown={onTextareaKeyDown}
@@ -155,7 +156,7 @@ export function ComposerAgent({
         <button
           type="button"
           className="kimo-composer-agent__attach"
-          aria-label="Attach image"
+          aria-label={t("ui.pkg.composer.agent.composeragent.attach-image")}
           onClick={onAttach}
           disabled={disabled}
         >
@@ -169,7 +170,7 @@ export function ComposerAgent({
               size="sm"
               tone="ghost"
               label={MORE_LABEL[more.dot ?? "none"]}
-              title="More options"
+              title={t("ui.pkg.composer.agent.composeragent.more-options")}
               icon={<Ellipsis />}
               className={cx(
                 "kimo-composer-agent__more-button",
@@ -231,7 +232,7 @@ export function ComposerAgent({
           <button
             type="button"
             className="kimo-composer-agent__send kimo-composer-agent__send--stop"
-            aria-label="Stop"
+            aria-label={t("ui.pkg.composer.agent.composeragent.stop")}
             onClick={onStop}
           >
             <Square aria-hidden="true" />
@@ -240,7 +241,7 @@ export function ComposerAgent({
           <button
             type="button"
             className="kimo-composer-agent__send"
-            aria-label="Send"
+            aria-label={t("ui.pkg.composer.agent.composeragent.send")}
             disabled={sendDisabled || disabled}
             onClick={onSend}
           >

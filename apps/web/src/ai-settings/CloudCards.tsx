@@ -15,6 +15,7 @@ import { MODEL_CATALOG } from "@kimo/ai-agent"
 import { AgentTonePill, Select } from "@kimo/ui"
 import { Cloud, Info } from "lucide-react"
 import { type ReactNode, useContext, useRef, useState } from "react"
+import { t } from "../lib/i18n"
 import { SettingsFailContext } from "../settings/panes"
 import type { AiSettingsController, CloudFields } from "./controller"
 import type { StoredProvider } from "./model"
@@ -76,7 +77,9 @@ export function CloudCards({ ctl, readOnly = false }: CloudCardsProps) {
   // Audit A5: failures show "Couldn't …" in the pane banner (board 37 CT1wv).
   const fail = useContext(SettingsFailContext)
   const set = (k: CloudKind, f: CloudFields) =>
-    void ctl.setCloud(k, f).catch((e: unknown) => fail(`save the ${CLOUD_LABEL[k]} settings`, e))
+    void ctl
+      .setCloud(k, f)
+      .catch((e: unknown) => fail(t("errors.saveCloudSettings", { cloud: CLOUD_LABEL[k] }), e))
   const b = stored("bedrock")
   const v = stored("vertex")
   const f = stored("foundry")
@@ -92,39 +95,42 @@ export function CloudCards({ ctl, readOnly = false }: CloudCardsProps) {
   return (
     <>
       <div className="ai-cloud" data-pen="YewZG" data-cloud="bedrock">
-        <Head title="Amazon Bedrock" pen="da1Bb" />
-        <Row label="Region" pen="Wqt1R">
+        <Head title={t("ui.ai.settings.cloudcards.14")} pen="da1Bb" />
+        <Row label={t("ai.region")} pen="Wqt1R">
           <Select
             className="ai-select"
-            label="Bedrock region"
+            label={t("ui.ai.settings.cloudcards.13")}
             disabled={readOnly}
             options={withCurrent(BEDROCK_REGIONS, b.region)}
             value={b.region ?? "us-east-1"}
             onChange={(r) => set("bedrock", { region: r })}
           />
         </Row>
-        <Row label="Credentials" pen="f0KTgP">
+        <Row label={t("ai.credentials")} pen="f0KTgP">
           <Select
             className="ai-select"
-            label="Bedrock credentials"
+            label={t("ui.ai.settings.cloudcards.12")}
             disabled={readOnly}
             options={[
-              { value: "profile", label: `AWS profile · ${profile}` },
-              { value: "env", label: "Environment (AWS_ACCESS_KEY_ID…)" },
-              { value: "sso", label: "SSO session" },
+              {
+                value: "profile",
+                label: t("ui.ai.settings.cloud.cards.profileOption", { profile }),
+              },
+              { value: "env", label: t("ui.ai.settings.cloudcards.environment-aws-access-key-id") },
+              { value: "sso", label: t("ui.ai.settings.cloudcards.sso-session") },
             ]}
             value={b.credentials ?? "profile"}
             onChange={(c) => set("bedrock", { credentials: c })}
           />
         </Row>
-        <Row label="Profile" pen="VlNqo" htmlFor="bedrock-profile">
+        <Row label={t("ai.profile")} pen="VlNqo" htmlFor="bedrock-profile">
           <span className="ai-value-field ai-add__value" data-pen="VSebY">
             <input
               id="bedrock-profile"
               key={b.profile ?? ""}
               className="ai-add__input ai-add__input--mono"
               disabled={readOnly}
-              placeholder="default  (~/.aws/config)"
+              placeholder={t("ui.ai.settings.cloudcards.11")}
               defaultValue={b.profile ? `${b.profile}  (~/.aws/config)` : ""}
               spellCheck={false}
               onFocus={(e) => {
@@ -141,10 +147,10 @@ export function CloudCards({ ctl, readOnly = false }: CloudCardsProps) {
             />
           </span>
         </Row>
-        <Row label="Models" pen="R281n">
+        <Row label={t("ai.models")} pen="R281n">
           <Select
             className="ai-select ai-select--mono"
-            label="Bedrock model"
+            label={t("ui.ai.settings.cloudcards.10")}
             disabled={readOnly}
             options={withCurrent(bedrockModels, b.models?.agent)}
             value={b.models?.agent ?? bedrockModels[0]?.value ?? ""}
@@ -158,8 +164,8 @@ export function CloudCards({ ctl, readOnly = false }: CloudCardsProps) {
       </div>
 
       <div className="ai-cloud" data-pen="bSx6y" data-cloud="vertex">
-        <Head title="Google Vertex AI" pen="frYz2" />
-        <Row label="Project ID" pen="iN4fQ" htmlFor="vertex-project">
+        <Head title={t("ui.ai.settings.cloudcards.9")} pen="frYz2" />
+        <Row label={t("ai.projectId")} pen="iN4fQ" htmlFor="vertex-project">
           <span className="ai-value-field ai-add__value" data-pen="q9hw2">
             <TextInput
               id="vertex-project"
@@ -170,24 +176,30 @@ export function CloudCards({ ctl, readOnly = false }: CloudCardsProps) {
             />
           </span>
         </Row>
-        <Row label="Region" pen="CiYaA">
+        <Row label={t("ai.region")} pen="CiYaA">
           <Select
             className="ai-select"
-            label="Vertex region"
+            label={t("ui.ai.settings.cloudcards.8")}
             disabled={readOnly}
             options={withCurrent(VERTEX_REGIONS, v.region)}
             value={v.region ?? "us-east5"}
             onChange={(r) => set("vertex", { region: r })}
           />
         </Row>
-        <Row label="Credentials" pen="VR8Jd">
+        <Row label={t("ai.credentials")} pen="VR8Jd">
           <Select
             className="ai-select"
-            label="Vertex credentials"
+            label={t("ui.ai.settings.cloudcards.7")}
             disabled={readOnly}
             options={[
-              { value: "adc", label: "Application default credentials" },
-              { value: "service-account", label: "Service account JSON…" },
+              {
+                value: "adc",
+                label: t("ui.ai.settings.cloudcards.application-default-credentials"),
+              },
+              {
+                value: "service-account",
+                label: t("ui.ai.settings.cloudcards.service-account-json"),
+              },
             ]}
             value={v.credentials ?? "adc"}
             onChange={(c) => {
@@ -196,7 +208,7 @@ export function CloudCards({ ctl, readOnly = false }: CloudCardsProps) {
                 set("vertex", { credentials: c })
                 void ctl
                   .deleteKey("vertex")
-                  .catch((e: unknown) => fail("delete the Vertex AI service account", e))
+                  .catch((e: unknown) => fail(t("errors.deleteVertexAccount"), e))
               }
             }}
           />
@@ -216,19 +228,19 @@ export function CloudCards({ ctl, readOnly = false }: CloudCardsProps) {
                   await ctl.setCloud("vertex", { credentials: "service-account" })
                   await ctl.setKey("vertex", json)
                 })
-                .catch((e: unknown) => fail("add the service account JSON", e))
+                .catch((e: unknown) => fail(t("errors.addServiceJson"), e))
             }}
           />
         </Row>
         <Hint pen="PdJoH">
-          Or use 'Service account JSON…'. The file is copied into the Keychain, then the path is
+          {t("ui.ai.settings.cloudcards.15")}
           forgotten.
         </Hint>
       </div>
 
       <div className="ai-cloud" data-pen="g7Uzta" data-cloud="foundry">
-        <Head title="Microsoft Foundry" pen="dGO0R" />
-        <Row label="Resource" pen="W8RUsj" htmlFor="foundry-resource">
+        <Head title={t("ui.ai.settings.cloudcards.6")} pen="dGO0R" />
+        <Row label={t("ai.resource")} pen="W8RUsj" htmlFor="foundry-resource">
           <span className="ai-value-field ai-add__value" data-pen="Dfa2q">
             <TextInput
               id="foundry-resource"
@@ -239,7 +251,7 @@ export function CloudCards({ ctl, readOnly = false }: CloudCardsProps) {
             />
           </span>
         </Row>
-        <Row label="Project" pen="w7DSE" htmlFor="foundry-project">
+        <Row label={t("ai.project")} pen="w7DSE" htmlFor="foundry-project">
           <span className="ai-value-field ai-add__value" data-pen="FYSVE">
             <TextInput
               id="foundry-project"
@@ -250,28 +262,31 @@ export function CloudCards({ ctl, readOnly = false }: CloudCardsProps) {
             />
           </span>
         </Row>
-        <Row label="Auth" pen="P4s1XM">
+        <Row label={t("ai.auth")} pen="P4s1XM">
           <Select
             className="ai-select"
-            label="Foundry auth"
+            label={t("ui.ai.settings.cloudcards.5")}
             disabled={readOnly}
             options={[
-              { value: "entra", label: "Microsoft Entra ID · signed in" },
-              { value: "api-key", label: "API key" },
+              {
+                value: "entra",
+                label: t("ui.ai.settings.cloudcards.microsoft-entra-id-signed-in"),
+              },
+              { value: "api-key", label: t("ai.apiKey") },
             ]}
             value={f.credentials ?? "entra"}
             onChange={(c) => set("foundry", { credentials: c })}
           />
         </Row>
         {f.credentials === "api-key" && (
-          <Row label="API key" pen="foundry-key" htmlFor="foundry-key">
+          <Row label={t("ai.apiKey")} pen="foundry-key" htmlFor="foundry-key">
             <span className="ai-value-field ai-add__value">
               <input
                 id="foundry-key"
                 className="ai-add__input ai-add__input--mono"
                 type="password"
                 autoComplete="off"
-                placeholder="Paste the resource's key"
+                placeholder={t("ui.ai.settings.cloudcards.4")}
                 value={foundryKey}
                 disabled={readOnly}
                 onChange={(e) => setFoundryKey(e.currentTarget.value)}
@@ -280,16 +295,16 @@ export function CloudCards({ ctl, readOnly = false }: CloudCardsProps) {
                     void ctl
                       .setKey("foundry", foundryKey)
                       .then(() => setFoundryKey(""))
-                      .catch((e: unknown) => fail("save the Foundry key", e))
+                      .catch((e: unknown) => fail(t("errors.saveFoundryKey"), e))
                 }}
               />
             </span>
           </Row>
         )}
-        <Row label="Deployment" pen="V48kJ4">
+        <Row label={t("ui.ai.settings.cloudcards.3")} pen="V48kJ4">
           <Select
             className="ai-select ai-select--mono"
-            label="Foundry deployment"
+            label={t("ui.ai.settings.cloudcards.2")}
             disabled={readOnly}
             options={withCurrent(deployments, f.models?.agent)}
             value={f.models?.agent ?? deployments[0]?.value ?? ""}
@@ -309,7 +324,11 @@ function Head({ title, pen }: { title: string; pen: string }) {
       </span>
       <span className="ai-cloud__title">{title}</span>
       <span className="ai-spacer" aria-hidden="true" />
-      <AgentTonePill className="ai-cloud__pill" tone="warning" label="Desktop only" />
+      <AgentTonePill
+        className="ai-cloud__pill"
+        tone="warning"
+        label={t("ui.ai.settings.cloudcards.1")}
+      />
     </div>
   )
 }

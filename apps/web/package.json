@@ -28,6 +28,7 @@
     "@kimo/desktop": "workspace:*",
     "@kimo/editor-state": "workspace:*",
     "@kimo/exporters": "workspace:*",
+    "@kimo/i18n": "workspace:*",
     "@kimo/layout": "workspace:*",
     "@kimo/mcp-server": "workspace:*",
     "@kimo/platform": "workspace:*",

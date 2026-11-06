@@ -46,6 +46,7 @@ import type {
 } from "@kimo/platform"
 import { HostSyncHub, type HostSyncMessage, type HostSyncTransport } from "@kimo/sync"
 import { scopeViolations } from "../agent-panel/tools"
+import { t } from "../lib/i18n"
 import type { CloudStore } from "../multiplayer/cloud/store"
 import { isUntitledRef, type SessionState } from "../platform/contract"
 import {
@@ -281,7 +282,9 @@ export async function startDocumentHostService(
           ok: false,
           error: {
             code: "INTERNAL",
-            message: `Save failed: ${e instanceof Error ? e.message : String(e)}`,
+            message: t("ui.host.documenthost.saveFailed", {
+              message: e instanceof Error ? e.message : String(e),
+            }),
             retryable: true,
           },
         }

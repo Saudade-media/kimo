@@ -1,3 +1,4 @@
+import { t } from "@kimo/i18n"
 import { Redo2, Undo2 } from "lucide-react"
 import type { ComponentPropsWithRef, KeyboardEvent } from "react"
 import { cx } from "../internal/util"
@@ -95,7 +96,7 @@ export function ActivityRow({
         <button
           type="button"
           className="kimo-activity-row__undo"
-          aria-label="Redo"
+          aria-label={t("ui.pkg.activity.row.activityrow.redo")}
           onClick={onRedo}
         >
           <Redo2 aria-hidden="true" />

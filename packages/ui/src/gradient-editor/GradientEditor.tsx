@@ -1,3 +1,4 @@
+import { t } from "@kimo/i18n"
 import { FlipHorizontal2, Minus, Plus, RotateCw } from "lucide-react"
 import { hexDigits, parseHex, parsePercent, percent, toHex } from "../color/color"
 import { hsvaToRgba, useHsva } from "../color/useHsva"
@@ -15,9 +16,9 @@ import { HueSlider } from "../slider/Slider"
 export type GradientKind = "linear" | "radial" | "angular"
 
 const KINDS = [
-  { value: "linear", label: "Linear" },
-  { value: "radial", label: "Radial" },
-  { value: "angular", label: "Angular" },
+  { value: "linear", label: "ui.pkg.gradient.kind.linear" },
+  { value: "radial", label: "ui.pkg.gradient.kind.radial" },
+  { value: "angular", label: "ui.pkg.gradient.kind.angular" },
 ] as const
 
 /** Color of a gradient at `at` (linear RGBA interpolation between the surrounding stops). */
@@ -137,7 +138,7 @@ export function GradientEditor({
 
   return (
     <Popover
-      title="Gradient"
+      title={t("ui.pkg.gradient.editor.gradienteditor.gradient")}
       onClose={onClose}
       anchor={anchor}
       placement={placement}
@@ -146,20 +147,20 @@ export function GradientEditor({
       <div className="kimo-gradient-editor__type-row">
         <Segmented
           fill
-          label="Gradient type"
-          options={KINDS}
+          label={t("ui.pkg.gradient.editor.gradienteditor.gradient-type")}
+          options={KINDS.map((k) => ({ value: k.value, label: t(k.label) }))}
           value={kind}
           onChange={(k) => onKindChange?.(k)}
         />
         <IconButton
-          label="Rotate 90°"
+          label={t("ui.pkg.gradient.editor.gradienteditor.rotate-90")}
           icon={<RotateCw />}
           size="sm"
           tone="ghost"
           onClick={onRotate}
         />
         <IconButton
-          label="Reverse stops"
+          label={t("ui.pkg.gradient.editor.gradienteditor.reverse-stops")}
           icon={<FlipHorizontal2 />}
           size="sm"
           tone="ghost"
@@ -192,7 +193,7 @@ export function GradientEditor({
           <span className="kimo-gradient-editor__spacer" />
           <IconButton
             className="kimo-gradient-editor__add"
-            label="Add stop"
+            label={t("ui.pkg.gradient.editor.gradienteditor.add-stop")}
             icon={<Plus />}
             size="sm"
             tone="ghost"

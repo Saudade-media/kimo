@@ -1,5 +1,6 @@
+import { type MessageKey, t } from "@kimo/i18n"
 import { ArrowDown, ArrowRight } from "lucide-react"
-import type { ComponentPropsWithRef } from "react"
+import type { ComponentPropsWithRef, ReactNode } from "react"
 import { Segmented } from "../segmented/Segmented"
 
 /** Props for {@link DirectionControl}. Remaining `<div>` props go to the frame. */
@@ -11,9 +12,9 @@ export interface DirectionControlProps
   label?: string
 }
 
-const OPTIONS = [
-  { value: "row", label: "Horizontal", icon: <ArrowRight /> },
-  { value: "column", label: "Vertical", icon: <ArrowDown /> },
+const OPTIONS: readonly { value: "row" | "column"; label: MessageKey; icon: ReactNode }[] = [
+  { value: "row", label: "ui.direction.horizontal", icon: <ArrowRight /> },
+  { value: "column", label: "ui.direction.vertical", icon: <ArrowDown /> },
 ] as const
 
 /**
@@ -22,17 +23,13 @@ const OPTIONS = [
  * shadow, icon text-primary; else icon text-tertiary), so it is that component with
  * Horizontal (xyvmk, `arrow-right` 14) and Vertical (RzC9v, `arrow-down` 14).
  */
-export function DirectionControl({
-  value,
-  onChange,
-  label = "Direction",
-  ...rest
-}: DirectionControlProps) {
+export function DirectionControl({ value, onChange, label, ...rest }: DirectionControlProps) {
+  const options = OPTIONS.map((o) => ({ ...o, label: t(o.label) }))
   return (
     <Segmented
       {...rest}
-      label={label}
-      options={OPTIONS}
+      label={label ?? t("ui.direction.label")}
+      options={options}
       value={value}
       onChange={(v) => onChange?.(v)}
     />

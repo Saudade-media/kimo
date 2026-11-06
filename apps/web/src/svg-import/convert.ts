@@ -5,6 +5,7 @@
  * Kimo paints. Options: Keep groups as frames, Match fills to variables, Outline strokes.
  */
 import type { InsertOp, Op } from "@kimo/editor-state"
+import { t, tn } from "../lib/i18n"
 import {
   type Bounds,
   type Matrix,
@@ -261,15 +262,17 @@ export function svgSize(root: SvgElement): { viewBox: Bounds; w: number; h: numb
 /** Popover description: "Editable paths in a frame. 14 paths · 3 groups · 1 gradient.
  * Unsupported: 1 filter (dropped)." */
 export function describeStats(s: SvgStats): string {
-  const p = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`
-  const parts = [p(s.paths, "path")]
-  if (s.groups) parts.push(p(s.groups, "group"))
-  if (s.gradients) parts.push(p(s.gradients, "gradient"))
-  if (s.stroked) parts.push(p(s.stroked, "stroked path"))
-  let out = `Editable paths in a frame. ${parts.join(" · ")}.`
+  const parts = [tn("ui.svg.convert.pathOne", "ui.svg.convert.path", s.paths)]
+  if (s.groups) parts.push(tn("ui.svg.convert.groupOne", "ui.svg.convert.group", s.groups))
+  if (s.gradients)
+    parts.push(tn("ui.svg.convert.gradientOne", "ui.svg.convert.gradient", s.gradients))
+  if (s.stroked) parts.push(tn("ui.svg.convert.strokedOne", "ui.svg.convert.stroked", s.stroked))
+  let out = t("ui.svg.convert.summary", { parts: parts.join(" · ") })
   const un = Object.entries(s.unsupported)
   if (un.length)
-    out += ` Unsupported: ${un.map(([k, n]) => `${n} ${k}${n === 1 ? "" : "s"}`).join(", ")} (dropped).`
+    out += t("ui.svg.convert.unsupported", {
+      list: un.map(([k, n]) => `${n} ${k}${n === 1 ? "" : "s"}`).join(", "),
+    })
   return out
 }
 

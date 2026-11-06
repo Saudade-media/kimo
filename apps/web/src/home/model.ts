@@ -11,16 +11,17 @@ import {
   type RecentFile,
   type WatchedFolder,
 } from "@kimo/platform"
+import { type MessageKey, t, tn } from "../lib/i18n"
 import type { HomeSection } from "../router"
 
-/** Sidebar label = h1 of each fixed section (rules "h1"). */
+/** Sidebar label = h1 of each fixed section (rules "h1"); `folder` and `workspace` name their own. */
 export const SECTION_TITLE = {
-  recents: "Recents",
-  all: "All files",
-  templates: "Templates",
-  libraries: "Design systems",
-  trash: "Trash",
-} as const
+  recents: "home.section.recents",
+  all: "home.section.all",
+  templates: "home.section.templates",
+  libraries: "home.section.libraries",
+  trash: "home.section.trash",
+} as const satisfies Record<string, MessageKey>
 
 /** The watched folder a `#/folder/<ref>` route lands on: `ref` itself, or the folder holding it. */
 export function resolveFolder(
@@ -55,17 +56,26 @@ export function searchFiles<T extends { name: string }>(files: readonly T[], que
   return q ? files.filter((f) => f.name.toLowerCase().includes(q)) : [...files]
 }
 
-const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`
+/** The nouns a list header counts; each has a singular and a plural message. */
+type CountUnit = "file" | "template" | "library" | "folder" | "component" | "day"
+const COUNT: Record<CountUnit, [MessageKey, MessageKey]> = {
+  file: ["home.count.fileOne", "home.count.file"],
+  template: ["home.count.templateOne", "home.count.template"],
+  library: ["home.count.libraryOne", "home.count.library"],
+  folder: ["home.count.folderOne", "home.count.folder"],
+  component: ["home.count.componentOne", "home.count.component"],
+  day: ["home.count.dayOne", "home.count.day"],
+}
 
 /** Files Header title: "24 files", "5 templates", "3 libraries". */
-export const countLabel = (n: number, one = "file", many?: string) => plural(n, one, many)
+export const countLabel = (n: number, unit: CountUnit = "file") =>
+  tn(COUNT[unit][0], COUNT[unit][1], n)
 
 /** Files Header note of a file list section (board 37 §1). */
 export function filesNote(section: HomeSection["kind"], folderCount: number): string {
-  if (section === "all")
-    return `in ${plural(folderCount, "folder")} and Recents · sorted by modified`
-  if (section === "folder") return "in this folder and its subfolders · sorted by modified"
-  return `from ${plural(folderCount, "folder")} on disk · sorted by modified`
+  if (section === "all") return t("home.note.all", { folders: countLabel(folderCount, "folder") })
+  if (section === "folder") return t("home.note.folder")
+  return t("home.note.recents", { folders: countLabel(folderCount, "folder") })
 }
 
 /** `home.kimo` → `home` (`.kimo` / `.kimoz`). */
@@ -180,8 +190,10 @@ export function libraryIndex(probes: readonly LibraryProbe[]): LibraryEntry[] {
  * import it (B4, web): the card shows the component count only.
  */
 export function libraryInfo(e: { components: number; usedBy: number | null }): string {
-  const components = plural(e.components, "component")
-  return e.usedBy == null ? components : `${components} · used by ${plural(e.usedBy, "file")}`
+  const components = countLabel(e.components, "component")
+  return e.usedBy == null
+    ? components
+    : t("home.libraryInfo", { components, usedBy: countLabel(e.usedBy, "file") })
 }
 
 const DAY = 24 * 60 * 60 * 1000
@@ -190,7 +202,7 @@ const DAY = 24 * 60 * 60 * 1000
 export function daysLeft(trashedAt: number, now: number, retentionMs = 30 * DAY): string {
   const full = Math.ceil(retentionMs / DAY)
   const left = Math.min(full, Math.max(1, Math.ceil((trashedAt + retentionMs - now) / DAY)))
-  return plural(left, "day")
+  return countLabel(left, "day")
 }
 
 /** The cause sentence of a failure (rules "Errors": "Couldn't <verb> <object>" then the cause). */
@@ -208,7 +220,7 @@ export function causeOf(e: unknown, existing?: string): string {
 
 /** "Couldn't move home.kimo to the Trash. Permission denied." */
 export function failure(action: string, e: unknown, existing?: string): string {
-  return `Couldn't ${action}. ${causeOf(e, existing)}`
+  return t("errors.couldntCause", { what: action, cause: causeOf(e, existing) })
 }
 
 /** True when the error is a platform `EXISTS`. */

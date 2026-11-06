@@ -1,3 +1,4 @@
+import { t } from "@kimo/i18n"
 import { X } from "lucide-react"
 import {
   type ComponentPropsWithoutRef,
@@ -131,7 +132,7 @@ export function Popover({
         {actions ?? (
           <IconButton
             className="kimo-popover__close"
-            label="Close"
+            label={t("ui.pkg.popover.popover.close")}
             icon={<X />}
             size="sm"
             tone="quiet"

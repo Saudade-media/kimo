@@ -33,6 +33,7 @@ import type {
   SnapOverlay,
   SpacingIndicator,
 } from "@kimo/renderer"
+import type { MessageKey } from "../lib/i18n"
 
 /** The vanilla Zustand UI store from `@kimo/editor-state`. */
 export type UiStore = ReturnType<typeof createUiStore>
@@ -62,7 +63,7 @@ export type CanvasToolId = (typeof CANVAS_TOOL_IDS)[number]
 export interface CanvasToolSpec {
   id: CanvasToolId
   /** Layer name in `desing.pen` (tooltip label). */
-  label: string
+  label: MessageKey
   icon: string
   /** Single-key shortcut (`⇧⌘K` style for chords). */
   shortcut: string
@@ -102,17 +103,24 @@ export interface CanvasToolSpec {
 export const CANVAS_TOOLS: readonly CanvasToolSpec[] = [
   {
     id: "move",
-    label: "Move",
+    label: "ui.tool.move",
     icon: "mouse-pointer-2",
     shortcut: "V",
     tool: "select",
     enabled: true,
   },
-  { id: "frame", label: "Frame", icon: "frame", shortcut: "F", tool: "frame", enabled: true },
+  {
+    id: "frame",
+    label: "ui.tool.frame",
+    icon: "frame",
+    shortcut: "F",
+    tool: "frame",
+    enabled: true,
+  },
   // Board 27 §5 shape slot (flyout MBxVC, in item order): exact lucide names from the design.
   {
     id: "rectangle",
-    label: "Rectangle",
+    label: "ui.tool.rectangle",
     icon: "square",
     shortcut: "R",
     tool: "rect",
@@ -121,7 +129,7 @@ export const CANVAS_TOOLS: readonly CanvasToolSpec[] = [
   },
   {
     id: "ellipse",
-    label: "Ellipse",
+    label: "ui.tool.ellipse",
     icon: "circle",
     shortcut: "O",
     tool: "ellipse",
@@ -130,7 +138,7 @@ export const CANVAS_TOOLS: readonly CanvasToolSpec[] = [
   },
   {
     id: "line",
-    label: "Line",
+    label: "ui.tool.line",
     icon: "minus",
     shortcut: "L",
     tool: "line",
@@ -139,7 +147,7 @@ export const CANVAS_TOOLS: readonly CanvasToolSpec[] = [
   },
   {
     id: "arrow",
-    label: "Arrow",
+    label: "ui.tool.arrow",
     icon: "move-up-right",
     shortcut: "⇧L",
     tool: "arrow",
@@ -148,7 +156,7 @@ export const CANVAS_TOOLS: readonly CanvasToolSpec[] = [
   },
   {
     id: "polygon",
-    label: "Polygon",
+    label: "ui.tool.polygon",
     icon: "pentagon",
     // The design's ⇧P stays Prompt's (board 22): Polygon is reached from the shape slot only.
     shortcut: "",
@@ -158,19 +166,19 @@ export const CANVAS_TOOLS: readonly CanvasToolSpec[] = [
   },
   {
     id: "star",
-    label: "Star",
+    label: "ui.tool.star",
     icon: "star",
     shortcut: "⇧S",
     tool: "star",
     enabled: true,
     slot: "shape",
   },
-  { id: "text", label: "Text", icon: "type", shortcut: "T", tool: "text", enabled: true },
+  { id: "text", label: "ui.tool.text", icon: "type", shortcut: "T", tool: "text", enabled: true },
   // M2: Pen is a real mode (board 10 #7 "Pen tool active": ToolButton/Active I0D9n4).
-  { id: "pen", label: "Pen", icon: "pen-tool", shortcut: "P", tool: "path", enabled: true },
+  { id: "pen", label: "ui.tool.pen", icon: "pen-tool", shortcut: "P", tool: "path", enabled: true },
   {
     id: "image",
-    label: "Image",
+    label: "ui.tool.image",
     icon: "image",
     shortcut: "⇧⌘K",
     tool: null,
@@ -179,7 +187,7 @@ export const CANVAS_TOOLS: readonly CanvasToolSpec[] = [
   },
   {
     id: "component",
-    label: "Component",
+    label: "ui.tool.component",
     icon: "component",
     shortcut: "⌥⌘K",
     tool: null,
@@ -191,7 +199,7 @@ export const CANVAS_TOOLS: readonly CanvasToolSpec[] = [
   // one-shot inserts at the viewport center, then the body opens for typing.
   {
     id: "note",
-    label: "Note",
+    label: "ui.tool.note",
     icon: "sticky-note",
     iconColor: "note-text",
     shortcut: "N",
@@ -201,7 +209,7 @@ export const CANVAS_TOOLS: readonly CanvasToolSpec[] = [
   },
   {
     id: "prompt",
-    label: "Prompt",
+    label: "ui.tool.prompt",
     icon: "sparkles",
     iconColor: "agent",
     shortcut: "⇧P",
@@ -718,12 +726,12 @@ export interface IconSpec {
 
 /** DOM hints the shell renders (board 10). Text and icon are the design's exact copy. */
 export type CanvasHint =
-  | { kind: "pen"; icon: "pen-tool"; text: "Click to add points · Drag to curve · Enter to finish" }
-  | { kind: "pen-close"; icon: "circle-dot"; text: "Close path"; screen: Point }
-  | { kind: "path-edit"; icon: "spline"; text: "Editing path · Esc or Enter to exit" }
-  | { kind: "measuring"; text: "Measuring"; keys: "⌥" }
+  | { kind: "pen"; icon: "pen-tool"; text: string }
+  | { kind: "pen-close"; icon: "circle-dot"; text: string; screen: Point }
+  | { kind: "path-edit"; icon: "spline"; text: string }
+  | { kind: "measuring"; text: string; keys: "⌥" }
   /** Board 27 §6 (d) ud74f: image crop mode (Hint u0dQ1, icon crop). */
-  | { kind: "crop"; icon: "crop"; text: "Drag edges to crop · drag inside to pan · Enter to apply" }
+  | { kind: "crop"; icon: "crop"; text: string }
 
 /** Imperative handle exposed through `ref`. */
 export interface CanvasHandle {

@@ -8,6 +8,7 @@
  * - {@link runFlySteps}: the flyctl deploy log (section 5 B): each command one line that ticks
  *   with its time; an error stops the run with flyctl's last lines.
  */
+import { t } from "../../lib/i18n"
 import { type FlyStep, flyRelayUrl, localRelayEnv } from "./commands"
 import type { ProcLine, RelayHostApi, RelayProc, ToolInfo } from "./host"
 import {
@@ -229,7 +230,7 @@ export class LocalRelay {
         if (this.state.status === "running")
           this.set({
             status: "failed",
-            error: `The relay stopped. ${tail.lines.at(-1) ?? ""}`.trim(),
+            error: t("ui.mp.relay.stopped", { tail: tail.lines.at(-1) ?? "" }).trim(),
           })
       })
       await waitForLine(

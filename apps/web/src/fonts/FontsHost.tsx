@@ -12,6 +12,7 @@ import type { FontAvailability, MissingFont } from "@kimo/renderer"
 import { readFontInfo } from "@kimo/renderer"
 import { DialogScrim } from "@kimo/ui"
 import { useEffect, useState } from "react"
+import { t } from "../lib/i18n"
 import { FONT_MIME } from "./document-fonts"
 import type { FontPickerEntry, GoogleFontsState } from "./FontPicker"
 import type { FontSystem } from "./font-system"
@@ -154,7 +155,7 @@ interface PickedFont {
 /** Opens the native/browser picker for one font file; null when cancelled or unreadable. */
 async function pickFontFile(platform: KimoPlatform): Promise<PickedFont | null> {
   const [ref] = await platform.dialogs.openFile({
-    title: "Choose font file",
+    title: t("ui.fonts.fontshost.choose-font-file"),
     filters: [{ name: "Fonts", extensions: Object.keys(FONT_MIME) }],
   })
   if (!ref) return null
@@ -264,7 +265,8 @@ export function MissingFontsHost(props: MissingFontsHostProps) {
         onKeep={close}
         onReplace={(mapping) => {
           const ops = replaceFontOps(doc(), mapping)
-          if (ops.length) apply(ops, `Replace ${Object.keys(mapping).length} fonts`)
+          if (ops.length)
+            apply(ops, t("ui.fonts.host.replaceFonts", { n: String(Object.keys(mapping).length) }))
           close()
         }}
         {...(platform.capabilities.reveal

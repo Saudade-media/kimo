@@ -12,6 +12,7 @@
  * `setFocused`, `state.sessions`), so it works with any {@link AgentPanelControllerExt}.
  */
 import { parseAgentOrigin } from "@kimo/ai-agent"
+import { t } from "../lib/i18n"
 import type { AgentPanelControllerExt } from "./controller"
 
 /** The owning Kimo session of a placeholder, as the context menu shows it. */
@@ -38,12 +39,12 @@ export function placeholderSession(
 
 /** The continuation sent to a resumed session. */
 function resumeMessage(frameName: string): string {
-  return `Continue building ${frameName}. The previous run stopped before it finished.`
+  return t("ui.agent.panel.resume.continue", { frame: frameName })
 }
 
 /** The composer text of "Ask Kimo to finish". */
 function finishMessage(frameName: string): string {
-  return `Finish building ${frameName}.`
+  return t("ui.agent.panel.resume.finish", { frame: frameName })
 }
 
 /**

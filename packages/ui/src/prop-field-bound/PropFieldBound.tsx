@@ -1,3 +1,4 @@
+import { t } from "@kimo/i18n"
 import { Unlink, Variable } from "lucide-react"
 import type { ComponentPropsWithRef, ReactNode } from "react"
 import { cx } from "../internal/util"
@@ -17,7 +18,11 @@ export interface BindButtonProps extends Omit<ComponentPropsWithRef<"button">, "
  * bg-hover, radius-xs, center; Icon (x2Sf8m) lucide `variable` 12 text-primary. Hosts put it
  * at the right edge of a bindable field (`kimo-prop-field--bindable`): hover / focus shows it.
  */
-export function BindButton({ label = "Bind to variable", className, ...rest }: BindButtonProps) {
+export function BindButton({
+  label = t("ui.pkg.prop.field.bound.propfieldbound.bind-to-variable"),
+  className,
+  ...rest
+}: BindButtonProps) {
   return (
     <button
       type="button"
@@ -125,7 +130,7 @@ export function PropFieldBound({
           type="button"
           className="kimo-prop-field-bound__detach"
           aria-label={`Detach ${what} from ${name}`}
-          title="Detach"
+          title={t("ui.pkg.prop.field.bound.propfieldbound.detach")}
           onClick={onDetach}
         >
           <Unlink aria-hidden="true" />

@@ -10,6 +10,7 @@ import {
 } from "../../src/editor/bindings"
 import { exportDtcg, importDtcg } from "../../src/editor/m3/variables"
 import { withSide } from "../../src/editor/style"
+import { fontOf, sizeNumber, sizeOf, weightOf } from "../../src/editor/text"
 import type { DocHeader } from "../../src/lib/header"
 
 const header = (extra: Record<string, unknown> = {}) =>
@@ -118,6 +119,22 @@ describe("detach all variables", () => {
       layout: { dir: "row", gap: 24, pad: [8, 16] },
     })
     expect(nodeHasBinding({ type: "rect", w: 4 })).toBe(false)
+  })
+})
+
+describe("Text section readers", () => {
+  test("a typography token supplies the fields the text does not set inline", () => {
+    const resolve = (ref: string) =>
+      ref === "type/announce" ? { font: "Geist", size: 12, weight: 500 } : undefined
+    const node = {
+      type: "text",
+      style: { typography: { $ref: "type/announce" }, size: 14 },
+    } as never
+    expect(fontOf(node, resolve)).toBe("Geist")
+    expect(weightOf(node, resolve)).toBe(500)
+    expect(sizeOf(node, resolve)).toBe(14)
+    expect(sizeNumber(node, resolve)).toBe(14)
+    expect(fontOf(node)).toBe("Inter")
   })
 })
 

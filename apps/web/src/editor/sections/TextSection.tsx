@@ -32,6 +32,7 @@
  * of their own get an OpenTypeFeatureRow (LFdEa) marked "not in font" when the face lacks them —
  * checked against the face's GSUB / GPOS FeatureList (`fonts/font-features.ts`).
  */
+import { type KimoDocument, resolveVariable } from "@kimo/core-schema"
 import type { LayoutResult } from "@kimo/layout"
 import {
   CustomTagField,
@@ -89,6 +90,7 @@ import {
   type TextCase,
   type TextDecoration,
   type TextGrow,
+  type TextResolve,
   type TextVAlign,
   valignOf,
   valignValue,
@@ -149,13 +151,18 @@ export function TextSection({
   /** Board 30: the live text edit of the selected text (values are its selection's). */
   editing?: RichTextSession | null
 }) {
-  const { editor, layout } = usePanel()
+  const { editor, layout, header, theme, m3 } = usePanel()
   const nodes = sel.map((s) => s.node)
-  const font = sharedText(nodes, fontOf)
-  const weight = sharedText(nodes, weightOf)
-  const size = sharedText(nodes, sizeOf)
-  const lineHeight = sharedText(nodes, lineHeightText)
-  const letterSpacing = sharedText(nodes, letterSpacingText)
+  // Typography tokens (`style.typography.$ref`) supply the fields the node does not set inline.
+  const resolve: TextResolve = (ref) => {
+    const r = resolveVariable(header as unknown as KimoDocument, ref, theme ?? {}, m3?.libraries())
+    return r.ok ? r.value : undefined
+  }
+  const font = sharedText(nodes, (n) => fontOf(n, resolve))
+  const weight = sharedText(nodes, (n) => weightOf(n, resolve))
+  const size = sharedText(nodes, (n) => sizeOf(n, resolve))
+  const lineHeight = sharedText(nodes, (n) => lineHeightText(n, resolve))
+  const letterSpacing = sharedText(nodes, (n) => letterSpacingText(n, resolve))
   const align = sharedText(nodes, alignOf)
   const valign = sharedText(nodes, valignOf)
   const grow = sharedText(nodes, growOf)
@@ -377,7 +384,7 @@ export function TextSection({
                 min={1}
                 onNumber={(n) => styleOps(sel, "size", () => Math.max(1, round(n)))}
                 relative={() => {
-                  const base = sel.map((s) => ({ s, v: sizeNumber(s.node) }))
+                  const base = sel.map((s) => ({ s, v: sizeNumber(s.node, resolve) }))
                   return (d) =>
                     base.flatMap(({ s, v }) =>
                       styleOps([s], "size", () => Math.max(1, round(v + d))),
@@ -461,13 +468,13 @@ export function TextSection({
                 step={0.1}
                 onNumber={(n) =>
                   styleOps(sel, "letterSpacing", (node) => {
-                    const px = round((n * sizeNumber(node)) / 100)
+                    const px = round((n * sizeNumber(node, resolve)) / 100)
                     return px === 0 ? undefined : px
                   })
                 }
                 onText={(t) => {
                   const ops = sel.map((s) => {
-                    const px = parseLetterSpacing(t, sizeNumber(s.node))
+                    const px = parseLetterSpacing(t, sizeNumber(s.node, resolve))
                     return px === null
                       ? null
                       : styleOps([s], "letterSpacing", () => (px === 0 ? undefined : px))
@@ -480,12 +487,12 @@ export function TextSection({
                   const base = sel.map((s) => {
                     const ls = styleOf(s.node).letterSpacing
                     const px = typeof ls === "number" ? ls : 0
-                    return { s, pct: (px / sizeNumber(s.node)) * 100 }
+                    return { s, pct: (px / sizeNumber(s.node, resolve)) * 100 }
                   })
                   return (d) =>
                     base.flatMap(({ s, pct }) =>
                       styleOps([s], "letterSpacing", (node) => {
-                        const px = round(((pct + d) * sizeNumber(node)) / 100)
+                        const px = round(((pct + d) * sizeNumber(node, resolve)) / 100)
                         return px === 0 ? undefined : px
                       }),
                     )

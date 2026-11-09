@@ -42162,7 +42162,7 @@
 
 , "p5eN80": {"type":"frame","parent":"tDZn60","order":"a0","name":"Vignette · A · command and URL","w":600,"layout":{"dir":"column","gap":8}}
 
-, "p5eSXXxPyi": {"type":"text","parent":"TyJoWXX1mv","order":"a1FtD","name":"Links","content":"Notification settings · Unsubscribe from Landing","style":{"font":{"$ref":"font-sans"},"size":{"$ref":"text-xs"},"weight":500},"fill":{"$ref":"text-secondary"}}
+, "p5eSXXxPyi": {"type":"text","parent":"TyJoWXX1mv","order":"a1FtD","name":"Links","content":"Notification settings · Unsubscribe from comment emails","style":{"font":{"$ref":"font-sans"},"size":{"$ref":"text-xs"},"weight":500},"fill":{"$ref":"text-secondary"}}
 
 , "p5iRO0": {"type":"text","parent":"E2cnyO","order":"a1","name":"Cap","content":"Iris","style":{"font":{"$ref":"font-mono"},"size":{"$ref":"text-xs"},"weight":400},"fill":{"$ref":"text-tertiary"}}
 

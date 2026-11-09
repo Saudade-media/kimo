@@ -60,9 +60,11 @@ design log, so the relay can let `comment` tokens write comments and nothing els
 3. **Room channel.** Comments are a separate Yjs document per room with their own envelope kinds
    (`comments-update`, `comments-snapshot`), their own sequence and their own compaction. Relays
    accept a comment append from `comment` and `edit` tokens and refuse it from `view`. A `comment`
-   token can read everything a `view` token reads. This is a protocol minor bump: the relay
-   advertises support in `welcome`; a client that meets an older relay keeps view links
-   read-only and says so in the Share popover.
+   token can read everything a `view` token reads. The relay advertises the channel in a
+   trailing `welcome` field (client decoders already ignore trailing bytes), and only clients
+   that then subscribe receive comment traffic; a client that meets an older relay keeps view
+   links read-only and says so in the Share popover. On the wire the relay reports a comment
+   connection as `view`, because 1.2.x decoders reject any other role.
 4. **Links.** On a relay that supports it, "view" links minted from now on carry role `comment`
    (shown as "Can view and comment"). Links minted before keep role `view`. Kimo Cloud mints
    view links the same way.
@@ -101,6 +103,11 @@ design log, so the relay can let `comment` tokens write comments and nothing els
 - Files with comments need the Kimo release that ships comments to edit; older versions open
   them read-only. The
   release notes must say this.
+- Kimo 1.2.x opening a new view link (role 3) joins as a viewer and cannot comment; the relay
+  must never put the word `comment` on the wire, or those clients fail to decode `welcome`.
+- Comment links carry no key or token, so copying one never hands out access.
+- `kimo merge` gains a three-way merge for `comments` (union by id, later edit wins), which needs
+  convergence tests like the rest of the format.
 - Authorship is not cryptographically enforced. Signing each message with the author's device
   key would fix that later without a format break (an optional `sig` field).
 - The editor gains a tool mode, a right panel, canvas overlays and new keyboard shortcuts

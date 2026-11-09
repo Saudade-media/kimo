@@ -786,8 +786,8 @@ export function AutoLayoutSection({ sel }: { sel: readonly Sel[] }) {
   const align = field((l) => (typeof l.align === "string" ? l.align : "start")) as string | Mixed
   const gap = field((l) => l.gap ?? 0)
   // Board 27 rule YRDTq: Row gap (crossGap) shows only while Wrap is on (horizontal); off keeps
-  // crossGap in the data, hidden. crossGap defaults to gap (spec §5.3).
-  const crossGap = field((l) => l.crossGap ?? l.gap ?? 0)
+  // crossGap in the data, hidden. crossGap defaults to 0, like the engine (spec §5.3).
+  const crossGap = field((l) => l.crossGap ?? 0)
   const wrapped = wrap === true && dir === "row"
   const single = sel.length === 1 ? (sel[0] as Sel).id : null
   // Raw sides: a bound side stays a `{ $ref }` (board 27 §7: each side binds on its own).
@@ -839,7 +839,7 @@ export function AutoLayoutSection({ sel }: { sel: readonly Sel[] }) {
     prefix,
     get: (n) => {
       const l = layoutObj(n) ?? {}
-      return key === "gap" ? (l.gap ?? 0) : (l.crossGap ?? l.gap ?? 0)
+      return key === "gap" ? (l.gap ?? 0) : (l.crossGap ?? 0)
     },
     put: (s, v) => mapOps([s], "layout", (node) => withLayout(node, { [key]: v })),
     current: () => {

@@ -61,6 +61,17 @@ Display numbers ("#12") are derived, never stored: threads sorted by their first
 then id, numbered from 1. Comments are excluded from canonical node order, from `components`,
 from validation of the node tree and from every exporter.
 
+**Git merge** (`kimo merge`, format §18 and §21), three-way against the base:
+
+- Threads and messages union by id. A thread or message deleted on one side and unchanged on the
+  other is deleted; deleted on one side and changed on the other, the deletion wins.
+- A field changed on one side only takes that side's value. Changed on both sides: for `text`
+  the message with the later `edited` wins; for `resolved` the later `at` wins (an absent value
+  loses to a present one); otherwise the value whose canonical JSON sorts higher wins, so the
+  result is the same whichever side is "ours".
+- Reaction lists merge as sets: additions from both sides, removals from both sides.
+- Comments never produce stored conflicts.
+
 New validation codes: `COMMENT_ANCHOR_INVALID` (error: anchor fields missing or out of range),
 `COMMENT_EMPTY` (error: a thread with no messages), `COMMENT_ATTACHMENT_MISSING` (warning: an
 attachment names no asset). A thread whose anchor node does not exist is not an error (§2).
@@ -113,21 +124,32 @@ member is its plain-JSON projection, written on save like the design doc.
 Additions to [multiplayer.md](multiplayer.md):
 
 - **§4 roles.** Role `3` comment becomes valid. Verification step 6 accepts 1, 2 and 3.
+- **Wire role.** Kimo 1.2.x decoders accept only `view` and `edit` in `welcome`, `peers` and
+  `peer-joined` (`protocol.ts` throws otherwise). The relay MUST therefore report a role 3
+  connection as `view` in every relay message. A client knows it may comment from the role in its
+  own token. A 1.2.x client opening a role 3 link joins as a viewer and cannot comment.
 - **§9 envelopes.** Kind `5` comments-update (AAD `kimo/v1|<roomId>|comments-update`) and kind
   `6` comments-snapshot (AAD `kimo/v1|<roomId>|comments-snapshot|<upTo>`), encrypted with the
   `doc` key. The plaintext is a comment-doc update or state.
-- **§11.2 client to relay.** Type `7` `append-comment` with the fields of `append`. Allowed for
-  `comment` and `edit`. A `view` token is denied with `VIEW_ONLY`.
-  `append` (design log) from a `comment` token is denied with `VIEW_ONLY` too.
-- **§11.3 relay to client.** `welcome` gains a trailing `varUint features` bit set; bit 0 means
-  "comment channel". Comment entries arrive as type `27` `comment-entries`, acks as `ack` with the
-  same `cid` space. Snapshot and compaction messages gain a channel byte after their type
-  (`0` design, `1` comments); clients that do not set bit 0 never see them.
+- **§11.3 `welcome`.** A trailing `varUint features` bit set; bit 0 means "comment channel".
+  Client decoders already ignore trailing bytes after the known fields, so older clients are
+  unaffected.
+- **§11.2 client to relay.** Type `7` `append-comment` (`varUint cid`, `varUint8Array env`):
+  allowed for roles comment and edit, `VIEW_ONLY` for view. Type `8` `comments-subscribe`
+  (`varUint since`): sent once, after a `welcome` with bit 0. `append` (design log) from a
+  comment token is `VIEW_ONLY`. Relays without the channel close on types 7 and 8
+  (`BAD_MESSAGE`), so clients MUST NOT send them unless bit 0 was set.
+- **§11.3 relay to client.** New types, sent only to connections that sent `comments-subscribe`:
+  `27` `comment-entries` (as `entries`), `28` `comment-snapshot` (as `snapshot`), `29`
+  `comment-compact` (as `compact`). Acks reuse `ack` with the shared `cid` space. Existing
+  types keep their layout.
 - **§14.** The relay stores a second log and snapshot per room with its own `seq`, compaction and
-  quota share. Room size and the owner sweep count both. Rate limit: 100 comment appends per
-  hour per token `jti` (Figma's posting limit), then `RATE_LIMITED`.
-- A client that connects to a relay without bit 0 MUST keep the comment doc local only, MUST NOT
-  mint role 3 links, and the Share popover says view links are read-only on this relay.
+  quota share. Room size and the owner sweep count both. The relay cannot tell a new message from
+  a reaction inside an encrypted update, so it limits comment appends to 600 an hour per token
+  `jti` (`RATE_LIMITED`); clients limit new messages and replies to 100 an hour per author
+  (Figma's posting limit).
+- A client that meets a relay without bit 0 keeps the comment doc local only, MUST NOT mint role
+  3 links, and the Share popover says view links are read-only on this relay.
 
 **Links.** On a relay with bit 0, the Share popover mints view links with role 3 and labels them
 "Can view and comment". Existing role 1 links stay view-only until reset. Kimo Cloud mints role 3
@@ -171,8 +193,10 @@ file's path hash for local ones.
   editors), re-anchoring by the rules of §2.
 - Panel: search (message text and author names), sort by date or unread, filters This page / All
   pages, Only your threads, Show resolved. Choices persist per file on the device.
-- Copy link copies the file's link (or local deep link) with `#comment=<thread id>`; opening it
-  selects the thread and zooms to its pin.
+- Copy link copies a link without any key or token: the room id (or, for a local file, its file
+  id) plus the thread id. It opens only for people who already have the file, from their local
+  registry or as a workspace member on Kimo Cloud, then selects the thread and zooms to its pin.
+  Giving someone new access always goes through Share, never through a comment link.
 - A guest (no account, no display name in Settings) is asked for a name once, on their first
   comment; Skip posts as their presence name ("Guest 2"). The name is saved on the device and also
   becomes their presence name.
@@ -210,7 +234,7 @@ ADR 0019) and, per file and recipient:
    per file and recipient. Mentions come first, then the other comments, each with author, frame
    name and text, and one "Open in Kimo" link.
 3. Recipients are workspace members with "Comment emails" not Off. Guests on view links get no
-   email. Unsubscribe links set the file's choice to Off for that member.
+   email. The unsubscribe link turns that member's Comment emails to Off for every file.
 
 Self-hosted relays send no email. The digest is the only place Kimo Cloud uses comment text; the
 privacy page MUST list it before the feature ships.

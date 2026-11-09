@@ -25,6 +25,7 @@ cites the sections of the [teardown](../teardown.md) (the plan of record) it imp
 | [0017](0017-relay-ownership-pairing.md) | Relays belong to devices: pre-claim or claim on first use, add devices with pairing links, remove the create secret | Proposed |
 | [0018](0018-kimo-cloud.md) | Kimo Cloud: a paid hosted relay, with billing outside the open repo and an owner policy hook in the relay | Proposed |
 | [0019](0019-kimo-cloud-workspaces.md) | Kimo Cloud workspaces: a subscription belongs to a workspace, editors take paid seats, Kimo Cloud holds the keys | Proposed |
+| [0020](0020-comments.md) | Comments: threads live in the file, sync on their own room channel, and viewers can write them | Proposed |
 
 ## Process
 

@@ -54,30 +54,44 @@ export function weightName(w: number): string {
 /** `$name` for a binding. */
 const refText = (v: { $ref: string }) => `$${v.$ref}`
 
-export function fontOf(node: NodeData): string {
-  const f = styleOf(node).font
+/** Resolves a variable name to its value (undefined when it does not resolve). */
+export type TextResolve = (ref: string) => unknown
+
+/**
+ * The style the canvas renders: the fields of `style.typography` (when it resolves) underneath
+ * the inline ones.
+ */
+function effectiveStyle(node: NodeData, resolve?: TextResolve): Obj {
+  const st = styleOf(node)
+  if (!resolve || !isRef(st.typography)) return st
+  const t = resolve(st.typography.$ref)
+  return isObj(t) ? { ...t, ...st } : st
+}
+
+export function fontOf(node: NodeData, resolve?: TextResolve): string {
+  const f = effectiveStyle(node, resolve).font
   return typeof f === "string" ? f : isRef(f) ? refText(f) : TEXT_DEFAULTS.font
 }
 
-export function weightOf(node: NodeData): number | string {
-  const w = styleOf(node).weight
+export function weightOf(node: NodeData, resolve?: TextResolve): number | string {
+  const w = effectiveStyle(node, resolve).weight
   return typeof w === "number" ? w : isRef(w) ? refText(w) : TEXT_DEFAULTS.weight
 }
 
-export function sizeOf(node: NodeData): number | string {
-  const s = styleOf(node).size
+export function sizeOf(node: NodeData, resolve?: TextResolve): number | string {
+  const s = effectiveStyle(node, resolve).size
   return typeof s === "number" ? s : isRef(s) ? refText(s) : TEXT_DEFAULTS.size
 }
 
 /** The numeric size (bindings / unknown fall back to the default), for % ↔ px conversions. */
-export function sizeNumber(node: NodeData): number {
-  const s = styleOf(node).size
+export function sizeNumber(node: NodeData, resolve?: TextResolve): number {
+  const s = effectiveStyle(node, resolve).size
   return typeof s === "number" ? s : TEXT_DEFAULTS.size
 }
 
 /** Line height field: "110%" (multiplier 1.1), "24px" ({ px: 24 }), "Auto" (absent). */
-export function lineHeightText(node: NodeData): string {
-  const lh = styleOf(node).lineHeight
+export function lineHeightText(node: NodeData, resolve?: TextResolve): string {
+  const lh = effectiveStyle(node, resolve).lineHeight
   if (typeof lh === "number") return `${formatNumber(lh * 100)}%`
   if (isObj(lh) && typeof lh.px === "number") return `${formatNumber(lh.px)}px`
   if (isRef(lh)) return refText(lh)
@@ -85,11 +99,11 @@ export function lineHeightText(node: NodeData): string {
 }
 
 /** Letter spacing field as % of the size ("-2%" for -0.96px at 48). */
-export function letterSpacingText(node: NodeData): string {
-  const ls = styleOf(node).letterSpacing
+export function letterSpacingText(node: NodeData, resolve?: TextResolve): string {
+  const ls = effectiveStyle(node, resolve).letterSpacing
   if (isRef(ls)) return refText(ls)
   const px = typeof ls === "number" ? ls : 0
-  return `${formatNumber((px / sizeNumber(node)) * 100)}%`
+  return `${formatNumber((px / sizeNumber(node, resolve)) * 100)}%`
 }
 
 export function alignOf(node: NodeData): TextAlign {

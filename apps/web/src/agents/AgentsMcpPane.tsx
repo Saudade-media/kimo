@@ -897,9 +897,7 @@ function Permissions({
         <span className="agents-perms__label">{t("ui.agents.agentsmcppane.t1")}</span>
         <Toggle checked={ask} label={t("ui.agents.agentsmcppane.1")} onChange={(on) => onAsk(on)} />
         <span className="agents-perms__auto-note">
-          {ask
-            ? "On: anything outside its permissions asks first"
-            : "Off: every request runs without asking"}
+          {ask ? t("ui.agents.agentsmcppane.auto-on") : t("ui.agents.agentsmcppane.auto-off")}
         </span>
       </div>
       <div className="agents-perms__footer">

@@ -103,7 +103,7 @@ export function ConfigDiffDialog(p: ConfigDiffDialogProps) {
   }, [])
   const title =
     p.action === "remove"
-      ? t("ui.agents.configdiff.remove", { tool: p.label })
+      ? t("ui.agents.configdiff.removeTitle", { tool: p.label })
       : p.action === "update"
         ? t("ui.agents.configdiff.update", { tool: p.label })
         : t("ui.agents.configdiff.add", { tool: p.label })

@@ -11,10 +11,10 @@
 
 ## Context
 
-People review designs in Figma by pinning comments to the canvas: press C, click or drag, write,
-reply, react, resolve. Kimo has sticky notes (`note` nodes) but nothing that a reviewer without
-edit rights can leave, nothing threaded and nothing that tells you someone answered. The owner
-asked for comments "exactly like Figma" and settled the product questions on 2026-11-10:
+Design reviews happen on the canvas: press C, click or drag, write, reply, react, resolve. Kimo
+has sticky notes (`note` nodes) but nothing that a reviewer without edit rights can leave, nothing
+threaded and nothing that tells you someone answered. The owner asked for full canvas comments and
+settled the product questions on 2026-11-10:
 
 - Comments live in the file. A local file keeps them on disk; a shared file (self-hosted room or
   Kimo Cloud) keeps them in its room. They work on unshared files too.
@@ -22,7 +22,7 @@ asked for comments "exactly like Figma" and settled the product questions on 202
   resolves; file owners and Cloud admins may delete any thread.
 - v1 has pins and area comments, replies, emoji reactions, @mentions, up to 5 images, rich text,
   unread state, sort and filters, links to a thread, Shift+C to hide, a guest name prompt.
-- Pins attach to top-level frames, components and groups, as in Figma.
+- Pins attach to top-level frames, components and groups.
 - Agents read, reply and resolve through MCP. They start a thread only when someone asks them to,
   and never delete a person's comment.
 - Exports never include comments.
@@ -57,7 +57,7 @@ design log, so the relay can let `comment` tokens write comments and nothing els
    coordinates. When a client deletes an anchored node it also writes a `fallback` position on
    each affected thread; a thread whose node is gone shows at its fallback and is listed as
    Detached. Undo of the delete reattaches it because the node id is kept. Copying or cutting a
-   frame does not move its comments, as in Figma.
+   frame does not move its comments.
 3. **Room channel.** Comments are a separate Yjs document per room with their own envelope kinds
    (`comments-update`, `comments-snapshot`), their own sequence and their own compaction. Relays
    accept a comment append from `comment` and `edit` tokens and refuse it from `view`. A `comment`
@@ -96,7 +96,7 @@ design log, so the relay can let `comment` tokens write comments and nothing els
 ## Consequences
 
 - Reviewers without edit rights can finally give feedback inside Kimo, which matches how
-  Figma teams already work and is a reason to pick Kimo Cloud.
+  design teams already work and is a reason to pick Kimo Cloud.
 - The relay gains a second log per room, a new role, two envelope kinds and a client message.
   Room storage, quotas, compaction and the owner sweep each count both logs. Relay tests must
   cover a `view` token refused on the comment channel and a `comment` token refused on the
@@ -121,12 +121,12 @@ design log, so the relay can let `comment` tokens write comments and nothing els
 - **Comments inside the design Yjs document.** One log, no protocol change. Rejected: the blind
   relay could not stop a view link from editing layers, and comments would share undo and
   compaction with the design.
-- **A Kimo Cloud comment service.** Simplest for email and moderation, as in Figma. Rejected:
+- **A Kimo Cloud comment service.** Simplest for email and moderation. Rejected:
   local files and self-hosted rooms would have no comments, and the owner wants them in the file.
 - **A sidecar file (`.kimo-comments`).** Keeps the design file clean. Rejected: it gets lost when
   a file is moved or sent, and git diffs would split one review across two files.
 - **A third "Can comment" link type next to view and edit.** Rejected by the owner: view links
-  comment, as in Figma.
+  comment.
 - **Immediate email per mention.** Rejected by the owner in favour of a debounced digest.
 
 ## Revisit when

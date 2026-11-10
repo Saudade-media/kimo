@@ -146,8 +146,7 @@ Additions to [multiplayer.md](multiplayer.md):
 - **§14.** The relay stores a second log and snapshot per room with its own `seq`, compaction and
   quota share. Room size and the owner sweep count both. The relay cannot tell a new message from
   a reaction inside an encrypted update, so it limits comment appends to 600 an hour per token
-  `jti` (`RATE_LIMITED`); clients limit new messages and replies to 100 an hour per author
-  (Figma's posting limit).
+  `jti` (`RATE_LIMITED`); clients limit new messages and replies to 100 an hour per author.
 - A client that meets a relay without bit 0 keeps the comment doc local only, MUST NOT mint role
   3 links, and the Share popover says view links are read-only on this relay.
 

@@ -165,7 +165,7 @@ view links for workspace files.
 | Edit a message | Its author only |
 | Delete a message | Its author; deleting a thread's first message deletes the thread |
 | Delete any thread | Room owner devices (ADR 0017) and Kimo Cloud workspace owner and admins |
-| Agents | Read, reply, resolve, unresolve, react; never edit or delete another author's message |
+| Agents | Read, reply, resolve, unresolve, react; start a thread only when a person asked; never edit or delete another author's message |
 
 The relay enforces only the first three rows (by role). Clients and the MCP server enforce the
 rest; a client that receives a remote change breaking these rules still applies it (CRDT) but the
@@ -210,11 +210,14 @@ One tool, `kimo_comments`:
 |---|---|---|
 | `list` | `{docId, page?, includeResolved?, unreadOnly?}` | Threads with anchor, resolved, message count, first and last message |
 | `read` | `{docId, threadId}` | The thread with every message |
+| `create` | `{docId, anchor: {node?, page?, x, y, w?, h?}, text}` | The new thread id. Only when a person asked for comments |
 | `reply` | `{docId, threadId, text}` | The new message id |
 | `resolve` / `unresolve` | `{docId, threadId}` | `ok` |
 | `react` | `{docId, messageId, emoji}` | `ok` (toggles) |
 
-The author is the calling agent (`agent:<origin>`, kind `agent`). The tool MUST refuse edits and
+The tool description MUST tell agents to use `create` only when the person asked them to comment
+(for example "leave review comments on this page"), never on their own initiative; the built-in
+agent follows the same rule. The author is the calling agent (`agent:<origin>`, kind `agent`). The tool MUST refuse edits and
 deletes (it offers none) and MUST respect the room role: a session on a view-only room gets
 `READ_ONLY`. Agent replies are rate-limited with the same budget as §4.
 

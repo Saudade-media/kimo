@@ -41950,7 +41950,7 @@
 
 , "ovzo50": {"type":"frame","parent":"jgIbE0","order":"a1","name":"Desktop · All files · Screen","w":1440,"h":900,"theme":{"mode":"light"},"clip":true,"fill":{"$ref":"bg-app"},"layout":{"dir":"row"}}
 
-, "ow78Of2cdB": {"type":"text","parent":"yZksMNa1KL","order":"a3VTP","name":"Note","w":{"mode":"fill"},"content":"Agents read, reply and resolve through MCP. They never delete a person's comment.","grow":"fixed-width","style":{"font":{"$ref":"font-sans"},"size":{"$ref":"text-xs"},"weight":400,"lineHeight":1.45},"fill":{"$ref":"text-tertiary"}}
+, "ow78Of2cdB": {"type":"text","parent":"yZksMNa1KL","order":"a3VTP","name":"Note","w":{"mode":"fill"},"content":"Agents read, reply and resolve. They start threads only when someone asks them to.","grow":"fixed-width","style":{"font":{"$ref":"font-sans"},"size":{"$ref":"text-xs"},"weight":400,"lineHeight":1.45},"fill":{"$ref":"text-tertiary"}}
 
 , "owSAM0": {"type":"instance","parent":"O4gcp0","order":"a6","name":"Effects","of":"fWrGA0","props":{"w":{"mode":"fill"}},"overrides":{"UB7fP0":{"set":{"content":"Effects"}},"y5Lz1A":{"replace":true}}}
 
@@ -51750,7 +51750,7 @@
 
 , "yZOQO0": {"type":"instance","parent":"Iz1Gt0","order":"a1","name":"Number","of":"EAGNC0","overrides":{"BRxvS0":{"set":{"content":"Number"}},"RmOTH0":{"set":{"icon":"hash","color":{"$ref":"text-secondary"},"visible":true}},"T4CD10":{"set":{"content":"N","visible":true}}}}
 
-, "yZaOBcQS2Q": {"type":"text","parent":"Qxgc1AQwSo","order":"a2I3f","name":"Note","w":{"mode":"fill"},"content":"Agents post with their mark. They reply and resolve, never delete.","grow":"fixed-width","style":{"font":{"$ref":"font-sans"},"size":{"$ref":"text-xs"},"weight":400,"lineHeight":1.45},"fill":{"$ref":"text-tertiary"}}
+, "yZaOBcQS2Q": {"type":"text","parent":"Qxgc1AQwSo","order":"a2I3f","name":"Note","w":{"mode":"fill"},"content":"Agents comment only when you ask them to. They never delete.","grow":"fixed-width","style":{"font":{"$ref":"font-sans"},"size":{"$ref":"text-xs"},"weight":400,"lineHeight":1.45},"fill":{"$ref":"text-tertiary"}}
 
 , "yZcJO0": {"type":"text","parent":"ELR9C0","order":"a0","name":"Title","content":"6 files","style":{"font":{"$ref":"font-sans"},"size":{"$ref":"text-lg"},"weight":600},"fill":{"$ref":"text-primary"}}
 

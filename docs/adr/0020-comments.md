@@ -23,7 +23,8 @@ asked for comments "exactly like Figma" and settled the product questions on 202
 - v1 has pins and area comments, replies, emoji reactions, @mentions, up to 5 images, rich text,
   unread state, sort and filters, links to a thread, Shift+C to hide, a guest name prompt.
 - Pins attach to top-level frames, components and groups, as in Figma.
-- Agents read, reply and resolve through MCP. They never delete a person's comment.
+- Agents read, reply and resolve through MCP. They start a thread only when someone asks them to,
+  and never delete a person's comment.
 - Exports never include comments.
 - Notifications: in the app, plus a Kimo Cloud email digest sent after the comments go quiet.
 
@@ -77,9 +78,11 @@ design log, so the relay can let `comment` tokens write comments and nothing els
    confirmation instead. Every exporter ignores `comments`.
 7. **Read state** is local to each person and device (a per-file map of thread id to the last
    message seen), never in the file or the room.
-8. **Agents.** The MCP server gets one `kimo_comments` tool (list, read, reply, resolve,
-   unresolve) and the built-in agent the same capability. Agent messages carry the agent as
-   author. Agents may not edit or delete messages they did not write.
+8. **Agents.** The MCP server gets one `kimo_comments` tool (list, read, create, reply, resolve,
+   unresolve, react) and the built-in agent the same capability. `create` is for requests only:
+   an agent starts a thread when a person asks it to ("leave review comments on this page"),
+   never on its own initiative. Agent messages carry the agent as author. Agents may not edit or
+   delete messages they did not write.
 9. **Notifications.** In the app: a count on the Comment tool, a toast for live comments in the
    room, desktop notifications for mentions and replies to you while Kimo is in the background.
    Kimo Cloud email: one digest per file and recipient, sent 15 minutes after the last new comment
@@ -131,4 +134,4 @@ design log, so the relay can let `comment` tokens write comments and nothing els
 - Kimo needs comments from people outside a workspace on Kimo Cloud (email would need guests'
   addresses).
 - Message signing is wanted to prove authorship on self-hosted relays.
-- Agents should start threads on their own (for example a review pass), not only reply.
+- Agents should comment unprompted (for example a standing review pass).

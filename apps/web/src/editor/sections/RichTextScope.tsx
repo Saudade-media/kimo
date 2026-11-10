@@ -48,10 +48,12 @@ export function RichTextScope({
     return {
       apply(ops, label) {
         const header = ctx.session.store.toHeader()
+        // Layers inside an instance have combined ids only the instance-aware view resolves.
+        const expanded = ctx.m3?.view()
         const out = translateOps(
           ops,
           view,
-          (id) => ctx.session.store.getNode(id),
+          (id) => (expanded ? expanded.getNode(id) : ctx.session.store.getNode(id)),
           live,
           (header.features ?? []) as readonly string[],
         )
@@ -63,7 +65,7 @@ export function RichTextScope({
         return base.active
       },
     }
-  }, [view, ctx.editor, ctx.session, live])
+  }, [view, ctx.editor, ctx.session, ctx.m3, live])
   const editing = live?.nodeId && sel.some((s) => s.id === live.nodeId) ? live : null
   if (!view || !editor) return <>{children(sel, editing)}</>
   return (

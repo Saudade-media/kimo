@@ -16,6 +16,7 @@ import type { MissingFont } from "@kimo/renderer"
 import { Banner, Button, Dialog, FontRow, fontRowMeta } from "@kimo/ui"
 import { Download, Type } from "lucide-react"
 import { useState } from "react"
+import { t, tn } from "../lib/i18n"
 import { FontReplaceSelect, type ReplaceChoice } from "./ReplaceWithMenu"
 import { suggestReplacement } from "./replace-fonts"
 import "./fonts.css"
@@ -75,7 +76,7 @@ function missingFontsDescription(fileName: string): string {
 
 /** "Replace 2 fonts" / "Replace 1 font". */
 function replaceLabel(n: number): string {
-  return `Replace ${n} font${n === 1 ? "" : "s"}`
+  return tn("ui.fonts.missing.replaceOne", "ui.fonts.missing.replace", n)
 }
 
 export function MissingFontsDialog({
@@ -121,7 +122,12 @@ export function MissingFontsDialog({
       description={missingFontsDescription(fileName)}
       footnote="Replacing is one undoable edit"
       {...(onOpenFontsFolder
-        ? { tertiary: { label: "Open fonts folder", onClick: onOpenFontsFolder } }
+        ? {
+            tertiary: {
+              label: t("ui.fonts.missingfontsdialog.open-fonts-folder"),
+              onClick: onOpenFontsFolder,
+            },
+          }
         : {})}
       cancelLabel="Keep for now"
       confirmLabel={replaceLabel(count)}
@@ -140,7 +146,15 @@ export function MissingFontsDialog({
             title={blocked === "ntpf" ? BLOCKED_BANNER_TITLE : GOOGLE_OFF_BANNER_TITLE}
             body={blocked === "ntpf" ? BLOCKED_BANNER_BODY : GOOGLE_OFF_BANNER_BODY}
             actions={
-              onOpenSettings ? [{ id: "settings", label: "Open settings", variant: "ghost" }] : []
+              onOpenSettings
+                ? [
+                    {
+                      id: "settings",
+                      label: t("ui.fonts.missingfontsdialog.open-settings"),
+                      variant: "ghost",
+                    },
+                  ]
+                : []
             }
             onAction={() => onOpenSettings?.()}
           />
@@ -192,7 +206,7 @@ export function MissingFontsDialog({
                     }
                   }}
                 >
-                  Fetch
+                  {t("ui.fonts.missingfontsdialog.1")}
                 </Button>
               }
             />

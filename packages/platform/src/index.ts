@@ -42,6 +42,7 @@ export {
   googleFontsAllowed,
   isSettingKey,
   isValidSetting,
+  type Language,
   type NudgePreset,
   normalizeSettings,
   nudgeSteps,

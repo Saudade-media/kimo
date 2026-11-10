@@ -18,6 +18,7 @@ import type { HostOS, SettingsApi } from "@kimo/platform"
 import type { PopoverAnchor } from "@kimo/ui"
 import { MenuDense, MenuDivider, MenuItemDense } from "@kimo/ui"
 import { type CanvasViewPrefs, toggleViewPref, type ViewToggleKey } from "../canvas/view-prefs"
+import { t } from "../lib/i18n"
 import { usesMacGlyphs } from "./FileMenu"
 import { useFailureToast } from "./failure-toast"
 
@@ -61,47 +62,47 @@ export function ViewMenu(props: ViewMenuProps) {
   }
   const fail = useFailureToast()
   const toggle = (key: ViewToggleKey) =>
-    run(() => toggleViewPref(settings, key, (e) => fail("change the view setting", e)))
+    run(() => toggleViewPref(settings, key, (e) => fail(t("errors.changeViewSetting"), e)))
   const m = (mac: string) => viewMeta(os, mac)
   return (
     <MenuDense
       anchor={props.anchor}
       placement={{ side: "bottom", align: "end" }}
       width={VIEW_MENU_WIDTH}
-      label="View"
+      label={t("view.label")}
       autoFocus
       onClose={onClose}
       className="view-menu"
       data-pen="F5DXf"
     >
-      <MenuItemDense label="Zoom in" meta={m("⌘+")} onSelect={run(props.zoomIn)} />
-      <MenuItemDense label="Zoom out" meta={m("⌘−")} onSelect={run(props.zoomOut)} />
-      <MenuItemDense label="Zoom to 100 %" meta={m("⌘0")} onSelect={run(props.zoom100)} />
-      <MenuItemDense label="Zoom to fit" meta={m("⇧1")} onSelect={run(props.zoomToFit)} />
+      <MenuItemDense label={t("view.zoomIn")} meta={m("⌘+")} onSelect={run(props.zoomIn)} />
+      <MenuItemDense label={t("view.zoomOut")} meta={m("⌘−")} onSelect={run(props.zoomOut)} />
+      <MenuItemDense label={t("view.zoom100")} meta={m("⌘0")} onSelect={run(props.zoom100)} />
+      <MenuItemDense label={t("view.zoomFit")} meta={m("⇧1")} onSelect={run(props.zoomToFit)} />
       <MenuItemDense
-        label="Zoom to selection"
+        label={t("view.zoomSelection")}
         meta={m("⇧2")}
         onSelect={run(props.zoomToSelection)}
       />
       <MenuDivider />
       <MenuItemDense
-        label="Pixel grid"
+        label={t("view.pixelGrid")}
         toggled={prefs.pixelGrid}
         meta={m("⇧'")}
         onSelect={toggle("canvas.pixelGrid")}
       />
       <MenuItemDense
-        label="Snap to pixel grid"
+        label={t("view.snapPixelGrid")}
         toggled={prefs.snapToPixelGrid}
         onSelect={toggle("canvas.snapToPixelGrid")}
       />
       <MenuItemDense
-        label="Snap to objects"
+        label={t("view.snapObjects")}
         toggled={prefs.snapToObjects}
         onSelect={toggle("canvas.snapToObjects")}
       />
       <MenuItemDense
-        label="Rulers"
+        label={t("view.rulers")}
         toggled={prefs.rulers}
         meta={m("⇧R")}
         onSelect={toggle("canvas.rulers")}
@@ -110,12 +111,12 @@ export function ViewMenu(props: ViewMenuProps) {
       {props.panels && (
         <>
           <MenuItemDense
-            label="Show left panel"
+            label={t("view.showLeftPanel")}
             toggled={!props.panels.leftCollapsed}
             onSelect={run(props.panels.toggleLeft)}
           />
           <MenuItemDense
-            label="Show right panel"
+            label={t("view.showRightPanel")}
             toggled={!props.panels.rightCollapsed}
             onSelect={run(props.panels.toggleRight)}
           />
@@ -123,12 +124,12 @@ export function ViewMenu(props: ViewMenuProps) {
         </>
       )}
       <MenuItemDense
-        label="Show layer names on canvas"
+        label={t("view.layerNames")}
         toggled={prefs.layerNames}
         onSelect={toggle("canvas.layerNames")}
       />
       <MenuItemDense
-        label="Preview"
+        label={t("view.preview")}
         meta={m("⇧Space")}
         disabled={props.previewTarget === null}
         onSelect={run(props.onPreview)}

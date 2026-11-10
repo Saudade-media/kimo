@@ -10,6 +10,7 @@ import { generateId, type Op } from "@kimo/editor-state"
 import { type DocReader, deleteOps, topLevel } from "../../canvas/commands"
 import type { CanvasHandle } from "../../canvas/contract"
 import type { AssetStore } from "../../lib/assets"
+import { t, tn } from "../../lib/i18n"
 import { type DuplicateMainMode, duplicateMainOps, selectedMain } from "../m3/component-actions"
 import type { M3Controller } from "../m3/controller"
 import { activePageId, activeRoots } from "../pages/model"
@@ -290,8 +291,11 @@ export class EditorCommands {
     m3.toast({
       tone: "component",
       icon: "clipboard-check",
-      text: `Pasted “${what}” into ${where}`,
-      action: { label: "Undo", run: () => session.store.undo("user") },
+      text: t("ui.editor.clipboard.pastedInto", { what, where }),
+      action: {
+        label: t("ui.editor.clipboard.undo"),
+        run: () => session.store.undo("user"),
+      },
     })
     if (r.detached)
       m3.toast({
@@ -347,19 +351,24 @@ export class EditorCommands {
         m3.toast({
           tone: "component",
           icon: "arrow-down-to-line",
-          text: n === 1 ? "Downloading 1 image from Figma…" : `Downloading ${n} images from Figma…`,
+          text: tn("ui.editor.clipboard.downloadingOne", "ui.editor.clipboard.downloading", n),
         }),
       )
     } catch (e) {
       m3.toast({
         tone: "warning",
-        text: `Couldn't paste from Figma: ${e instanceof Error ? e.message : String(e)}`,
+        text: t("ui.editor.clipboard.pasteFailed", {
+          message: e instanceof Error ? e.message : String(e),
+        }),
       })
       return []
     }
     if (!r) return []
     if (!r.payload.roots.length) {
-      m3.toast({ tone: "warning", text: "Nothing in this Figma copy can be pasted into Kimo" })
+      m3.toast({
+        tone: "warning",
+        text: t("ui.editor.clipboard.commands.nothing-in-this-figma-copy-can-be-pasted-into-kimo"),
+      })
       return []
     }
     const roots = await this.paste(r.payload, mode)
@@ -449,7 +458,10 @@ export class EditorCommands {
     const id = generateId()
     const ops = groupNodesOps(this.reader(), layout, sel, id)
     if (!ops) {
-      this.d.m3.toast({ tone: "warning", text: "Select layers that share a parent to group them" })
+      this.d.m3.toast({
+        tone: "warning",
+        text: t("ui.editor.clipboard.commands.select-layers-that-share-a-parent-to-group-them"),
+      })
       return false
     }
     if (this.apply(ops, "Group")) this.ui.getState().select([id])
@@ -464,7 +476,10 @@ export class EditorCommands {
     const id = generateId()
     const ops = wrapInFrameOps(this.reader(), layout, sel, id)
     if (!ops) {
-      this.d.m3.toast({ tone: "warning", text: "Select layers that share a parent to wrap them" })
+      this.d.m3.toast({
+        tone: "warning",
+        text: t("ui.editor.clipboard.commands.select-layers-that-share-a-parent-to-wrap-them"),
+      })
       return false
     }
     if (this.apply(ops, "Wrap in frame")) this.ui.getState().select([id])

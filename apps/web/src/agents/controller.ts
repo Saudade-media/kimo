@@ -18,6 +18,7 @@ import type {
 } from "@kimo/platform"
 import { workAreaIds } from "../canvas/agent-area"
 import { failureText } from "../editor/errors"
+import { t, tn } from "../lib/i18n"
 import {
   AGENT_ACTIVITY_LIMIT,
   type AgentChip,
@@ -244,7 +245,16 @@ export function createAgentsController(opts: AgentsOptions): AgentsControllerExt
     if (failed === 0) return
     const total = ok + failed
     report(
-      `Couldn't undo ${failed === total ? (total === 1 ? "the change" : `${total} changes`) : `${failed} of ${total} changes`}. The layers changed after the agent's edit, or ${labelOf(origin)} disconnected.`,
+      t("ui.agents.controller.undoFailed", {
+        what:
+          failed === total
+            ? tn("ui.agents.controller.changesOne", "ui.agents.controller.changes", total)
+            : t("ui.agents.controller.changesOf", {
+                failed: String(failed),
+                total: String(total),
+              }),
+        origin: labelOf(origin),
+      }),
     )
   }
   // Undo through the document host: the agent's groups are not in this window's op log.
@@ -545,20 +555,27 @@ export function createAgentsController(opts: AgentsOptions): AgentsControllerExt
   /** Guarded undo of one logged edit; `quiet` leaves the report to a batch caller. */
   async function undoEntryImpl(entry: McpActivityEntry, quiet = false) {
     if (!entry.undoToken) return { ok: false, stale: false }
-    const what = entry.label ? `“${entry.label}”` : "the change"
+    const what = entry.label
+      ? t("ui.agents.controller.quoted", { label: entry.label })
+      : t("ui.agents.controller.theChange")
     let r: McpHistoryResult
     try {
       r = await history.undo(entry.origin, entry.undoToken)
     } catch (e) {
       emit()
-      if (!quiet) report(failureText(`undo ${what}`, e))
+      if (!quiet) report(failureText(t("errors.undoWhat", { what }), e))
       return { ok: false, stale: false }
     }
     // Not on top: newer edits of the same agent come first. The entry stays undoable.
     if (r.conflict) {
       emit()
       if (!quiet)
-        report(`Couldn't undo ${what}. Undo the newer edits from ${labelOf(entry.origin)} first.`)
+        report(
+          t("ui.agents.controller.undoNewer", {
+            what,
+            origin: labelOf(entry.origin),
+          }),
+        )
       return r
     }
     // Refused or stale: the entry has nothing left to undo here (its row's Undo is disabled).
@@ -573,10 +590,13 @@ export function createAgentsController(opts: AgentsOptions): AgentsControllerExt
     // A hosted window's refusal without an answer means the host had no live connection for it.
     report(
       r.stale
-        ? `Couldn't undo ${what}. The layers changed after this edit.`
+        ? t("ui.agents.controller.undoStale", { what })
         : hostedHistory && r.message === undefined
-          ? `Couldn't undo ${what}. ${labelOf(entry.origin)} is no longer connected to this file.`
-          : `Couldn't undo ${what}. The undo history no longer has this edit.`,
+          ? t("ui.agents.controller.undoGone", {
+              what,
+              origin: labelOf(entry.origin),
+            })
+          : t("ui.agents.controller.undoHistory", { what }),
     )
     return r
   }
@@ -599,7 +619,7 @@ export function createAgentsController(opts: AgentsOptions): AgentsControllerExt
         // The request may have expired or been answered elsewhere: the host's queue is the truth.
         queue = opts.host.approvals.pending()
         emit()
-        report(failureText("send your answer", e))
+        report(failureText(t("errors.sendAnswer"), e))
         return
       }
       queue = queue.filter((q) => q.id !== id)
@@ -610,20 +630,33 @@ export function createAgentsController(opts: AgentsOptions): AgentsControllerExt
         await opts.host.disconnect(connectionId)
       } catch (e) {
         const c = connections.find((x) => x.connectionId === connectionId)
-        report(failureText(`disconnect ${c?.identity.label ?? "the agent"}`, e))
+        report(
+          failureText(
+            t("errors.disconnect", { name: c?.identity.label ?? t("errors.theAgent") }),
+            e,
+          ),
+        )
       }
     },
     undoEntry: (entry) => undoEntryImpl(entry),
     redoEntry: history.redo
       ? async (entry) => {
-          const what = entry.label ? `“${entry.label}”` : "the change"
+          const what = entry.label
+            ? t("ui.agents.controller.quoted", { label: entry.label })
+            : t("ui.agents.controller.theChange")
           // Redo replays the agent's last undone group: only that entry can redo.
           const st = redoStacks.get(entry.origin) ?? []
           if (st[st.length - 1] !== entry.seq) {
             report(
               st.length
-                ? `Couldn't redo ${what}. Redo the edit you undid last from ${labelOf(entry.origin)} first.`
-                : `Couldn't redo ${what}. ${labelOf(entry.origin)} edited the file after the undo.`,
+                ? t("ui.agents.controller.redoNewer", {
+                    what,
+                    origin: labelOf(entry.origin),
+                  })
+                : t("ui.agents.controller.redoEdited", {
+                    what,
+                    origin: labelOf(entry.origin),
+                  }),
             )
             return { ok: false, stale: false, conflict: true }
           }
@@ -635,7 +668,7 @@ export function createAgentsController(opts: AgentsOptions): AgentsControllerExt
             )
           } catch (e) {
             emit()
-            report(failureText(`redo ${what}`, e))
+            report(failureText(t("errors.redoWhat", { what }), e))
             return { ok: false, stale: false }
           }
           if (r.ok || r.stale) redoStacks.set(entry.origin, st.slice(0, -1))
@@ -645,12 +678,18 @@ export function createAgentsController(opts: AgentsOptions): AgentsControllerExt
           } else
             report(
               r.stale
-                ? `Couldn't redo ${what}. The layers changed after the undo.`
+                ? t("ui.agents.controller.redoStale", { what })
                 : r.conflict
-                  ? `Couldn't redo ${what}. Redo the edit you undid last from ${labelOf(entry.origin)} first.`
+                  ? t("ui.agents.controller.redoNewer", {
+                      what,
+                      origin: labelOf(entry.origin),
+                    })
                   : hostedHistory && r.message === undefined
-                    ? `Couldn't redo ${what}. ${labelOf(entry.origin)} is no longer connected to this file.`
-                    : `Couldn't redo ${what}. The undo history no longer has this edit.`,
+                    ? t("ui.agents.controller.redoGone", {
+                        what,
+                        origin: labelOf(entry.origin),
+                      })
+                    : t("ui.agents.controller.redoHistory", { what }),
             )
           emit()
           return r
@@ -715,7 +754,7 @@ export function createAgentsController(opts: AgentsOptions): AgentsControllerExt
         }
       } catch (e) {
         emit()
-        report(failureText("undo the agent's changes", e))
+        report(failureText(t("errors.undoAgentChanges"), e))
         return { undone: ok, stale: staleCount }
       }
       if (ok > 0) remote.delete(origin)
@@ -732,7 +771,7 @@ export function createAgentsController(opts: AgentsOptions): AgentsControllerExt
         r = await history.undo(origin)
       } catch (e) {
         emit()
-        report(failureText("revert the change", e))
+        report(failureText(t("errors.revertChange"), e))
         return { ok: false, stale: false }
       }
       emit()
@@ -767,8 +806,8 @@ export function createAgentsController(opts: AgentsOptions): AgentsControllerExt
       } catch (e) {
         userPaused.delete(client)
         emit()
-        report(failureText(`pause ${labelOf(client)}`, e), {
-          label: "Retry",
+        report(failureText(t("errors.pause", { name: labelOf(client) }), e), {
+          label: t("settings.retry"),
           run: () => void controller.pause(client),
         })
       }
@@ -789,8 +828,8 @@ export function createAgentsController(opts: AgentsOptions): AgentsControllerExt
         if (wasUser) userPaused.add(client)
         Object.assign(paused, cleared)
         emit()
-        report(failureText(`resume ${labelOf(client)}`, e), {
-          label: "Retry",
+        report(failureText(t("errors.resume", { name: labelOf(client) }), e), {
+          label: t("settings.retry"),
           run: () => void controller.resume(client),
         })
       }

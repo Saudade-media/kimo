@@ -5,6 +5,7 @@
  */
 import { IconGlyphSvg, PropRow, PropSection } from "@kimo/ui"
 import { useRef, useState } from "react"
+import { t } from "../../lib/i18n"
 import { Bindable } from "../bind"
 import { NumberField } from "../fields"
 import { type Sel, useKeepPopoverFocus, usePanel } from "../panel-context"
@@ -48,7 +49,7 @@ export function IconSection({ sel }: { sel: readonly Sel[] }) {
   useKeepPopoverFocus(open)
 
   return (
-    <PropSection title="Icon">
+    <PropSection title={t("insp.icon")}>
       <div className="rp-body">
         {/* Icon Field (RrRtL): h 28, padding [0, 8], gap 8, radius-sm */}
         <button
@@ -79,7 +80,7 @@ export function IconSection({ sel }: { sel: readonly Sel[] }) {
         <PropRow className="rp-row">
           <NumberField
             prefix="Size"
-            label="Icon size"
+            label={t("insp.iconSize")}
             value={size}
             editor={editor}
             min={1}
@@ -94,7 +95,7 @@ export function IconSection({ sel }: { sel: readonly Sel[] }) {
               sel={sel}
               spec={{
                 type: "number",
-                label: "Icon stroke",
+                label: t("insp.iconStroke"),
                 prefix: "Stroke",
                 get: (n) => n.strokeWidth ?? 2,
                 put: (s, v) => setOps([s.id], "strokeWidth", v === 2 ? undefined : v),
@@ -106,7 +107,7 @@ export function IconSection({ sel }: { sel: readonly Sel[] }) {
               {(bind) => (
                 <NumberField
                   prefix="Stroke"
-                  label="Icon stroke"
+                  label={t("insp.iconStroke")}
                   bind={bind}
                   value={stroke === MIXED ? MIXED : Number(stroke) || stroke}
                   editor={editor}
@@ -123,7 +124,7 @@ export function IconSection({ sel }: { sel: readonly Sel[] }) {
               sel={sel}
               spec={{
                 type: "number",
-                label: "Icon weight",
+                label: t("insp.iconWeight"),
                 prefix: "Weight",
                 get: (n) => n.weight ?? 400,
                 put: (s, v) => setOps([s.id], "weight", v === 400 ? undefined : v),
@@ -134,7 +135,7 @@ export function IconSection({ sel }: { sel: readonly Sel[] }) {
               {(bind) => (
                 <NumberField
                   prefix="Weight"
-                  label="Icon weight"
+                  label={t("insp.iconWeight")}
                   bind={bind}
                   value={weight === MIXED ? MIXED : Number(weight) || weight}
                   editor={editor}

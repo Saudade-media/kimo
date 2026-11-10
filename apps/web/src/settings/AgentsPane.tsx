@@ -9,6 +9,7 @@ import { EmptyState } from "@kimo/ui"
 import { Bot } from "lucide-react"
 import { useCallback, useContext, useEffect, useMemo, useState } from "react"
 import { AgentsMcpPane, type AgentsServerControls } from "../agents"
+import { t } from "../lib/i18n"
 import { SettingsBannerContext, SettingsFailContext } from "./panes"
 
 /** The generic HTTP bearer shown in the server card (per-host bearers live in host configs). */
@@ -71,7 +72,7 @@ export function AgentsPane({
     let live = true
     void host.server.token(HTTP_TOKEN_CLIENT).then(
       (t) => live && setToken(t),
-      (e: unknown) => live && fail("read the HTTP token", e),
+      (e: unknown) => live && fail(t("errors.readHttpToken"), e),
     )
     return () => {
       live = false
@@ -99,7 +100,7 @@ export function AgentsPane({
         value: status?.askBeforeDestructive ?? true,
         set: (v) =>
           void host.server.setAskBeforeDestructive(v).then(refreshStatus, (e: unknown) => {
-            fail("save Ask before destructive or out-of-scope ops", e)
+            fail(t("errors.saveAskBefore"), e)
             refreshStatus()
           }),
       },
@@ -107,7 +108,7 @@ export function AgentsPane({
         value: status?.startOnLaunch ?? true,
         set: (v) =>
           void host.server.setStartOnLaunch(v).then(refreshStatus, (e: unknown) => {
-            fail("save Start server when Kimo opens", e)
+            fail(t("errors.saveStartServer"), e)
             refreshStatus()
           }),
       },
@@ -119,7 +120,7 @@ export function AgentsPane({
                 try {
                   await host.server.setPort(p)
                 } catch (e) {
-                  fail(`use port ${p}`, e)
+                  fail(t("errors.usePort", { port: String(p) }), e)
                 }
                 refreshStatus()
               },
@@ -137,7 +138,7 @@ export function AgentsPane({
                   setToken(t)
                   return t
                 } catch (e) {
-                  fail("generate a new HTTP token", e)
+                  fail(t("errors.generateHttpToken"), e)
                   return token ?? ""
                 }
               },
@@ -160,7 +161,7 @@ export function AgentsPane({
               reveal: () =>
                 void host.server
                   .revealLog()
-                  .catch((e: unknown) => fail("reveal the server log", e)),
+                  .catch((e: unknown) => fail(t("errors.revealServerLog"), e)),
             },
           }
         : {}),
@@ -176,7 +177,7 @@ export function AgentsPane({
       ? () =>
           void platform.files
             .reveal(activityDir)
-            .catch((e: unknown) => fail("reveal the activity log", e))
+            .catch((e: unknown) => fail(t("errors.revealActivityLog"), e))
       : undefined)
 
   if (!host)
@@ -184,8 +185,8 @@ export function AgentsPane({
       <div className="settings-agents-empty">
         <EmptyState
           icon={<Bot size={18} aria-hidden="true" />}
-          title="Agents connect to the desktop app"
-          description="Use the desktop app, or `kimo mcp` in a terminal, so Claude Code, Codex or Gemini CLI can edit files."
+          title={t("ui.settings.agentspane.2")}
+          description={t("ui.settings.agentspane.1")}
         />
       </div>
     )

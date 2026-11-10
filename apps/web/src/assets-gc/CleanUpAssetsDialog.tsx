@@ -10,10 +10,10 @@
 
 import { Dialog } from "@kimo/ui"
 import { CircleCheck, ImageIcon, Images, PenTool, Trash2, Type } from "lucide-react"
+import { t } from "../lib/i18n"
 import {
   type AssetFile,
   formatBytes,
-  GC_NOTHING_TITLE,
   GC_VISIBLE_ROWS,
   gcCommand,
   gcConfirmLabel,
@@ -62,12 +62,13 @@ export function CleanUpAssetsDialog({
       description={gcDescription(fileName, total)}
       footnote={gcCommand(fileName)}
       confirmLabel={gcConfirmLabel(unused.length)}
+      cancelLabel={t("ui.assetsgc.dialog.cancel")}
       confirmDisabled={busy || unused.length === 0}
       onCancel={onCancel}
       onConfirm={onConfirm}
       data-pen="Vqeu7"
     >
-      <ul className="gc-body" aria-label="Unused assets">
+      <ul className="gc-body" aria-label={t("ui.assets.gc.cleanupassetsdialog.1")}>
         {shown.map((f) => (
           <li key={f.name} className="gc-row">
             <span className="gc-row__thumb" aria-hidden="true">
@@ -117,11 +118,11 @@ export function CleanUpNothingDialog({
       tone="success"
       inline={inline}
       icon={<CircleCheck />}
-      title={GC_NOTHING_TITLE}
+      title={t("ui.assetsgc.dialog.nothingTitle")}
       description={gcNothingDescription(fileName)}
       footnote={gcCommand(fileName)}
       cancelLabel={null}
-      confirmLabel="Done"
+      confirmLabel={t("ui.assetsgc.dialog.done")}
       onCancel={onDone}
       onConfirm={onDone}
       data-pen="nsxuR"
@@ -130,7 +131,7 @@ export function CleanUpNothingDialog({
         <Images className="gc-nothing__icon" aria-hidden="true" />
         <span className="gc-nothing__summary">{gcSummary(count, bytes)}</span>
         <span className="gc-row__spacer" aria-hidden="true" />
-        <span className="gc-nothing__state">all referenced</span>
+        <span className="gc-nothing__state">{t("ui.assetsgc.dialog.allReferenced")}</span>
       </div>
     </Dialog>
   )

@@ -20,6 +20,7 @@ import type { CliDetection } from "@kimo/ai-agent"
 import { AgentMark, AgentTonePill, CompactButton } from "@kimo/ui"
 import { ArrowRight, KeyRound, SquareChevronRight, SquareTerminal, Terminal } from "lucide-react"
 import { type CSSProperties, useState } from "react"
+import { t } from "../lib/i18n"
 import type { AgentPanelControllerExt, OnboardingView } from "./controller"
 
 /** Button/Primary h 32 (jfK4g / kBBgE): CompactButton takes 24–30, the instance is 32. */
@@ -81,10 +82,8 @@ function CliFound({
   return (
     <div className="agent-first-run" data-pen="E3icY" data-testid="agent-first-run-cli">
       <AgentMark size={32} state="listening" />
-      <h3 className="agent-first-run__title">Meet Kimo</h3>
-      <p className="agent-first-run__desc">
-        Kimo designs and edits on this canvas with you. It needs a model to think with.
-      </p>
+      <h3 className="agent-first-run__title">{t("ui.agent.panel.firstrun.t5")}</h3>
+      <p className="agent-first-run__desc">{t("ui.agent.panel.firstrun.2")}</p>
       <div className="agent-first-run__card" data-pen="fFG6G">
         <div className="agent-first-run__row" data-pen="K8IHwR">
           <span className="agent-first-run__tile" aria-hidden="true">
@@ -93,7 +92,7 @@ function CliFound({
           <div className="agent-first-run__text">
             <div className="agent-first-run__name-row">
               <span className="agent-first-run__name">{cli.label}</span>
-              <AgentTonePill tone="success" label="Detected" />
+              <AgentTonePill tone="success" label={t("ui.agent.panel.firstrun.1")} />
             </div>
             <span className="agent-first-run__path">
               {[tildePath(cli.path), cli.signedIn ? "signed in" : null].filter(Boolean).join(" · ")}
@@ -110,16 +109,16 @@ function CliFound({
           onClick={() => void controller.chooseCli(cli.id)}
           data-pen="jfK4g"
         >
-          {`Use ${cli.label}`}
+          {t("ui.agent.panel.firstrun.use", { cli: cli.label })}
         </CompactButton>
         <p className="agent-first-run__note">
           {plan
-            ? `Runs on your ${plan} subscription. Kimo never sees a key.`
-            : "Runs on your CLI's own sign-in. Kimo never sees a key."}
+            ? t("ui.agent.panel.firstrun.planNote", { plan })
+            : t("ui.agent.panel.firstrun.cliNote")}
         </p>
       </div>
       <button type="button" className="agent-first-run__link" onClick={onOpenSettings}>
-        <span>Or add an API key</span>
+        <span>{t("ui.agent.panel.firstrun.t4")}</span>
         <ArrowRight aria-hidden="true" />
       </button>
     </div>
@@ -145,14 +144,12 @@ function KeyCard({
   return (
     <div className="agent-first-run" data-pen="WJCW5" data-testid="agent-first-run-key">
       <AgentMark size={32} static />
-      <h3 className="agent-first-run__title">Connect a model</h3>
-      <p className="agent-first-run__desc">
-        Bring your own key. The provider bills the usage, not Kimo.
-      </p>
+      <h3 className="agent-first-run__title">{t("ui.agent.panel.firstrun.t3")}</h3>
+      <p className="agent-first-run__desc">{t("ui.agent.panel.firstrun.3")}</p>
       <div className="agent-first-run__card agent-first-run__card--key" data-pen="rPDtX">
         <label className="agent-first-run__label-row" htmlFor="agent-first-run-key">
           <KeyRound className="agent-first-run__key-icon" aria-hidden="true" />
-          <span className="agent-first-run__label">Anthropic API key</span>
+          <span className="agent-first-run__label">{t("ui.agent.panel.firstrun.t2")}</span>
         </label>
         <span
           className={`agent-first-run__field${view.error ? " is-danger" : ""}`}
@@ -200,18 +197,18 @@ function KeyCard({
           onClick={() => connect(key)}
           data-pen="kBBgE"
         >
-          {view.connecting ? "Connecting…" : "Connect"}
+          {view.connecting
+            ? t("ui.agent.panel.firstrun.connecting")
+            : t("ui.agent.panel.firstrun.connect")}
         </CompactButton>
       </div>
       <div className="agent-first-run__other" data-pen="tp7XM">
         <button type="button" className="agent-first-run__link" onClick={onOpenSettings}>
-          <span>Other providers</span>
+          <span>{t("ui.agent.panel.firstrun.t1")}</span>
           <ArrowRight aria-hidden="true" />
         </button>
         {showCliHint && (
-          <span className="agent-first-run__hint">
-            Have Claude Code? Install it and reopen this tab.
-          </span>
+          <span className="agent-first-run__hint">{t("ui.agent.panel.firstrun.4")}</span>
         )}
       </div>
     </div>

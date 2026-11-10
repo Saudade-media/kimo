@@ -25,6 +25,7 @@ import {
   useState,
   useSyncExternalStore,
 } from "react"
+import { t } from "../lib/i18n"
 import {
   type BindType,
   newVariable,
@@ -155,7 +156,7 @@ export function Bindable({
   const create = () => {
     if (literal === null) return
     const name = newVariableName(header, spec.varBase ?? spec.label, literal)
-    write(() => ({ $ref: name }), `Create variable ${name}`, [
+    write(() => ({ $ref: name }), t("ui.editor.bind.createVariable", { name }), [
       {
         op: "setVariables",
         set: { [name]: newVariable(spec.type, literal) as never },
@@ -167,13 +168,17 @@ export function Bindable({
   const picker = open && (
     <VariablePicker
       anchor={root.current}
-      title={`Bind ${spec.label}`}
+      title={t("ui.editor.bind.bindLabel", { label: spec.label })}
       type={spec.type}
       groups={pickerGroups(header, libraries, spec.type, first ? themeOf(first.id) : {})}
       selected={ref ?? undefined}
       onSelect={bind}
       createLabel={
-        literal === null ? undefined : `Create variable from ${valueText(spec.type, literal)}`
+        literal === null
+          ? undefined
+          : t("ui.editor.bind.createFrom", {
+              value: valueText(spec.type, literal),
+            })
       }
       onCreate={create}
       onDetach={ref !== null ? detach : undefined}
@@ -226,7 +231,7 @@ export function Bindable({
         className: "kimo-prop-field--bindable",
         trailing: (
           <BindButton
-            label={`Bind ${spec.label.toLowerCase()} to a variable`}
+            label={t("ui.editor.bind.bindHint", { label: spec.label.toLowerCase() })}
             aria-haspopup="dialog"
             aria-expanded={open}
             onPointerDown={(e) => e.preventDefault()}

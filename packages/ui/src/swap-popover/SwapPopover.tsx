@@ -1,3 +1,4 @@
+import { t } from "@kimo/i18n"
 import { Info, Search } from "lucide-react"
 import { type KeyboardEvent, useId, useMemo, useState } from "react"
 import { AssetRow } from "../asset-row/AssetRow"
@@ -91,7 +92,7 @@ export function SwapPopover({
   return (
     <Popover
       {...rest}
-      title="Swap instance"
+      title={t("ui.pkg.swap.popover.swappopover.swap-instance")}
       wide
       onClose={onClose}
       initialFocus="first"
@@ -101,8 +102,8 @@ export function SwapPopover({
       <div className="kimo-swap-popover__search">
         <Input
           icon={<Search />}
-          placeholder="Search components"
-          aria-label="Search components"
+          placeholder={t("ui.pkg.swap.popover.swappopover.search-components")}
+          aria-label={t("ui.pkg.swap.popover.swappopover.search-components")}
           role="combobox"
           aria-expanded
           aria-controls={listId}
@@ -116,7 +117,12 @@ export function SwapPopover({
           frameProps={{ className: "kimo-swap-popover__input" }}
         />
       </div>
-      <div id={listId} role="listbox" aria-label="Components" className="kimo-swap-popover__list">
+      <div
+        id={listId}
+        role="listbox"
+        aria-label={t("ui.pkg.swap.popover.swappopover.components")}
+        className="kimo-swap-popover__list"
+      >
         {filtered.map((g) => [
           <div key={`h:${g.title}`} className="kimo-swap-popover__group-header" role="presentation">
             <span className="kimo-swap-popover__group-title">{g.title}</span>
@@ -143,7 +149,11 @@ export function SwapPopover({
             )
           }),
         ])}
-        {filtered.length === 0 && <p className="kimo-swap-popover__empty">No components match</p>}
+        {filtered.length === 0 && (
+          <p className="kimo-swap-popover__empty">
+            {t("ui.pkg.swap.popover.swappopover.no-components-match")}
+          </p>
+        )}
       </div>
       <div className="kimo-swap-popover__footer">
         <Info className="kimo-swap-popover__info" aria-hidden="true" />

@@ -6,6 +6,7 @@
  */
 import { ActivityRow, AgentMark, Button, CompactButton, EmptyState, Select } from "@kimo/ui"
 import { useMemo, useState } from "react"
+import { t } from "../lib/i18n"
 import type { AgentsControllerExt } from "./controller"
 import { useAgentsState } from "./hooks"
 import { AgentIcon } from "./icons"
@@ -68,10 +69,10 @@ export function AgentActivityPanel({
         <Select
           dense
           className="agents-activity__select"
-          label="Client"
+          label={t("ui.agents.activitypanel.4")}
           value={client}
           options={[
-            { value: "all", label: "All clients" },
+            { value: "all", label: t("ui.agents.activitypanel.all-clients") },
             ...clients.map(([value, label]) => ({ value, label })),
           ]}
           onChange={setClient}
@@ -79,9 +80,9 @@ export function AgentActivityPanel({
         <Select
           dense
           className="agents-activity__select"
-          label="Kind"
+          label={t("ui.agents.activitypanel.3")}
           value={kind}
-          options={KIND_FILTERS}
+          options={KIND_FILTERS.map((f) => ({ value: f.value, label: t(f.label) }))}
           onChange={setKind}
         />
       </div>
@@ -93,8 +94,8 @@ export function AgentActivityPanel({
             <EmptyState
               className="agents-activity__empty-state"
               icon={<AgentIcon name="history" size={18} />}
-              title="No agent activity yet"
-              description="Agent changes show up here. Undo any of them."
+              title={t("ui.agents.activitypanel.2")}
+              description={t("ui.agents.activitypanel.1")}
             />
             {state.connections.length === 0 && onConnectAgent && (
               <CompactButton
@@ -104,7 +105,7 @@ export function AgentActivityPanel({
                 icon={<AgentIcon name="plug" size={14} />}
                 onClick={onConnectAgent}
               >
-                Connect an agent…
+                {t("ui.agents.activitypanel.5")}
               </CompactButton>
             )}
           </div>
@@ -122,7 +123,7 @@ export function AgentActivityPanel({
                   className="agents-link agents-link--xs"
                   onClick={() => void controller.undoSession(g.origin)}
                 >
-                  Undo session
+                  {t("ui.agents.activitypanel.6")}
                 </button>
               )}
             </div>
@@ -168,7 +169,7 @@ export function AgentActivityPanel({
             else download(json, name)
           }}
         >
-          Export JSON
+          {t("ui.agents.activitypanel.7")}
         </Button>
       </div>
     </div>

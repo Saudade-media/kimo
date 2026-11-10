@@ -11,6 +11,7 @@
  */
 import { Button, SegmentedText, ToolButton, Tooltip } from "@kimo/ui"
 import { useLayoutEffect, useRef, useState } from "react"
+import { t } from "../lib/i18n"
 import { Icon } from "../lib/icons"
 import type { UiStore } from "./contract"
 import { type PathEditBarState, useCanvasToolState } from "./tool-state"
@@ -30,9 +31,9 @@ export type PathEditCommand =
 const PATH_EDIT_BAR_GAP = 12
 
 const MODES = [
-  { mode: "select", label: "Select anchors", icon: "mouse-pointer-2", pen: "K4tXoR" },
-  { mode: "add", label: "Add anchor", icon: "pen-tool", pen: "CS881" },
-  { mode: "bend", label: "Bend", icon: "spline", pen: "B7DQfS" },
+  { mode: "select", label: "ui.path.selectAnchors", icon: "mouse-pointer-2", pen: "K4tXoR" },
+  { mode: "add", label: "ui.path.addAnchor", icon: "pen-tool", pen: "CS881" },
+  { mode: "bend", label: "ui.path.bend", icon: "spline", pen: "B7DQfS" },
 ] as const
 
 export function PathEditBar({ ui, run }: { ui: UiStore; run(command: PathEditCommand): void }) {
@@ -58,17 +59,17 @@ function Bar({ state, run }: { state: PathEditBarState; run(c: PathEditCommand):
         ref={bar}
         className="path-edit-bar"
         role="toolbar"
-        aria-label="Path editing"
+        aria-label={t("ui.canvas.patheditbar.6")}
         data-canvas-overlay=""
         data-pen="LirqJ"
         style={{ left: Math.round(left), top: Math.round(top) }}
         onPointerDown={(e) => e.stopPropagation()}
       >
         {MODES.map((m) => (
-          <Tooltip key={m.mode} side="top" label={m.label}>
+          <Tooltip key={m.mode} side="top" label={t(m.label)}>
             <ToolButton
               className="path-edit-bar__tool"
-              label={m.label}
+              label={t(m.label)}
               icon={<Icon name={m.icon} size={16} />}
               active={state.mode === m.mode}
               data-pen={m.pen}
@@ -80,30 +81,30 @@ function Bar({ state, run }: { state: PathEditBarState; run(c: PathEditCommand):
         <span className="path-edit-bar__divider" aria-hidden="true" />
         <SegmentedText
           className="path-edit-bar__kind"
-          label="Anchor type"
+          label={t("ui.canvas.patheditbar.5")}
           data-pen="t1kP6a"
           options={[
-            { value: "sharp", label: "Sharp", disabled: !state.canCut },
-            { value: "smooth", label: "Smooth", disabled: !state.canCut },
+            { value: "sharp", label: t("ui.canvas.patheditbar.sharp"), disabled: !state.canCut },
+            { value: "smooth", label: t("ui.canvas.patheditbar.smooth"), disabled: !state.canCut },
           ]}
           value={state.anchorKind}
           onChange={(v) => run(v)}
         />
         <span className="path-edit-bar__divider" aria-hidden="true" />
-        <Tooltip side="top" label="Cut at anchor">
+        <Tooltip side="top" label={t("ui.canvas.patheditbar.4")}>
           <ToolButton
             className="path-edit-bar__tool"
-            label="Cut at anchor"
+            label={t("ui.canvas.patheditbar.3")}
             icon={<Icon name="scissors" size={16} />}
             disabled={!state.canCut}
             data-pen="qDGrD"
             onClick={() => run("cut")}
           />
         </Tooltip>
-        <Tooltip side="top" label="Delete segment" shortcut="⌫">
+        <Tooltip side="top" label={t("ui.canvas.patheditbar.2")} shortcut="⌫">
           <ToolButton
             className="path-edit-bar__tool"
-            label="Delete segment"
+            label={t("ui.canvas.patheditbar.1")}
             icon={<Icon name="eraser" size={16} />}
             disabled={!state.segmentSelected}
             data-pen="X7yF0a"
@@ -118,7 +119,7 @@ function Bar({ state, run }: { state: PathEditBarState; run(c: PathEditCommand):
           data-pen="SsIpQ"
           onClick={() => run("done")}
         >
-          Done
+          {t("ui.canvas.patheditbar.7")}
         </Button>
       </div>
       {state.cue && (
@@ -131,7 +132,7 @@ function Bar({ state, run }: { state: PathEditBarState; run(c: PathEditCommand):
           <span className="path-edit-cue__icon">
             <Icon name="eraser" size={10} />
           </span>
-          <span className="path-edit-cue__label">⌫ deletes segment</span>
+          <span className="path-edit-cue__label">{t("ui.canvas.patheditbar.deleteSegment")}</span>
         </div>
       )}
     </>

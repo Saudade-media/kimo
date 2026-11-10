@@ -1,3 +1,4 @@
+import { t } from "@kimo/i18n"
 import type { ComponentPropsWithRef, CSSProperties, KeyboardEvent } from "react"
 import { hueColor } from "../color/color"
 import { usePointerDrag } from "../internal/drag"
@@ -38,7 +39,7 @@ export function ColorArea({
   onChangeEnd,
   className,
   style,
-  "aria-label": label = "Saturation and brightness",
+  "aria-label": label = t("ui.pkg.color.area.colorarea.saturation-and-brightness"),
   ...rest
 }: ColorAreaProps) {
   const emit = (s: number, v: number) => {

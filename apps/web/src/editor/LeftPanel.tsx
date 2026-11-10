@@ -41,6 +41,7 @@ import { isOverridden, layerKind, replacedName } from "./m3/model"
 import { VariablesTab } from "./m3/VariablesTab"
 import "../canvas/agent-canvas.css"
 import { useDocHeader } from "../lib/header"
+import { t, tn } from "../lib/i18n"
 import { matches } from "../shortcuts/shortcuts"
 import { openRowMenu } from "./clipboard/menu-bus"
 import { computeTreeDrop, refuseParent, type TreeDrop, treeDropOps } from "./clipboard/tree-drop"
@@ -52,9 +53,9 @@ import type { FileSession } from "./session"
 
 type LeftTab = "layers" | "assets" | "variables"
 const TABS = [
-  { value: "layers", label: "Layers" },
-  { value: "assets", label: "Assets" },
-  { value: "variables", label: "Variables" },
+  { value: "layers", label: "editor.tab.layers" },
+  { value: "assets", label: "editor.tab.assets" },
+  { value: "variables", label: "editor.tab.variables" },
 ] as const
 
 export function LeftPanel({
@@ -90,15 +91,20 @@ export function LeftPanel({
     return (
       <aside
         className="left-panel ws-card ws-card--left ws-card--collapsed"
-        aria-label="Layers panel"
+        aria-label={t("ui.editor.leftpanel.7")}
       >
         {header}
       </aside>
     )
   return (
-    <aside className="left-panel ws-card ws-card--left" aria-label="Layers panel">
+    <aside className="left-panel ws-card ws-card--left" aria-label={t("ui.editor.leftpanel.6")}>
       {header}
-      <Tabs label="Left panel" items={TABS} value={tab} onChange={setTab} />
+      <Tabs
+        label={t("editor.leftPanel")}
+        items={TABS.map((x) => ({ ...x, label: t(x.label) }))}
+        value={tab}
+        onChange={setTab}
+      />
       {tab === "layers" && (
         <>
           {/* Board 27 §1 (a) lid8E: the pages strip at the top of the Layers tab. */}
@@ -106,8 +112,8 @@ export function LeftPanel({
           <div className="left-panel__search">
             <Input
               icon={<Icon name="search" size={16} />}
-              placeholder="Search layers"
-              aria-label="Search layers"
+              placeholder={t("editor.searchLayers")}
+              aria-label={t("editor.searchLayers")}
               type="search"
               value={query}
               onChange={(e) => setQuery(e.currentTarget.value)}
@@ -153,7 +159,7 @@ function LayerTreeHeader({ session }: { session: FileSession }) {
       <span className="layer-tree-header__page">{name}</span>
       <span className="layer-tree-header__spacer" />
       <span className="layer-tree-header__count">
-        {count} {count === 1 ? "layer" : "layers"}
+        {tn("editor.layerCountOne", "editor.layerCount", count)}
       </span>
     </div>
   )
@@ -590,12 +596,8 @@ function LayerTree({
       <div className="left-panel__empty">
         <EmptyState
           icon={<Icon name="layers" size={18} />}
-          title={query ? "No matching layers" : "No layers yet"}
-          description={
-            query
-              ? "Try another name or layer type."
-              : "Press F to draw a frame, or ask the agent to start a layout."
-          }
+          title={query ? t("editor.noMatchingLayers") : t("editor.noLayers")}
+          description={query ? t("editor.tryOtherName") : t("editor.emptyLayersHint")}
         />
       </div>
     )
@@ -613,7 +615,7 @@ function LayerTree({
       ref={tree}
       className="layer-tree"
       role="tree"
-      aria-label="Layers"
+      aria-label={t("editor.layers")}
       aria-multiselectable="true"
       onKeyDown={onKeyDown}
       onPointerLeave={() => ui.getState().setHovered(null)}
@@ -1016,7 +1018,7 @@ function AgentLayerRow({
           // biome-ignore lint/a11y/noAutofocus: rename starts on an explicit double-click / F2
           autoFocus
           className="kimo-layer-row__input"
-          aria-label="Layer name"
+          aria-label={t("ui.editor.leftpanel.5")}
           value={draft}
           onChange={(e) => setDraft(e.currentTarget.value)}
           onBlur={() => finish(true)}
@@ -1033,13 +1035,16 @@ function AgentLayerRow({
       {kind === "placeholder" ? (
         <span
           className="agent-layer-row__trail agent-layer-row__trail--lock"
-          title="An agent is building this frame (you can still edit it)"
+          title={t("ui.editor.leftpanel.4")}
         >
           <Icon name="lock" size={14} />
         </span>
       ) : kind === "prompt" ? (
         run === "running" ? (
-          <span className="agent-layer-row__trail agent-layer-row__trail--running" title="Running">
+          <span
+            className="agent-layer-row__trail agent-layer-row__trail--running"
+            title={t("ui.editor.leftpanel.3")}
+          >
             <Icon name="loader-circle" size={14} />
           </span>
         ) : run === "failed" ? (
@@ -1047,7 +1052,7 @@ function AgentLayerRow({
             type="button"
             tabIndex={-1}
             className="agent-layer-row__trail agent-layer-row__trail--failed"
-            aria-label="Run failed · retry"
+            aria-label={t("ui.editor.leftpanel.2")}
             disabled={!onRun}
             onClick={(e) => {
               e.stopPropagation()
@@ -1061,7 +1066,7 @@ function AgentLayerRow({
             type="button"
             tabIndex={-1}
             className="agent-layer-row__trail agent-layer-row__trail--play"
-            aria-label="Run prompt"
+            aria-label={t("ui.editor.leftpanel.1")}
             disabled={!onRun}
             onClick={(e) => {
               e.stopPropagation()

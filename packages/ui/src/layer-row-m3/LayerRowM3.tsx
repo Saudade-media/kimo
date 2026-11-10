@@ -1,3 +1,4 @@
+import { t } from "@kimo/i18n"
 import {
   ChevronDown,
   ChevronRight,
@@ -176,7 +177,7 @@ export function LayerRowM3({
         <input
           ref={input}
           className="kimo-layer-row-m3__input"
-          aria-label="Layer name"
+          aria-label={t("ui.pkg.layer.row.m3.layerrowm3.layer-name")}
           value={draft}
           onChange={(e) => setDraft(e.currentTarget.value)}
           onBlur={() => finishRename(true)}
@@ -214,7 +215,9 @@ export function LayerRowM3({
         <OverrideDot
           tone="warning"
           className="kimo-layer-row-m3__broken"
-          title="Broken overrides. Review them in the instance panel"
+          title={t(
+            "ui.pkg.layer.row.m3.layerrowm3.broken-overrides-review-them-in-the-instance-panel",
+          )}
         />
       ) : (
         overridden && (

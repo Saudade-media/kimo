@@ -1,3 +1,4 @@
+import { t } from "@kimo/i18n"
 import { Minus, Plus } from "lucide-react"
 import { useState } from "react"
 import { IconButton } from "../icon-button/IconButton"
@@ -97,7 +98,7 @@ export function EnumTargets({
         ) : (
           <SegmentedText
             className="kimo-enum-options__tabs"
-            label="Option"
+            label={t("ui.pkg.enum.targets.enumtargets.option")}
             options={options.map((o) => ({ value: o, label: o }))}
             value={option}
             onChange={onOptionChange}
@@ -109,7 +110,7 @@ export function EnumTargets({
         <IconButton
           className="kimo-enum-options__add"
           tone="quiet"
-          label="Add option"
+          label={t("ui.pkg.enum.targets.enumtargets.add-option")}
           icon={<Plus />}
           disabled={readOnly}
           onClick={onAddOption}
@@ -173,7 +174,9 @@ export function EnumTargets({
           onClick={onAddTarget}
         >
           <Plus className="kimo-enum-targets__add-icon" aria-hidden="true" />
-          <span className="kimo-enum-targets__add-label">Add target</span>
+          <span className="kimo-enum-targets__add-label">
+            {t("ui.pkg.enum.targets.enumtargets.add-target")}
+          </span>
         </button>
       </div>
     </>

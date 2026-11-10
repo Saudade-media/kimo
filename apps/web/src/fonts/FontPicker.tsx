@@ -15,6 +15,7 @@
 import { Input, MenuItemDense, type PlacementOptions, Popover, Tab } from "@kimo/ui"
 import { Search, Shield, WifiOff } from "lucide-react"
 import { type CSSProperties, type KeyboardEvent, useMemo, useRef, useState } from "react"
+import { type MessageKey, t, tn } from "../lib/i18n"
 import "./fonts.css"
 
 type FontSourceGroup = "document" | "local" | "google"
@@ -44,22 +45,24 @@ interface FontPickerProps {
   inline?: boolean
 }
 
-const GROUPS: { id: FontSourceGroup; label: string; tab: string }[] = [
-  { id: "document", label: "IN THIS DOCUMENT", tab: "Document" },
-  { id: "local", label: "ON THIS MAC", tab: "Local" },
-  { id: "google", label: "GOOGLE FONTS", tab: "Google" },
+const GROUPS: { id: FontSourceGroup; label: MessageKey; tab: MessageKey }[] = [
+  { id: "document", label: "ui.fonts.group.document", tab: "ui.fonts.group.documentTab" },
+  { id: "local", label: "ui.fonts.group.local", tab: "ui.fonts.group.localTab" },
+  { id: "google", label: "ui.fonts.group.google", tab: "ui.fonts.group.googleTab" },
 ]
 
 type Filter = "all" | FontSourceGroup
 
 /** Search placeholder: "Search 1,642 fonts". */
 function searchPlaceholder(n: number): string {
-  return `Search ${n.toLocaleString("en-US")} font${n === 1 ? "" : "s"}`
+  return tn("ui.fonts.picker.searchOne", "ui.fonts.picker.search", n, {
+    n: n.toLocaleString("en-US"),
+  })
 }
 
 /** The offline note (wYmyJ) copy. */
 function offlineNote(cachedGoogle: number): string {
-  return `You're offline, so Google shows the ${cachedGoogle} cached font${cachedGoogle === 1 ? "" : "s"}. Others download when you're back online.`
+  return tn("ui.fonts.picker.offlineOne", "ui.fonts.picker.offline", cachedGoogle)
 }
 
 const BLOCKED_NOTE =
@@ -122,7 +125,7 @@ export function FontPicker({
   return (
     <Popover
       wide
-      title="Font"
+      title={t("ui.fonts.fontpicker.4")}
       className="fonts-picker"
       bodyProps={{ className: "fonts-picker__body" }}
       initialFocus={inline ? "none" : search}
@@ -137,7 +140,7 @@ export function FontPicker({
         icon={<Search />}
         frameProps={{ className: "fonts-picker__search" }}
         placeholder={searchPlaceholder(entries.length)}
-        aria-label="Search fonts"
+        aria-label={t("ui.fonts.fontpicker.3")}
         value={query}
         onChange={(e) => setQuery(e.currentTarget.value)}
         onKeyDown={(e) => {
@@ -147,10 +150,12 @@ export function FontPicker({
           }
         }}
       />
-      <div className="fonts-picker__sources" role="tablist" aria-label="Font sources">
+      <div className="fonts-picker__sources" role="tablist" aria-label={t("ui.fonts.fontpicker.2")}>
         {(["all", ...GROUPS.map((g) => g.id)] as Filter[]).map((f) => (
           <Tab key={f} active={filter === f} onClick={() => setFilter(f)}>
-            {f === "all" ? "All" : GROUPS.find((g) => g.id === f)?.tab}
+            {f === "all"
+              ? t("ui.fonts.group.all")
+              : t(GROUPS.find((g) => g.id === f)?.tab ?? "ui.fonts.group.all")}
           </Tab>
         ))}
       </div>
@@ -158,7 +163,7 @@ export function FontPicker({
         ref={list}
         className="fonts-picker__list"
         role="menu"
-        aria-label="Fonts"
+        aria-label={t("ui.fonts.fontpicker.1")}
         onKeyDown={onListKey}
       >
         {GROUPS.map((g) => {
@@ -166,7 +171,7 @@ export function FontPicker({
           if (!rows.length) return null
           return [
             <div key={`h-${g.id}`} className="fonts-picker__group" role="presentation">
-              <span className="fonts-picker__group-label">{g.label}</span>
+              <span className="fonts-picker__group-label">{t(g.label)}</span>
             </div>,
             ...rows.map((e) => (
               <MenuItemDense

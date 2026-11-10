@@ -19,6 +19,7 @@ import {
   useDismiss,
 } from "@kimo/ui"
 import { type ReactNode, type RefObject, useEffect, useLayoutEffect, useRef, useState } from "react"
+import { t } from "../lib/i18n"
 import { ApprovalPrompt } from "./ApprovalPrompt"
 import type { AgentChipView, AgentsControllerExt } from "./controller"
 import { useAgentsState } from "./hooks"
@@ -281,7 +282,7 @@ function AgentsPopoverFrame({
           size="sm"
           tone="quiet"
           className="agents-icon-button agents-pop__close"
-          label="Close"
+          label={t("ui.agents.presence.1")}
           icon={<AgentIcon name="x" size={14} />}
           onClick={onClose}
         />
@@ -318,7 +319,7 @@ function QueuePopover({
   }, [state.queue.length, onClose])
   return (
     <AgentsPopoverFrame
-      title={`Waiting for approval · ${state.queue.length}`}
+      title={t("ui.agents.presence.waiting", { n: String(state.queue.length) })}
       icon="hand"
       width={320}
       anchor={anchor}
@@ -343,7 +344,7 @@ function QueuePopover({
               text="xs"
               onClick={() => void controller.answer(r.id, "deny")}
             >
-              Deny
+              {t("ui.agents.presence.2")}
             </CompactButton>
             <CompactButton
               variant="primary"
@@ -352,7 +353,7 @@ function QueuePopover({
               text="xs"
               onClick={() => void controller.answer(r.id, "once")}
             >
-              Approve
+              {t("ui.agents.presence.3")}
             </CompactButton>
           </div>
         ))}
@@ -507,7 +508,11 @@ function ChangesPopover({
           size="sm"
           tone="ghost"
           className="agents-icon-button"
-          label={userPaused ? `Resume ${chip.label}` : `Pause ${chip.label}`}
+          label={
+            userPaused
+              ? t("ui.agents.presence.resume", { name: chip.label })
+              : t("ui.agents.presence.pause", { name: chip.label })
+          }
           icon={<AgentIcon name={userPaused ? "play" : "pause"} size={14} />}
           onClick={() =>
             void (userPaused ? controller.resume(chip.client) : controller.pause(chip.client))
@@ -517,7 +522,7 @@ function ChangesPopover({
           size="sm"
           tone="ghost"
           className="agents-icon-button"
-          label={`${chip.label} settings`}
+          label={t("ui.agents.presence.settings", { name: chip.label })}
           icon={<AgentIcon name="settings-2" size={14} />}
           onClick={() => onOpenClientSettings?.(chip.client)}
         />
@@ -539,7 +544,7 @@ function ChangesPopover({
             className="agents-link agents-link--sm"
             onClick={() => onShowOnCanvas?.(nodeIds)}
           >
-            Show on canvas
+            {t("ui.agents.presence.4")}
           </button>
         )}
       </div>
@@ -568,7 +573,7 @@ function ChangesPopover({
           disabled={!undoable}
           onClick={() => void controller.undoAll(chip.origin)}
         >
-          Undo all
+          {t("ui.agents.presence.5")}
         </Button>
         <Button
           size="sm"
@@ -578,7 +583,7 @@ function ChangesPopover({
           disabled={!undoable}
           onClick={() => controller.keep(chip.origin)}
         >
-          Keep
+          {t("ui.agents.presence.6")}
         </Button>
       </div>
     </div>,

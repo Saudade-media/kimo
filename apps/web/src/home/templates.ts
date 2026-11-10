@@ -18,6 +18,7 @@ import {
 import { getTemplate, listTemplates, loadTemplate } from "@kimo/templates"
 import { LibraryManager } from "../editor/m3/libraries"
 import { importKimoFile, listFiles, patchFile } from "../lib/files"
+import { t as tr } from "../lib/i18n"
 import { defaultNewFilesDir } from "../settings/model"
 import { templateHash } from "../thumbnails/model"
 import { diskThumbnails, libraryThumbnails } from "../thumbnails/store"
@@ -145,7 +146,7 @@ export async function createTemplateWithSaveAs(
   load: TemplateLoader = loadExample,
 ): Promise<FileRef | null> {
   const target = await platform.dialogs.saveFile({
-    title: "Save as",
+    title: tr("ui.home.templates.save-as"),
     suggestedName: t.file,
     filters: [KIMO_FILE_FILTER],
   })

@@ -1,15 +1,17 @@
+import { type MessageKey, t } from "@kimo/i18n"
 import type { ComponentPropsWithRef, CSSProperties, ReactNode } from "react"
 import { cx } from "../internal/util"
 
 /** Availability shown by the FontRow status pill (board 19 / 02d). */
 export type FontRowStatus = "installed" | "cached" | "not-cached" | "missing"
 
-const STATUS: Record<FontRowStatus, { label: string; tone: "linked" | "changed" | "missing" }> = {
-  installed: { label: "Installed", tone: "linked" },
-  cached: { label: "Cached", tone: "linked" },
-  "not-cached": { label: "Not cached", tone: "changed" },
-  missing: { label: "Missing", tone: "missing" },
-}
+const STATUS: Record<FontRowStatus, { label: MessageKey; tone: "linked" | "changed" | "missing" }> =
+  {
+    installed: { label: "ui.pkg.font.status.installed", tone: "linked" },
+    cached: { label: "ui.pkg.font.status.cached", tone: "linked" },
+    "not-cached": { label: "ui.pkg.font.status.notCached", tone: "changed" },
+    missing: { label: "ui.pkg.font.status.missing", tone: "missing" },
+  }
 
 /** Props for {@link FontRow}. Remaining `<div>` props go to the row. */
 export interface FontRowProps extends Omit<ComponentPropsWithRef<"div">, "children"> {
@@ -91,7 +93,7 @@ export function FontRow({
         data-status={status}
       >
         <span className="kimo-status-pill__dot" aria-hidden="true" />
-        <span className="kimo-status-pill__label">{pill.label}</span>
+        <span className="kimo-status-pill__label">{t(pill.label)}</span>
       </span>
       {action}
     </div>

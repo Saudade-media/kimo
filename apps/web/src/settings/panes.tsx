@@ -14,7 +14,7 @@ import type {
   UpdateInfo,
   UpdaterStatus,
 } from "@kimo/platform"
-import { isPlatformError } from "@kimo/platform"
+import { isPlatformError, isValidSetting } from "@kimo/platform"
 import {
   Banner,
   Button,
@@ -39,6 +39,7 @@ import {
 import { causeOf } from "../editor/errors"
 import { fontPackController } from "../fonts/font-pack"
 import { announceFontCacheCleared } from "../fonts/font-system"
+import { getLanguage, listLanguages, t } from "../lib/i18n"
 import { flushAllWindows } from "../updater/restart-broadcast"
 import { useAsync, useUpdaterStatus } from "./hooks"
 import {
@@ -54,6 +55,7 @@ import {
   mergeDriverDescription,
   parseChoice,
   SELECT_WIDTH,
+  SETTING_LABELS,
   selectOptions,
   type UpdateAction,
   updateRowView,
@@ -103,19 +105,41 @@ export function PaneTitle({ children, banner }: { children: string; banner?: Rea
   )
 }
 
-function ChoiceSelect({ k, props, label }: { k: ChoiceKey; props: PaneProps; label: string }) {
+function ChoiceSelect({ k, props }: { k: ChoiceKey; props: PaneProps }) {
   const current = props.settings[k]
   return (
     <Select
       dense
       className="settings-select"
       style={{ width: SELECT_WIDTH[k] }}
-      label={label}
+      label={t(SETTING_LABELS[k])}
       options={selectOptions(k, current)}
       value={String(current)}
       onChange={(raw) => {
         const v = parseChoice(k, raw)
         if (v !== null) props.set(k, v)
+      }}
+    />
+  )
+}
+
+/** General › Language: the options are the registered packs, named by Intl.DisplayNames. */
+function LanguageSelect({ props }: { props: PaneProps }) {
+  const current = props.settings["general.language"]
+  const names =
+    typeof Intl.DisplayNames === "function"
+      ? new Intl.DisplayNames([getLanguage()], { type: "language" })
+      : null
+  return (
+    <Select
+      dense
+      className="settings-select"
+      style={{ width: LANGUAGE_SELECT_WIDTH }}
+      label={t("setting.general.language")}
+      options={listLanguages().map((id) => ({ value: id, label: names?.of(id) ?? id }))}
+      value={current}
+      onChange={(raw) => {
+        if (isValidSetting("general.language", raw)) props.set("general.language", raw)
       }}
     />
   )
@@ -151,6 +175,9 @@ function SettingToggle({
 function ValueText({ children }: { children: ReactNode }) {
   return <span className="settings-value">{children}</span>
 }
+
+/** The language Select's width (the other General rows use 104). */
+const LANGUAGE_SELECT_WIDTH = 104
 
 function RowButton({
   variant = "secondary",
@@ -217,50 +244,32 @@ export function FilesPane(props: PaneProps) {
   const rows: ReactNode[] = [
     <SettingRow
       key="autosave"
-      label="Autosave"
+      label={t("setting.files.autosave")}
       description={autosaveDescription(settings["files.autosaveIntervalMs"])}
       control={(ids) => <SettingToggle k="files.autosave" props={props} {...ids} />}
     />,
     <SettingRow
       key="interval"
-      label="Autosave interval"
-      description="Idle time before a write."
-      control={
-        <ChoiceSelect
-          k="files.autosaveIntervalMs"
-          props={props}
-          label={LABEL["files.autosaveIntervalMs"]}
-        />
-      }
+      label={t("setting.files.autosaveIntervalMs")}
+      description={t("settings.files.idle")}
+      control={<ChoiceSelect k="files.autosaveIntervalMs" props={props} />}
     />,
     <SettingRow
       key="recovery"
-      label="Recovery snapshots"
-      description="Kept in ~/.kimo/recovery for 30 days, even when autosave is off."
-      control={
-        <ChoiceSelect
-          k="files.recoverySnapshotMs"
-          props={props}
-          label={LABEL["files.recoverySnapshotMs"]}
-        />
-      }
+      label={t("setting.files.recoverySnapshotMs")}
+      description={t("settings.files.recoveryDesc")}
+      control={<ChoiceSelect k="files.recoverySnapshotMs" props={props} />}
     />,
     <SettingRow
       key="external"
-      label="When a file changes on disk"
-      description="With no local edits Kimo always reloads; this applies when you have edits."
-      control={
-        <ChoiceSelect
-          k="files.onExternalChange"
-          props={props}
-          label={LABEL["files.onExternalChange"]}
-        />
-      }
+      label={t("setting.files.onExternalChange")}
+      description={t("settings.files.externalDesc")}
+      control={<ChoiceSelect k="files.onExternalChange" props={props} />}
     />,
     <SettingRow
       key="git-pause"
-      label="Pause autosave during git operations"
-      description="Detects index.lock, rebase, merge, cherry-pick and branch switches."
+      label={t("setting.files.pauseAutosaveDuringGit")}
+      description={t("settings.files.gitPauseDesc")}
       control={(ids) => <SettingToggle k="files.pauseAutosaveDuringGit" props={props} {...ids} />}
     />,
   ]
@@ -268,8 +277,8 @@ export function FilesPane(props: PaneProps) {
     rows.push(
       <SettingRow
         key="new-files"
-        label="New files go to"
-        description="Used by New file when no folder is selected on Home."
+        label={t("setting.files.newFilesDir")}
+        description={t("settings.files.newFilesDesc")}
         control={
           <>
             <ValueText>
@@ -280,14 +289,16 @@ export function FilesPane(props: PaneProps) {
             <RowButton
               onClick={async () => {
                 try {
-                  const dir = await platform.dialogs.pickFolder({ title: "New files go to" })
+                  const dir = await platform.dialogs.pickFolder({
+                    title: t("setting.files.newFilesDir"),
+                  })
                   if (dir) await set("files.newFilesDir", dir)
                 } catch (e) {
-                  if (!isPlatformError(e, "CANCELLED")) fail("choose a folder", e)
+                  if (!isPlatformError(e, "CANCELLED")) fail(t("errors.chooseFolder"), e)
                 }
               }}
             >
-              Change…
+              {t("settings.files.change")}
             </RowButton>
           </>
         }
@@ -297,8 +308,10 @@ export function FilesPane(props: PaneProps) {
     rows.push(
       <SettingRow
         key="merge-driver"
-        label="Git merge driver"
-        description={repos.value ? mergeDriverDescription(configured, total) : "Checking…"}
+        label={t("settings.files.mergeDriver")}
+        description={
+          repos.value ? mergeDriverDescription(configured, total) : t("settings.files.checking")
+        }
         control={
           <RowButton
             disabled={!repos.value || configured === total}
@@ -307,12 +320,12 @@ export function FilesPane(props: PaneProps) {
                 for (const r of repos.value ?? [])
                   if (!r.ok) await platform.git.installMergeDriver(r.root)
               } catch (e) {
-                fail("set up the git merge driver", e, () => void setUp())
+                fail(t("errors.setUpMergeDriver"), e, () => void setUp())
               }
               repos.reload()
             }}
           >
-            Set up…
+            {t("settings.files.setUp")}
           </RowButton>
         }
       />,
@@ -321,23 +334,31 @@ export function FilesPane(props: PaneProps) {
     rows.push(
       <SettingRow
         key="default-app"
-        label="Default app for .kimo and .kimoz"
-        description={`Kimo opens these files from ${platform.os === "windows" ? "Explorer" : platform.os === "linux" ? "your file manager" : "Finder"} and kimo:// links.`}
+        label={t("settings.files.defaultApp")}
+        description={t("settings.files.defaultAppDesc", {
+          where: t(
+            platform.os === "windows"
+              ? "settings.files.explorer"
+              : platform.os === "linux"
+                ? "settings.files.fileManager"
+                : "settings.files.finder",
+          ),
+        })}
         control={
           defaultApp.value === "default" ? (
-            <ValueText>Kimo ✓</ValueText>
+            <ValueText>{t("ui.settings.panes.t1")}</ValueText>
           ) : (
             <RowButton
               onClick={async function makeDefault() {
                 try {
                   await platform.defaultApp?.makeDefault()
                 } catch (e) {
-                  fail("make Kimo the default app", e, () => void makeDefault())
+                  fail(t("errors.makeDefaultApp"), e, () => void makeDefault())
                 }
                 defaultApp.reload()
               }}
             >
-              Make default
+              {t("settings.files.makeDefault")}
             </RowButton>
           )
         }
@@ -345,7 +366,7 @@ export function FilesPane(props: PaneProps) {
     )
   return (
     <>
-      <PaneTitle>Files & autosave</PaneTitle>
+      <PaneTitle>{t("settings.nav.files")}</PaneTitle>
       {markLast(rows)}
     </>
   )
@@ -362,14 +383,14 @@ export function FontsPane(props: PaneProps) {
   const rows: ReactNode[] = [
     <SettingRow
       key="ntpf"
-      label="No third-party fetch"
-      description="Kimo has no telemetry. This also blocks Google Fonts and remote image URLs."
+      label={t("setting.privacy.noThirdPartyFetch")}
+      description={t("settings.fonts.noFetchDesc")}
       control={(ids) => <SettingToggle k="privacy.noThirdPartyFetch" props={props} {...ids} />}
     />,
     <SettingRow
       key="google"
-      label="Google Fonts"
-      description="Fetched on first use, then cached by content hash. Off while No third-party fetch is on."
+      label={t("setting.fonts.google")}
+      description={t("settings.fonts.googleDesc")}
       dimmed={blocked || !platform.capabilities.remoteFonts}
       control={(ids) => (
         <SettingToggle
@@ -390,8 +411,10 @@ export function FontsPane(props: PaneProps) {
     />,
     <SettingRow
       key="cache"
-      label="Font cache"
-      description={cache.value?.dir ? displayPath(cache.value.dir, home) : "Stored in this browser"}
+      label={t("settings.fonts.cache")}
+      description={
+        cache.value?.dir ? displayPath(cache.value.dir, home) : t("settings.fonts.inBrowser")
+      }
       control={
         <>
           <ValueText>
@@ -406,12 +429,12 @@ export function FontsPane(props: PaneProps) {
                 announceFontCacheCleared()
                 props.onFontCacheCleared?.()
               } catch (e) {
-                fail("clear the font cache", e, () => void clear())
+                fail(t("errors.clearFontCache"), e, () => void clear())
               }
               cache.reload()
             }}
           >
-            Clear
+            {t("settings.fonts.clear")}
           </RowButton>
         </>
       }
@@ -423,22 +446,24 @@ export function FontsPane(props: PaneProps) {
     rows.push(
       <SettingRow
         key="folders"
-        label="Extra font folders"
+        label={t("setting.fonts.extraFolders")}
         description={extraFoldersDescription(platform.os, [], home)}
         last={folders.length > 0}
         control={
           <RowButton
             onClick={async () => {
               try {
-                const dir = await platform.dialogs.pickFolder({ title: "Add font folder" })
+                const dir = await platform.dialogs.pickFolder({
+                  title: t("settings.fonts.addFolderTitle"),
+                })
                 if (dir && !folders.includes(dir))
                   await set("fonts.extraFolders", [...folders, dir])
               } catch (e) {
-                if (!isPlatformError(e, "CANCELLED")) fail("add the font folder", e)
+                if (!isPlatformError(e, "CANCELLED")) fail(t("errors.addFontFolder"), e)
               }
             }}
           >
-            Add folder…
+            {t("settings.fonts.addFolder")}
           </RowButton>
         }
       />,
@@ -451,12 +476,12 @@ export function FontsPane(props: PaneProps) {
               <Folder className="settings-folder__icon" aria-hidden="true" />
               <span className="settings-folder__path">{displayPath(dir, home)}</span>
               <span className="settings-folder__spacer" />
-              <Tooltip label="Remove folder" side="top">
+              <Tooltip label={t("settings.fonts.removeFolder")} side="top">
                 <IconButton
                   size="sm"
                   tone="quiet"
                   className="settings-folder__remove"
-                  label={`Remove ${displayPath(dir, home)}`}
+                  label={t("settings.fonts.remove", { path: displayPath(dir, home) })}
                   icon={<X />}
                   // The font system rescans when `fonts.extraFolders` changes.
                   onClick={() =>
@@ -475,14 +500,14 @@ export function FontsPane(props: PaneProps) {
   rows.push(
     <SettingRow
       key="embed"
-      label="Embed fonts in .kimoz packages"
-      description="Only fonts whose license allows embedding (OS/2 fsType)."
+      label={t("setting.fonts.embedInKimoz")}
+      description={t("settings.fonts.embedDesc")}
       control={(ids) => <SettingToggle k="fonts.embedInKimoz" props={props} {...ids} />}
     />,
   )
   return (
     <>
-      <PaneTitle>Fonts & privacy</PaneTitle>
+      <PaneTitle>{t("settings.nav.fonts")}</PaneTitle>
       {markLast(rows)}
     </>
   )
@@ -519,7 +544,7 @@ function FontPackRow({
           label={fontPackProgressLabel(state.bytes, estimate)}
         />
         <RowButton variant="ghost" onClick={() => pack.cancel()}>
-          Cancel
+          {t("settings.fonts.cancel")}
         </RowButton>
       </>
     )
@@ -530,10 +555,10 @@ function FontPackRow({
         <RowButton
           variant="ghost"
           onClick={() =>
-            void pack.remove().catch((e: unknown) => fail("remove the offline font pack", e))
+            void pack.remove().catch((e: unknown) => fail(t("errors.removeFontPack"), e))
           }
         >
-          Remove
+          {t("settings.fonts.removePack")}
         </RowButton>
       </>
     )
@@ -547,13 +572,13 @@ function FontPackRow({
           }
           onClick={() => void pack.download()}
         >
-          Download
+          {t("settings.fonts.download")}
         </RowButton>
       </>
     )
   return (
     <SettingRow
-      label="Offline font pack"
+      label={t("settings.fonts.pack")}
       description={description}
       dimmed={off !== null && state.status !== "ready" && state.status !== "downloading"}
       control={control}
@@ -566,68 +591,54 @@ function FontPackRow({
 
 export function GeneralPane(props: PaneProps) {
   const os = props.platform.os
-  const follows =
+  const follows = t(
     os === "windows"
-      ? "Windows"
+      ? "settings.general.osWindows"
       : os === "linux"
-        ? "your desktop"
+        ? "settings.general.osLinux"
         : os === "web"
-          ? "your system"
-          : "macOS"
+          ? "settings.general.osWeb"
+          : "settings.general.osMac",
+  )
   return (
     <>
-      <PaneTitle>General</PaneTitle>
+      <PaneTitle>{t("settings.nav.general")}</PaneTitle>
       {markLast([
         <SettingRow
           key="appearance"
-          label="Appearance"
-          description={`Follows ${follows} unless set.`}
-          control={
-            <ChoiceSelect
-              k="general.appearance"
-              props={props}
-              label={LABEL["general.appearance"]}
-            />
-          }
+          label={t("setting.general.appearance")}
+          description={t("settings.general.appearanceDesc", { os: follows })}
+          control={<ChoiceSelect k="general.appearance" props={props} />}
+        />,
+        <SettingRow
+          key="language"
+          label={t("setting.general.language")}
+          control={<LanguageSelect props={props} />}
         />,
         // The web app has no quit: the open file stays in the tab's URL.
         native(props.platform) && (
           <SettingRow
             key="launch"
-            label="On launch"
-            description="Reopen the files that were open when you quit."
-            control={
-              <ChoiceSelect k="general.onLaunch" props={props} label={LABEL["general.onLaunch"]} />
-            }
+            label={t("setting.general.onLaunch")}
+            description={t("settings.general.onLaunchDesc")}
+            control={<ChoiceSelect k="general.onLaunch" props={props} />}
           />
         ),
         <SettingRow
           key="zoom"
-          label="Canvas zoom"
+          label={t("setting.general.canvasZoom")}
           description={
             props.settings["general.canvasZoom"] === "mouse"
-              ? "Scroll to zoom; ⇧ + scroll pans."
-              : "Pinch and ⌘ + scroll."
+              ? t("settings.general.zoomMouse")
+              : t("settings.general.zoomTrackpad")
           }
-          control={
-            <ChoiceSelect
-              k="general.canvasZoom"
-              props={props}
-              label={LABEL["general.canvasZoom"]}
-            />
-          }
+          control={<ChoiceSelect k="general.canvasZoom" props={props} />}
         />,
         <SettingRow
           key="duplicateMain"
-          label="Duplicating a main component"
-          description="⌘D, ⌥-drag and Edit › Duplicate on a main."
-          control={
-            <ChoiceSelect
-              k="general.duplicateMain"
-              props={props}
-              label={LABEL["general.duplicateMain"]}
-            />
-          }
+          label={t("setting.general.duplicateMain")}
+          description={t("settings.general.duplicateDesc")}
+          control={<ChoiceSelect k="general.duplicateMain" props={props} />}
         />,
       ])}
     </>
@@ -645,37 +656,37 @@ export function GeneralPane(props: PaneProps) {
 export function CanvasPane(props: PaneProps) {
   return (
     <>
-      <PaneTitle>Canvas</PaneTitle>
+      <PaneTitle>{t("settings.nav.canvas")}</PaneTitle>
       {markLast([
         <SettingRow
           key="snap-objects"
-          label="Snap to objects"
-          description="Edges, centres and equal gaps of nearby layers."
+          label={t("setting.canvas.snapToObjects")}
+          description={t("settings.canvas.snapObjectsDesc")}
           control={(ids) => <SettingToggle k="canvas.snapToObjects" props={props} {...ids} />}
         />,
         <SettingRow
           key="snap-pixel"
-          label="Snap to pixel grid"
-          description="Round positions and sizes to whole pixels."
+          label={t("setting.canvas.snapToPixelGrid")}
+          description={t("settings.canvas.snapPixelDesc")}
           control={(ids) => <SettingToggle k="canvas.snapToPixelGrid" props={props} {...ids} />}
         />,
         <SettingRow
           key="pixel-grid"
-          label="Pixel grid"
-          description="Shown at 800 % zoom and above."
+          label={t("setting.canvas.pixelGrid")}
+          description={t("settings.canvas.gridDesc")}
           control={(ids) => <SettingToggle k="canvas.pixelGrid" props={props} {...ids} />}
         />,
         <SettingRow
           key="rulers"
-          label="Rulers"
-          description="Top and left rulers in canvas units."
+          label={t("setting.canvas.rulers")}
+          description={t("settings.canvas.rulersDesc")}
           control={(ids) => <SettingToggle k="canvas.rulers" props={props} {...ids} />}
         />,
         <SettingRow
           key="nudge"
-          label="Nudge"
-          description="Arrow keys move by; ⇧ uses the big step."
-          control={<ChoiceSelect k="canvas.nudge" props={props} label={LABEL["canvas.nudge"]} />}
+          label={t("setting.canvas.nudge")}
+          description={t("settings.canvas.nudgeDesc")}
+          control={<ChoiceSelect k="canvas.nudge" props={props} />}
         />,
       ])}
     </>
@@ -725,7 +736,7 @@ export function UpdatesPane(props: PaneProps) {
         )
       await platform.updater.restart()
     } catch (e) {
-      fail("restart Kimo", e, () => void restart())
+      fail(t("errors.restartKimo"), e, () => void restart())
     }
   }
   const view = updateRowView(status, platform.appVersion, seen.current)
@@ -733,23 +744,21 @@ export function UpdatesPane(props: PaneProps) {
   const openNotes = () =>
     void platform.files
       .openExternalUrl(notes as string)
-      .catch((e: unknown) => fail("open the release notes", e))
+      .catch((e: unknown) => fail(t("errors.openReleaseNotes"), e))
   const rows: ReactNode[] = []
   if (can)
     rows.push(
       <SettingRow
         key="download"
-        label="Download updates"
-        description="Signed builds only. Kimo asks before restarting."
+        label={t("setting.updates.download")}
+        description={t("settings.updates.downloadDesc")}
         control={(ids) => <SettingToggle k="updates.download" props={props} {...ids} />}
       />,
       <SettingRow
         key="channel"
-        label="Channel"
-        description="Beta gets builds about a week earlier."
-        control={
-          <ChoiceSelect k="updates.channel" props={props} label={LABEL["updates.channel"]} />
-        }
+        label={t("setting.updates.channel")}
+        description={t("settings.updates.channelDesc")}
+        control={<ChoiceSelect k="updates.channel" props={props} />}
       />,
     )
   let control: ReactNode
@@ -773,28 +782,28 @@ export function UpdatesPane(props: PaneProps) {
       <>
         {notes && (
           <RowButton variant="ghost" onClick={openNotes}>
-            Release notes
+            {t("settings.updates.releaseNotes")}
           </RowButton>
         )}
         <RowButton
           variant="primary"
           onClick={() => (view.kind === "ready" ? void restart() : run("download"))}
         >
-          {view.kind === "ready" ? "Restart to update" : "Download"}
+          {view.kind === "ready" ? t("settings.updates.restart") : t("settings.fonts.download")}
         </RowButton>
       </>
     )
   else
     control = (
       <RowButton disabled={status.state === "checking"} onClick={() => run("check")}>
-        Check now
+        {t("settings.updates.checkNow")}
       </RowButton>
     )
   rows.push(
     <SettingRow
       key="version"
       label={can ? view.label : `Kimo ${platform.appVersion}`}
-      description={can ? view.description : "The web app updates when you reload."}
+      description={can ? view.description : t("settings.updates.webDesc")}
       control={control}
       data-update-state={view.kind}
     />,
@@ -808,17 +817,19 @@ export function UpdatesPane(props: PaneProps) {
         data-pen="eEmwX"
         data-testid="settings-update-error"
         title={
-          view.action === "download" ? "Couldn't download the update" : "Couldn't check for updates"
+          view.action === "download"
+            ? t("settings.updates.downloadFailed")
+            : t("settings.updates.checkFailedTitle")
         }
         {...(causeOf(status.message) ? { body: causeOf(status.message) } : {})}
-        actions={[{ id: "retry", label: "Retry", variant: "primary" }]}
+        actions={[{ id: "retry", label: t("settings.retry"), variant: "primary" }]}
         onAction={() => run(view.action)}
         onDismiss={() => setDismissed(status)}
       />
     ) : null
   return (
     <>
-      <PaneTitle banner={banner}>Updates</PaneTitle>
+      <PaneTitle banner={banner}>{t("settings.nav.updates")}</PaneTitle>
       {markLast(rows)}
     </>
   )
@@ -831,17 +842,4 @@ function markLast(rows: ReactNode[]): ReactNode[] {
       ? cloneElement(r, { last: true })
       : r,
   )
-}
-
-/** Accessible names of the Select controls (their row labels). */
-const LABEL: Record<ChoiceKey, string> = {
-  "files.autosaveIntervalMs": "Autosave interval",
-  "files.recoverySnapshotMs": "Recovery snapshots",
-  "files.onExternalChange": "When a file changes on disk",
-  "general.appearance": "Appearance",
-  "general.onLaunch": "On launch",
-  "general.canvasZoom": "Canvas zoom",
-  "general.duplicateMain": "Duplicating a main component",
-  "canvas.nudge": "Nudge",
-  "updates.channel": "Channel",
 }

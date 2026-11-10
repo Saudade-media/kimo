@@ -1,3 +1,4 @@
+import { t } from "@kimo/i18n"
 import { type ComponentPropsWithRef, type KeyboardEvent, type PointerEvent, useRef } from "react"
 import { clamp, cx, mergeRefs } from "../internal/util"
 import type { GestureProps } from "../slider/Slider"
@@ -56,7 +57,7 @@ export function GradientStopBar({
   onRemove,
   onChangeStart,
   onChangeEnd,
-  label = "Gradient stops",
+  label = t("ui.pkg.gradient.stop.bar.gradientstopbar.gradient-stops"),
   className,
   ref,
   ...rest

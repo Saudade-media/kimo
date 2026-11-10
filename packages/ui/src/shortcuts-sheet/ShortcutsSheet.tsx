@@ -1,3 +1,4 @@
+import { t } from "@kimo/i18n"
 import { Info, Search, X } from "lucide-react"
 import { type ComponentPropsWithRef, Fragment, useId, useRef } from "react"
 import { IconButton } from "../icon-button/IconButton"
@@ -111,21 +112,21 @@ export function ShortcutsSheet<P extends string = string>({
           icon={<Search />}
           frameProps={{ className: "kimo-shortcuts-sheet__filter" }}
           type="search"
-          placeholder="Filter shortcuts"
-          aria-label="Filter shortcuts"
+          placeholder={t("ui.pkg.shortcuts.sheet.shortcutssheet.filter-shortcuts")}
+          aria-label={t("ui.pkg.shortcuts.sheet.shortcutssheet.filter-shortcuts")}
           value={filter}
           onChange={(e) => onFilterChange(e.currentTarget.value)}
         />
         <SegmentedText
           className="kimo-shortcuts-sheet__platform"
-          label="Platform"
+          label={t("ui.pkg.shortcuts.sheet.shortcutssheet.platform")}
           options={platforms}
           value={platform}
           onChange={onPlatformChange}
         />
         <IconButton
           className="kimo-shortcuts-sheet__close"
-          label="Close"
+          label={t("ui.pkg.shortcuts.sheet.shortcutssheet.close")}
           icon={<X />}
           onClick={onClose}
         />

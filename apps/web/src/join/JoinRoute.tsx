@@ -10,6 +10,7 @@
  */
 import { useCallback, useEffect, useRef, useState } from "react"
 import { RoomEditor } from "../editor/Editor"
+import { t } from "../lib/i18n"
 import { useJoin, useJoinedRoom, useMultiplayer } from "../multiplayer/hooks"
 import type { MultiplayerModel } from "../multiplayer/model"
 import { useOptionalRuntime } from "../platform/runtime"
@@ -28,7 +29,7 @@ export function JoinRoute({ link }: { link: string }) {
   if (!model)
     return (
       <JoinStage>
-        <p className="not-found__label">Joining is not available here.</p>
+        <p className="not-found__label">{t("ui.join.joinroute.t1")}</p>
       </JoinStage>
     )
   return <JoinFlow model={model} initialLink={link} />

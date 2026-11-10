@@ -13,6 +13,7 @@
  */
 import { Button, KimoLogo } from "@kimo/ui"
 import type { ReactNode } from "react"
+import { type MessageKey, t } from "../lib/i18n"
 import { Icon } from "../lib/icons"
 import type { JoinState } from "../multiplayer/model"
 import {
@@ -24,11 +25,11 @@ import {
 } from "./copy"
 import "./join.css"
 
-const ACTIONS: Record<JoinActionId, { icon: string; label: string; primary?: boolean }> = {
-  "open-kimo": { icon: "house", label: "Open Kimo" },
-  "copy-details": { icon: "copy", label: "Copy details" },
-  "try-again": { icon: "refresh-cw", label: "Try again", primary: true },
-  "paste-link": { icon: "clipboard", label: "Paste link" },
+const ACTIONS: Record<JoinActionId, { icon: string; label: MessageKey; primary?: boolean }> = {
+  "open-kimo": { icon: "house", label: "ui.join.action.openKimo" },
+  "copy-details": { icon: "copy", label: "ui.join.action.copyDetails" },
+  "try-again": { icon: "refresh-cw", label: "ui.join.action.tryAgain", primary: true },
+  "paste-link": { icon: "clipboard", label: "ui.join.action.pasteLink" },
 }
 
 /** The full-window stage the card sits centered on (bg-canvas). */
@@ -88,7 +89,7 @@ export function JoinProgressCard({
         <div
           className="join-card__track"
           role="progressbar"
-          aria-label="Decrypting the file"
+          aria-label={t("ui.join.joincard.1")}
           aria-valuemin={0}
           aria-valuemax={100}
           {...(pct === null ? {} : { "aria-valuenow": pct })}
@@ -145,7 +146,7 @@ export function JoinErrorCardView({
               disabled={busy && id === "try-again"}
               onClick={() => onAction(id)}
             >
-              {done ? "Copied" : a.label}
+              {done ? t("ui.join.action.copied") : t(a.label)}
             </Button>
           )
         })}

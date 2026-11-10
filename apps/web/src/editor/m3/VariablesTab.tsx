@@ -9,6 +9,7 @@ import { axisDisplayOrder, isRef, type KimoDocument } from "@kimo/core-schema"
 import { EmptyState, Input, MenuDense, MenuDivider, VariableListRow } from "@kimo/ui"
 import { Fragment, useMemo, useRef, useState } from "react"
 import { useDocHeader } from "../../lib/header"
+import { t } from "../../lib/i18n"
 import { Icon } from "../../lib/icons"
 import type { FileSession } from "../session"
 import { type M3Controller, useBusValue, useLibraries } from "./controller"
@@ -70,12 +71,20 @@ export function VariablesTab({ session, m3 }: { session: FileSession; m3: M3Cont
       const set: Record<string, unknown> = {}
       for (const [k, v] of Object.entries(parsed)) if (!Object.hasOwn(vars, k)) set[k] = v
       if (!Object.keys(set).length) {
-        m3.toast({ tone: "warning", text: "No new variables in that file" })
+        m3.toast({
+          tone: "warning",
+          text: t("ui.editor.m3.variablestab.no-new-variables-in-that-file"),
+        })
         return
       }
       session.apply([{ op: "setVariables", set } as never], "Import DTCG")
     } catch (e) {
-      m3.toast({ tone: "danger", text: `Could not import: ${e instanceof Error ? e.message : e}` })
+      m3.toast({
+        tone: "danger",
+        text: t("ui.editor.m3.variablestab.importFailed", {
+          message: e instanceof Error ? e.message : String(e),
+        }),
+      })
     }
   }
 
@@ -85,8 +94,8 @@ export function VariablesTab({ session, m3 }: { session: FileSession; m3: M3Cont
         <div className="m3-assets__empty">
           <EmptyState
             icon={<Icon name="table-2" size={18} />}
-            title="No variables yet"
-            description="Variables hold colors, numbers, strings and booleans you can bind to fields and switch per theme."
+            title={t("ui.editor.m3.variablestab.6")}
+            description={t("ui.editor.m3.variablestab.5")}
           />
           <div className="m3-assets__empty-actions">
             <M3Button
@@ -95,7 +104,7 @@ export function VariablesTab({ session, m3 }: { session: FileSession; m3: M3Cont
               className="m3-assets__empty-button"
               onClick={() => m3.openPanel({ variables: true })}
             >
-              New variable
+              {t("ui.editor.m3.variablestab.7")}
             </M3Button>
             <M3Button
               variant="secondary"
@@ -103,7 +112,7 @@ export function VariablesTab({ session, m3 }: { session: FileSession; m3: M3Cont
               className="m3-assets__empty-button"
               onClick={() => fileInput.current?.click()}
             >
-              Import DTCG…
+              {t("ui.editor.m3.variablestab.8")}
             </M3Button>
             <input
               ref={fileInput}
@@ -126,15 +135,15 @@ export function VariablesTab({ session, m3 }: { session: FileSession; m3: M3Cont
       <div className="left-panel__search">
         <Input
           icon={<Icon name="search" size={16} />}
-          placeholder="Search variables"
-          aria-label="Search variables"
+          placeholder={t("ui.editor.m3.variablestab.4")}
+          aria-label={t("ui.editor.m3.variablestab.3")}
           type="search"
           value={query}
           onChange={(e) => setQuery(e.currentTarget.value)}
           frameProps={{ className: "left-panel__search-input" }}
         />
       </div>
-      <div className="m3-vars__list" role="listbox" aria-label="Variables">
+      <div className="m3-vars__list" role="listbox" aria-label={t("ui.editor.m3.variablestab.2")}>
         {axes.length > 0 && (
           <div className="m3-preview-theme">
             <span className="m3-preview-theme__eye">
@@ -157,7 +166,7 @@ export function VariablesTab({ session, m3 }: { session: FileSession; m3: M3Cont
         {themeMenu && (
           <MenuDense
             width={200}
-            label="Preview theme"
+            label={t("ui.editor.m3.variablestab.1")}
             anchor={themeMenu}
             onClose={() => setThemeMenu(null)}
             autoFocus
@@ -254,7 +263,7 @@ export function VariablesTab({ session, m3 }: { session: FileSession; m3: M3Cont
             className="m3-vars__open-button"
             onClick={() => m3.openPanel({ variables: true })}
           >
-            Open variables
+            {t("ui.editor.m3.variablestab.9")}
           </M3Button>
         </div>
       </div>

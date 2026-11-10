@@ -1,3 +1,4 @@
+import { type MessageKey, t } from "../lib/i18n"
 /**
  * Every keyboard binding in Kimo — one table (board 25 §7 rules GJYcL "Single source": SHORTCUTS[]).
  * The handlers (Editor.tsx, canvas/controller.ts, CanvasHost.tsx, LeftPanel.tsx,
@@ -53,7 +54,7 @@ export interface Combo {
 export interface Shortcut {
   id: string
   /** Action name on the sheet. */
-  label: string
+  label: MessageKey
   scope: ShortcutScope
   /** Sheet group; absent → a mode-local binding the sheet doesn't list. */
   group?: ShortcutGroup
@@ -66,7 +67,7 @@ export interface Shortcut {
 const ARROWS = ["arrowleft", "arrowright", "arrowup", "arrowdown"] as const
 
 // Single-key tools: no ⌘/Ctrl, no ⌥, no ⇧ (Editor.tsx: `mod || e.altKey` return first).
-const tool = (id: string, label: string, key: string): Shortcut => ({
+const tool = (id: string, label: MessageKey, key: string): Shortcut => ({
   id,
   label,
   scope: "global",
@@ -75,7 +76,7 @@ const tool = (id: string, label: string, key: string): Shortcut => ({
 })
 
 // ⇧ + single key tools (board 27 shape slot).
-const shiftTool = (id: string, label: string, key: string): Shortcut => ({
+const shiftTool = (id: string, label: MessageKey, key: string): Shortcut => ({
   id,
   label,
   scope: "global",
@@ -86,37 +87,37 @@ const shiftTool = (id: string, label: string, key: string): Shortcut => ({
 /** The table, in sheet order within each group. */
 export const SHORTCUT_LIST: readonly Shortcut[] = [
   // --- Tools (CANVAS_TOOLS + Editor.tsx / controller.ts) -----------------------------------
-  tool("tool.move", "Move", "v"),
-  tool("tool.frame", "Frame", "f"),
-  tool("tool.rectangle", "Rectangle", "r"),
-  tool("tool.ellipse", "Ellipse", "o"),
+  tool("tool.move", "ui.shortcuts.move", "v"),
+  tool("tool.frame", "ui.shortcuts.frame", "f"),
+  tool("tool.rectangle", "ui.shortcuts.rectangle", "r"),
+  tool("tool.ellipse", "ui.shortcuts.ellipse", "o"),
   // Board 27 §5 shape slot (rule ZsJgx): Line L · Arrow ⇧L · Star ⇧S. The design's Polygon ⇧P
   // stays the Prompt tool's (board 22, lead decision): Polygon has no key, it is reached from
   // the shape slot flyout.
-  tool("tool.line", "Line", "l"),
-  shiftTool("tool.arrow", "Arrow", "l"),
-  shiftTool("tool.star", "Star", "s"),
-  tool("tool.text", "Text", "t"),
-  tool("tool.pen", "Pen", "p"),
-  tool("tool.note", "Note", "n"),
-  shiftTool("tool.prompt", "Prompt", "p"),
+  tool("tool.line", "ui.shortcuts.line", "l"),
+  shiftTool("tool.arrow", "ui.shortcuts.arrow", "l"),
+  shiftTool("tool.star", "ui.shortcuts.star", "s"),
+  tool("tool.text", "ui.shortcuts.text", "t"),
+  tool("tool.pen", "ui.shortcuts.pen", "p"),
+  tool("tool.note", "ui.shortcuts.note", "n"),
+  shiftTool("tool.prompt", "ui.shortcuts.prompt", "p"),
   {
     id: "tool.image",
-    label: "Image",
+    label: "ui.shortcuts.image",
     scope: "global",
     group: "tools",
     combos: [{ keys: ["k"], mod: true, shift: true, label: "K" }],
   },
   {
     id: "iconPicker",
-    label: "Icon picker",
+    label: "ui.shortcuts.icon-picker",
     scope: "canvas",
     group: "tools",
     combos: [{ keys: ["i"], mod: false, alt: false, shift: false, label: "I" }],
   },
   {
     id: "tool.hand",
-    label: "Hand",
+    label: "ui.shortcuts.hand",
     scope: "global",
     group: "tools",
     combos: [{ keys: ["h"], mod: false, alt: false, shift: false, label: "H" }],
@@ -125,49 +126,49 @@ export const SHORTCUT_LIST: readonly Shortcut[] = [
   // --- File (Editor.tsx, SettingsDialog.tsx) ------------------------------------------------
   {
     id: "newFile",
-    label: "New file",
+    label: "ui.shortcuts.new-file",
     scope: "global",
     group: "file",
     combos: [{ keys: ["n"], mod: true, shift: false, label: "N" }],
   },
   {
     id: "openFile",
-    label: "Open…",
+    label: "ui.shortcuts.open",
     scope: "global",
     group: "file",
     combos: [{ keys: ["o"], mod: true, label: "O" }],
   },
   {
     id: "save",
-    label: "Save",
+    label: "ui.shortcuts.save",
     scope: "global",
     group: "file",
     combos: [{ keys: ["s"], mod: true, shift: false, label: "S" }],
   },
   {
     id: "saveAs",
-    label: "Save as…",
+    label: "ui.shortcuts.save-as",
     scope: "global",
     group: "file",
     combos: [{ keys: ["s"], mod: true, shift: true, label: "S" }],
   },
   {
     id: "exportDialog",
-    label: "Export…",
+    label: "ui.shortcuts.export",
     scope: "global",
     group: "file",
     combos: [{ keys: ["e"], codes: ["KeyE"], mod: true, shift: true, alt: false, label: "E" }],
   },
   {
     id: "copyAsPng",
-    label: "Copy selection as PNG",
+    label: "ui.shortcuts.copy-selection-as-png",
     scope: "global",
     group: "file",
     combos: [{ keys: ["c"], codes: ["KeyC"], mod: true, shift: true, alt: false, label: "C" }],
   },
   {
     id: "settings",
-    label: "Settings",
+    label: "ui.shortcuts.settings",
     scope: "global",
     group: "file",
     combos: [{ keys: [","], mod: true, shift: false, alt: false, label: "," }],
@@ -176,35 +177,35 @@ export const SHORTCUT_LIST: readonly Shortcut[] = [
   // keys: ⇧ turns ] into }. ⌘] / ⌘[ (Bring forward / Send backward) need no ⇧.
   {
     id: "newTab",
-    label: "New tab",
+    label: "ui.shortcuts.new-tab",
     scope: "global",
     group: "file",
     combos: [{ keys: ["t"], codes: ["KeyT"], mod: true, shift: false, alt: false, label: "T" }],
   },
   {
     id: "closeTab",
-    label: "Close tab",
+    label: "ui.shortcuts.close-tab",
     scope: "global",
     group: "file",
     combos: [{ keys: ["w"], codes: ["KeyW"], mod: true, shift: false, alt: false, label: "W" }],
   },
   {
     id: "nextTab",
-    label: "Next tab",
+    label: "ui.shortcuts.next-tab",
     scope: "global",
     group: "file",
     combos: [{ codes: ["BracketRight"], mod: true, shift: true, alt: false, label: "]" }],
   },
   {
     id: "previousTab",
-    label: "Previous tab",
+    label: "ui.shortcuts.previous-tab",
     scope: "global",
     group: "file",
     combos: [{ codes: ["BracketLeft"], mod: true, shift: true, alt: false, label: "[" }],
   },
   {
     id: "goToTab",
-    label: "Go to tab 1 to 8",
+    label: "ui.shortcuts.go-to-tab-1-to-8",
     scope: "global",
     group: "file",
     combos: [
@@ -219,7 +220,7 @@ export const SHORTCUT_LIST: readonly Shortcut[] = [
   },
   {
     id: "lastTab",
-    label: "Last tab",
+    label: "ui.shortcuts.last-tab",
     scope: "global",
     group: "file",
     combos: [{ codes: ["Digit9"], mod: true, shift: false, alt: false, label: "9" }],
@@ -228,14 +229,14 @@ export const SHORTCUT_LIST: readonly Shortcut[] = [
   // --- Edit -----------------------------------------------------------------------------------
   {
     id: "undo",
-    label: "Undo",
+    label: "ui.shortcuts.undo",
     scope: "global",
     group: "edit",
     combos: [{ keys: ["z"], mod: true, shift: false, label: "Z" }],
   },
   {
     id: "redo",
-    label: "Redo",
+    label: "ui.shortcuts.redo",
     scope: "global",
     group: "edit",
     combos: [
@@ -247,112 +248,112 @@ export const SHORTCUT_LIST: readonly Shortcut[] = [
   // (editor/clipboard/useEditorCommands.ts).
   {
     id: "cut",
-    label: "Cut",
+    label: "ui.shortcuts.cut",
     scope: "canvas",
     group: "edit",
     combos: [{ keys: ["x"], mod: true, shift: false, alt: false, label: "X" }],
   },
   {
     id: "copy",
-    label: "Copy",
+    label: "ui.shortcuts.copy",
     scope: "canvas",
     group: "edit",
     combos: [{ keys: ["c"], mod: true, shift: false, alt: false, label: "C" }],
   },
   {
     id: "copyProperties",
-    label: "Copy properties",
+    label: "ui.shortcuts.copy-properties",
     scope: "canvas",
     group: "edit",
     combos: [{ codes: ["KeyC"], mod: true, shift: false, alt: true, label: "C" }],
   },
   {
     id: "paste",
-    label: "Paste",
+    label: "ui.shortcuts.paste",
     scope: "canvas",
     group: "edit",
     combos: [{ keys: ["v"], mod: true, shift: false, alt: false, label: "V" }],
   },
   {
     id: "pasteInPlace",
-    label: "Paste in place",
+    label: "ui.shortcuts.paste-in-place",
     scope: "canvas",
     group: "edit",
     combos: [{ codes: ["KeyV"], mod: true, shift: true, alt: false, label: "V" }],
   },
   {
     id: "pasteProperties",
-    label: "Paste properties",
+    label: "ui.shortcuts.paste-properties",
     scope: "canvas",
     group: "edit",
     combos: [{ codes: ["KeyV"], mod: true, shift: false, alt: true, label: "V" }],
   },
   {
     id: "duplicate",
-    label: "Duplicate",
+    label: "ui.shortcuts.duplicate",
     scope: "canvas",
     group: "edit",
     combos: [{ keys: ["d"], mod: true, shift: false, alt: false, label: "D" }],
   },
   {
     id: "group",
-    label: "Group",
+    label: "ui.shortcuts.group",
     scope: "canvas",
     group: "edit",
     combos: [{ keys: ["g"], mod: true, shift: false, alt: false, label: "G" }],
   },
   {
     id: "ungroup",
-    label: "Ungroup",
+    label: "ui.shortcuts.ungroup",
     scope: "canvas",
     group: "edit",
     combos: [{ codes: ["KeyG"], mod: true, shift: true, alt: false, label: "G" }],
   },
   {
     id: "wrapInFrame",
-    label: "Wrap in frame",
+    label: "ui.shortcuts.wrap-in-frame",
     scope: "canvas",
     group: "edit",
     combos: [{ codes: ["KeyG"], mod: true, shift: false, alt: true, label: "G" }],
   },
   {
     id: "addAutoLayout",
-    label: "Add auto layout",
+    label: "ui.shortcuts.add-auto-layout",
     scope: "canvas",
     group: "edit",
     combos: [{ codes: ["KeyA"], mod: false, shift: true, alt: false, label: "A" }],
   },
   {
     id: "removeAutoLayout",
-    label: "Remove auto layout",
+    label: "ui.shortcuts.remove-auto-layout",
     scope: "canvas",
     group: "edit",
     combos: [{ codes: ["KeyA"], mod: false, shift: true, alt: true, label: "A" }],
   },
   {
     id: "bringToFront",
-    label: "Bring to front",
+    label: "ui.shortcuts.bring-to-front",
     scope: "canvas",
     group: "edit",
     combos: [{ codes: ["BracketRight"], mod: true, shift: false, alt: false, label: "]" }],
   },
   {
     id: "sendToBack",
-    label: "Send to back",
+    label: "ui.shortcuts.send-to-back",
     scope: "canvas",
     group: "edit",
     combos: [{ codes: ["BracketLeft"], mod: true, shift: false, alt: false, label: "[" }],
   },
   {
     id: "delete",
-    label: "Delete",
+    label: "ui.shortcuts.delete",
     scope: "canvas",
     group: "edit",
     combos: [{ keys: ["backspace", "delete"], mod: false, alt: false, label: "⌫" }],
   },
   {
     id: "nudge",
-    label: "Nudge 1 px · 10 px",
+    label: "ui.shortcuts.nudge-1-px-10-px",
     scope: "canvas",
     group: "edit",
     combos: [
@@ -363,7 +364,7 @@ export const SHORTCUT_LIST: readonly Shortcut[] = [
   {
     // Board 27 §4 rule bFozp "Nudge … Applies to arrow-key moves and Alt-arrow resize".
     id: "nudgeResize",
-    label: "Resize by nudge",
+    label: "ui.shortcuts.resize-by-nudge",
     scope: "canvas",
     group: "edit",
     combos: [{ keys: ARROWS, mod: false, alt: true, label: "←↑→↓" }],
@@ -371,21 +372,21 @@ export const SHORTCUT_LIST: readonly Shortcut[] = [
   {
     // Board 27 §6 rule K0t6s: ⇧H / ⇧V.
     id: "flipHorizontal",
-    label: "Flip horizontal",
+    label: "ui.shortcuts.flip-horizontal",
     scope: "canvas",
     group: "edit",
     combos: [{ keys: ["h"], mod: false, alt: false, shift: true, label: "H" }],
   },
   {
     id: "flipVertical",
-    label: "Flip vertical",
+    label: "ui.shortcuts.flip-vertical",
     scope: "canvas",
     group: "edit",
     combos: [{ keys: ["v"], mod: false, alt: false, shift: true, label: "V" }],
   },
   {
     id: "renameLayer",
-    label: "Rename layer",
+    label: "ui.shortcuts.rename-layer",
     scope: "layers",
     group: "edit",
     combos: [{ keys: ["f2"], label: "F2" }],
@@ -394,56 +395,56 @@ export const SHORTCUT_LIST: readonly Shortcut[] = [
   // --- Selection & layers ------------------------------------------------------------------------
   {
     id: "selectAll",
-    label: "Select all",
+    label: "ui.shortcuts.select-all",
     scope: "canvas",
     group: "selection",
     combos: [{ keys: ["a"], mod: true, shift: false, alt: false, label: "A" }],
   },
   {
     id: "selectInverse",
-    label: "Select inverse",
+    label: "ui.shortcuts.select-inverse",
     scope: "canvas",
     group: "selection",
     combos: [{ codes: ["KeyA"], mod: true, shift: true, alt: false, label: "A" }],
   },
   {
     id: "selectChildren",
-    label: "Select children",
+    label: "ui.shortcuts.select-children",
     scope: "canvas",
     group: "selection",
     combos: [{ keys: ["enter"], mod: false, alt: false, shift: false, label: "↵" }],
   },
   {
     id: "selectParent",
-    label: "Select parent / deselect",
+    label: "ui.shortcuts.select-parent-deselect",
     scope: "canvas",
     group: "selection",
     combos: [{ keys: ["escape"], mod: false, alt: false, label: "Esc" }],
   },
   {
     id: "addToSelection",
-    label: "Add to selection",
+    label: "ui.shortcuts.add-to-selection",
     scope: "pointer",
     group: "selection",
     combos: [{ pointer: true, shift: true, label: "click" }],
   },
   {
     id: "selectInside",
-    label: "Select inside group",
+    label: "ui.shortcuts.select-inside-group",
     scope: "pointer",
     group: "selection",
     combos: [{ pointer: true, mod: true, label: "click" }],
   },
   {
     id: "toggleHidden",
-    label: "Hide / show",
+    label: "ui.shortcuts.hide-show",
     scope: "layers",
     group: "selection",
     combos: [{ keys: ["h"], mod: true, shift: true, label: "H" }],
   },
   {
     id: "toggleLocked",
-    label: "Lock / unlock",
+    label: "ui.shortcuts.lock-toggle",
     scope: "layers",
     group: "selection",
     combos: [{ keys: ["l"], mod: true, shift: true, label: "L" }],
@@ -452,7 +453,7 @@ export const SHORTCUT_LIST: readonly Shortcut[] = [
   // --- Components & variables (M3) ---------------------------------------------------------------
   {
     id: "createComponent",
-    label: "Create component",
+    label: "ui.shortcuts.create-component",
     scope: "global",
     group: "components",
     // ⌥⇧⌘K is Image (checked first, as it always was).
@@ -460,21 +461,21 @@ export const SHORTCUT_LIST: readonly Shortcut[] = [
   },
   {
     id: "detachInstance",
-    label: "Detach instance",
+    label: "ui.shortcuts.detach-instance",
     scope: "global",
     group: "components",
     combos: [{ codes: ["KeyB"], mod: true, alt: true, label: "B" }],
   },
   {
     id: "goToMain",
-    label: "Go to main component",
+    label: "ui.shortcuts.go-to-main-component",
     scope: "global",
     group: "components",
     combos: [{ keys: ["enter"], mod: false, alt: true, label: "↵" }],
   },
   {
     id: "variables",
-    label: "Variables",
+    label: "ui.shortcuts.variables",
     scope: "global",
     group: "components",
     // Board 27 §2 gives ⇧⌘V to Paste in place; the Variables dialog moves to ⌥⇧⌘V.
@@ -484,7 +485,7 @@ export const SHORTCUT_LIST: readonly Shortcut[] = [
   // --- View ------------------------------------------------------------------------------------
   {
     id: "zoomIn",
-    label: "Zoom in",
+    label: "ui.shortcuts.zoom-in",
     scope: "canvas",
     group: "view",
     combos: [
@@ -494,7 +495,7 @@ export const SHORTCUT_LIST: readonly Shortcut[] = [
   },
   {
     id: "zoomOut",
-    label: "Zoom out",
+    label: "ui.shortcuts.zoom-out",
     scope: "canvas",
     group: "view",
     combos: [
@@ -504,7 +505,7 @@ export const SHORTCUT_LIST: readonly Shortcut[] = [
   },
   {
     id: "zoom100",
-    label: "Zoom to 100 %",
+    label: "ui.shortcuts.zoom-to-100",
     scope: "canvas",
     group: "view",
     combos: [
@@ -516,21 +517,21 @@ export const SHORTCUT_LIST: readonly Shortcut[] = [
   {
     // Board 27 §1 (c) C1rd4: the ⌘P page switcher.
     id: "pageSwitcher",
-    label: "Go to page…",
+    label: "ui.shortcuts.go-to-page",
     scope: "global",
     group: "view",
     combos: [{ keys: ["p"], mod: true, shift: false, alt: false, label: "P" }],
   },
   {
     id: "zoomToFit",
-    label: "Zoom to fit",
+    label: "ui.shortcuts.zoom-to-fit",
     scope: "canvas",
     group: "view",
     combos: [{ codes: ["Digit1"], mod: false, alt: false, shift: true, label: "1" }],
   },
   {
     id: "zoomToSelection",
-    label: "Zoom to selection",
+    label: "ui.shortcuts.zoom-to-selection",
     scope: "canvas",
     group: "view",
     combos: [{ codes: ["Digit2"], mod: false, alt: false, shift: true, label: "2" }],
@@ -538,7 +539,7 @@ export const SHORTCUT_LIST: readonly Shortcut[] = [
   {
     // Board 27 §4 View menu (rmQMe): Pixel grid ⇧'.
     id: "view.pixelGrid",
-    label: "Pixel grid",
+    label: "ui.shortcuts.pixel-grid",
     scope: "global",
     group: "view",
     combos: [{ codes: ["Quote"], mod: false, alt: false, shift: true, label: "'" }],
@@ -546,14 +547,14 @@ export const SHORTCUT_LIST: readonly Shortcut[] = [
   {
     // Board 27 §4 rule YwZyP "Rulers ⇧R".
     id: "view.rulers",
-    label: "Rulers",
+    label: "ui.shortcuts.rulers",
     scope: "global",
     group: "view",
     combos: [{ keys: ["r"], mod: false, alt: false, shift: true, label: "R" }],
   },
   {
     id: "pan",
-    label: "Pan",
+    label: "ui.shortcuts.pan",
     scope: "canvas",
     group: "view",
     // shift: false — ⇧Space is Preview (board 27 §9).
@@ -562,7 +563,7 @@ export const SHORTCUT_LIST: readonly Shortcut[] = [
   {
     // Board 27 §9 (j52y5f): Preview — topbar Play button, View › Preview, ⇧Space (Editor.tsx).
     id: "preview",
-    label: "Preview",
+    label: "ui.shortcuts.preview",
     scope: "global",
     group: "view",
     combos: [{ codes: ["Space"], mod: false, alt: false, shift: true, label: "Space" }],
@@ -570,7 +571,7 @@ export const SHORTCUT_LIST: readonly Shortcut[] = [
   {
     // Board 44 §5 rule "Collapse": ⌘\ collapses both floating cards (or opens both again).
     id: "togglePanels",
-    label: "Show / hide panels",
+    label: "ui.shortcuts.show-hide-panels",
     scope: "global",
     group: "view",
     combos: [{ codes: ["Backslash"], mod: true, alt: false, shift: false, label: "\\" }],
@@ -579,7 +580,7 @@ export const SHORTCUT_LIST: readonly Shortcut[] = [
     // Desktop (tabs/useWindowTabs.ts): reloads the window; its tabs come back. The web build
     // leaves ⌘R to the browser.
     id: "reloadWindow",
-    label: "Reload window",
+    label: "ui.shortcuts.reload-window",
     scope: "global",
     group: "view",
     combos: [{ keys: ["r"], codes: ["KeyR"], mod: true, alt: false, shift: false, label: "R" }],
@@ -588,21 +589,21 @@ export const SHORTCUT_LIST: readonly Shortcut[] = [
   // --- Agent & text ------------------------------------------------------------------------------
   {
     id: "askKimo",
-    label: "Ask Kimo",
+    label: "ui.shortcuts.ask-kimo",
     scope: "global",
     group: "agent-text",
     combos: [{ keys: ["k"], mod: true, shift: false, alt: false, label: "K" }],
   },
   {
     id: "link",
-    label: "Link… (text selected)",
+    label: "ui.shortcuts.link-text-selected",
     scope: "text-selected",
     group: "agent-text",
     combos: [{ codes: ["KeyK"], mod: true, shift: false, alt: false, label: "K" }],
   },
   {
     id: "italic",
-    label: "Italic (text selected)",
+    label: "ui.shortcuts.italic-text-selected",
     scope: "text-selected",
     group: "agent-text",
     combos: [{ codes: ["KeyI"], mod: true, shift: false, alt: false, label: "I" }],
@@ -611,28 +612,28 @@ export const SHORTCUT_LIST: readonly Shortcut[] = [
     // Board 30 "Rich text": while editing a text, style the selected characters (or the next
     // typed ones at a collapsed caret). ⌘I and ⌘K also apply to the range while editing.
     id: "bold",
-    label: "Bold (editing text)",
+    label: "ui.shortcuts.bold-editing-text",
     scope: "text-edit",
     group: "agent-text",
     combos: [{ codes: ["KeyB"], mod: true, shift: false, alt: false, label: "B" }],
   },
   {
     id: "underline",
-    label: "Underline (editing text)",
+    label: "ui.shortcuts.underline-editing-text",
     scope: "text-edit",
     group: "agent-text",
     combos: [{ codes: ["KeyU"], mod: true, shift: false, alt: false, label: "U" }],
   },
   {
     id: "strikethrough",
-    label: "Strikethrough (editing text)",
+    label: "ui.shortcuts.strikethrough-editing-text",
     scope: "text-edit",
     group: "agent-text",
     combos: [{ codes: ["KeyX"], mod: true, shift: true, alt: false, label: "X" }],
   },
   {
     id: "finishText",
-    label: "Finish editing text",
+    label: "ui.shortcuts.finish-editing-text",
     scope: "text-edit",
     group: "agent-text",
     combos: [
@@ -644,14 +645,14 @@ export const SHORTCUT_LIST: readonly Shortcut[] = [
   // --- Conflicts (board 18) -----------------------------------------------------------------------
   {
     id: "nextConflict",
-    label: "Next conflict",
+    label: "ui.shortcuts.next-conflict",
     scope: "global",
     group: "conflicts",
     combos: [{ keys: ["'"], codes: ["Quote"], mod: true, alt: false, shift: false, label: "'" }],
   },
   {
     id: "previousConflict",
-    label: "Previous conflict",
+    label: "ui.shortcuts.previous-conflict",
     scope: "global",
     group: "conflicts",
     combos: [
@@ -662,7 +663,7 @@ export const SHORTCUT_LIST: readonly Shortcut[] = [
   // --- Help ---------------------------------------------------------------------------------------
   {
     id: "shortcuts",
-    label: "Keyboard shortcuts",
+    label: "ui.shortcuts.keyboard-shortcuts",
     scope: "global",
     group: "help",
     isNew: true,
@@ -672,50 +673,50 @@ export const SHORTCUT_LIST: readonly Shortcut[] = [
   // --- Mode-local bindings (matched by the canvas, not listed on the sheet) -----------------------
   {
     id: "gesture.cancel",
-    label: "Cancel drag",
+    label: "ui.shortcuts.cancel-drag",
     scope: "gesture",
     combos: [{ keys: ["escape"], label: "Esc" }],
   },
   {
     id: "pen.finish",
-    label: "Finish path",
+    label: "ui.shortcuts.finish-path",
     scope: "pen",
     combos: [{ keys: ["enter", "escape"], mod: false, label: "↵" }],
   },
   {
     id: "pen.removePoint",
-    label: "Remove last point",
+    label: "ui.shortcuts.remove-last-point",
     scope: "pen",
     combos: [{ keys: ["backspace", "delete"], mod: false, label: "⌫" }],
   },
   {
     id: "placement.cancel",
-    label: "Cancel placement",
+    label: "ui.shortcuts.cancel-placement",
     scope: "placement",
     combos: [{ keys: ["escape"], label: "Esc" }],
   },
   {
     id: "pathEdit.exit",
-    label: "Exit path editing",
+    label: "ui.shortcuts.exit-path-editing",
     scope: "path-edit",
     combos: [{ keys: ["enter", "escape"], mod: false, label: "↵" }],
   },
   {
     id: "pathEdit.deletePoints",
-    label: "Delete points",
+    label: "ui.shortcuts.delete-points",
     scope: "path-edit",
     combos: [{ keys: ["backspace", "delete"], mod: false, label: "⌫" }],
   },
   // Board 27 §6 (d) rules R6uRRw: Enter / Apply commits, Esc reverts.
   {
     id: "crop.apply",
-    label: "Apply crop",
+    label: "ui.shortcuts.apply-crop",
     scope: "crop",
     combos: [{ keys: ["enter"], mod: false, label: "↵" }],
   },
   {
     id: "crop.cancel",
-    label: "Cancel crop",
+    label: "ui.shortcuts.cancel-crop",
     scope: "crop",
     combos: [{ keys: ["escape"], label: "Esc" }],
   },
@@ -802,16 +803,20 @@ export function formatShortcut(s: Shortcut, platform: ShortcutPlatform): string[
 }
 
 /** Sheet groups (rules GrX3H), with their column (WcWPY Body › Column 1–3). */
-export const SHORTCUT_GROUPS: readonly { id: ShortcutGroup; title: string; column: 1 | 2 | 3 }[] = [
-  { id: "tools", title: "Tools", column: 1 },
-  { id: "file", title: "File", column: 1 },
-  { id: "edit", title: "Edit", column: 2 },
-  { id: "selection", title: "Selection & layers", column: 2 },
-  { id: "components", title: "Components & variables", column: 2 },
-  { id: "view", title: "View", column: 3 },
-  { id: "agent-text", title: "Agent & text", column: 3 },
-  { id: "conflicts", title: "Conflicts", column: 3 },
-  { id: "help", title: "Help", column: 3 },
+export const SHORTCUT_GROUPS: readonly {
+  id: ShortcutGroup
+  title: MessageKey
+  column: 1 | 2 | 3
+}[] = [
+  { id: "tools", title: "ui.shortcuts.tools", column: 1 },
+  { id: "file", title: "ui.shortcuts.file", column: 1 },
+  { id: "edit", title: "ui.shortcuts.edit", column: 2 },
+  { id: "selection", title: "ui.shortcuts.selection-layers", column: 2 },
+  { id: "components", title: "ui.shortcuts.components-variables", column: 2 },
+  { id: "view", title: "ui.shortcuts.view", column: 3 },
+  { id: "agent-text", title: "ui.shortcuts.agent-text", column: 3 },
+  { id: "conflicts", title: "ui.shortcuts.conflicts", column: 3 },
+  { id: "help", title: "ui.shortcuts.help", column: 3 },
 ]
 
 interface SheetRow {
@@ -836,10 +841,11 @@ export function sheetGroups(platform: ShortcutPlatform, query = ""): SheetGroup[
   const q = query.trim().toLowerCase()
   return SHORTCUT_GROUPS.map((g) => ({
     ...g,
+    title: t(g.title),
     rows: SHORTCUT_LIST.filter((s) => s.group === g.id)
       .map((s) => ({
         id: s.id,
-        label: s.label,
+        label: t(s.label),
         combos: formatShortcut(s, platform),
         isNew: !!s.isNew,
       }))

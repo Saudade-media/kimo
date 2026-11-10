@@ -25,6 +25,7 @@ import {
   MODEL_CATALOG,
   type ProviderKind,
 } from "@kimo/ai-agent"
+import { t, tn } from "../lib/i18n"
 
 /** System prompt + tool definitions sent with every request (tokens). */
 const SYSTEM_TOKENS = 6_000
@@ -112,15 +113,19 @@ export interface CostWarningView {
   thresholdUsd: number
 }
 
-const plural = (n: number, one: string) => `${n} ${one}${n === 1 ? "" : "s"}`
-
 /** "14 frames + 3 images in context" / "a long thread in context". */
 function contextPhrase(e: Pick<TurnEstimate, "frames" | "images">): string {
   const parts = [
-    ...(e.frames > 0 ? [plural(e.frames, "frame")] : []),
-    ...(e.images > 0 ? [plural(e.images, "image")] : []),
+    ...(e.frames > 0
+      ? [tn("ui.agent.panel.costwarning.frameOne", "ui.agent.panel.costwarning.frame", e.frames)]
+      : []),
+    ...(e.images > 0
+      ? [tn("ui.agent.panel.costwarning.imageOne", "ui.agent.panel.costwarning.image", e.images)]
+      : []),
   ]
-  return parts.length ? `${parts.join(" + ")} in context` : "a long thread in context"
+  return parts.length
+    ? t("ui.agent.panel.costwarning.inContext", { parts: parts.join(" + ") })
+    : t("ui.agent.panel.costwarning.longThread")
 }
 
 /**
@@ -135,11 +140,16 @@ export function costWarningCopy(
   const ctx = contextPhrase(w.estimate)
   if (!showCost)
     return {
-      title: `This turn is large: ~${formatTokens(w.estimate.tokens)} tokens`,
-      description: `Above your per-turn warning: ${ctx}. Trim the selection or send anyway.`,
+      title: t("ui.agent.panel.costwarning.large", {
+        tokens: formatTokens(w.estimate.tokens),
+      }),
+      description: t("ui.agent.panel.costwarning.above", { ctx }),
     }
   return {
-    title: `This turn may cost about ${formatUsd(w.estimate.usd)}`,
-    description: `Above your ${formatUsd(w.thresholdUsd)} per-turn warning: ${ctx}. Trim the selection or send anyway.`,
+    title: t("ui.agent.panel.costwarning.cost", { usd: formatUsd(w.estimate.usd) }),
+    description: t("ui.agent.panel.costwarning.aboveCost", {
+      usd: formatUsd(w.thresholdUsd),
+      ctx,
+    }),
   }
 }

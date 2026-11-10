@@ -11,6 +11,7 @@ import { MultiplayerError, parsePairingLink, parsePairingToken } from "@kimo/syn
 import { Button, Input, KimoLogo } from "@kimo/ui"
 import { useEffect, useId, useMemo, useState } from "react"
 import { JoinStage } from "../join/JoinCard"
+import { t } from "../lib/i18n"
 import { Icon } from "../lib/icons"
 import { deviceNameFor, ownershipFor } from "../multiplayer/device"
 import { useMultiplayer } from "../multiplayer/hooks"
@@ -45,47 +46,53 @@ function outcomeCard(outcome: PairOutcome, host: string): OutcomeCard {
       return {
         icon: "circle-check",
         tone: "success",
-        title: "This device is added",
-        desc: `You can now share files on ${host}.`,
+        title: t("ui.pair.pairroute.this-device-is-added"),
+        desc: t("ui.pair.route.addedDesc", { host }),
         primary: true,
       }
     case "already":
       return {
         icon: "laptop",
         tone: "neutral",
-        title: "Already added",
-        desc: `This device can already share on ${host}. Nothing to do.`,
+        title: t("ui.pair.pairroute.already-added"),
+        desc: t("ui.pair.route.alreadyDesc", { host }),
         primary: false,
       }
     case "expired":
       return {
         icon: "clock-alert",
         tone: "neutral",
-        title: "This link has expired",
-        desc: "Make a new one on the other device: Settings › Multiplayer, Add device.",
+        title: t("ui.pair.pairroute.this-link-has-expired"),
+        desc: t(
+          "ui.pair.pairroute.make-a-new-one-on-the-other-device-settings-multiplayer-add-device",
+        ),
         primary: false,
       }
     case "used":
       return {
         icon: "link-2-off",
         tone: "neutral",
-        title: "This link was already used",
-        desc: "Make a new one on the other device: Settings › Multiplayer, Add device.",
+        title: t("ui.pair.pairroute.this-link-was-already-used"),
+        desc: t(
+          "ui.pair.pairroute.make-a-new-one-on-the-other-device-settings-multiplayer-add-device",
+        ),
         primary: false,
       }
     case "invalid":
       return {
         icon: "circle-alert",
         tone: "danger",
-        title: "This link doesn't work",
-        desc: "It may have been cancelled, or the relay was reset. Make a new one on the other device.",
+        title: t("ui.pair.pairroute.this-link-doesn-t-work"),
+        desc: t(
+          "ui.pair.pairroute.it-may-have-been-cancelled-or-the-relay-was-reset-make-a-new-one-on-the-other-device",
+        ),
         primary: false,
       }
     case "unreachable":
       return {
         icon: "wifi-off",
         tone: "danger",
-        title: "Couldn't reach the relay",
+        title: t("ui.pair.pairroute.couldn-t-reach-the-relay"),
         desc: `${host} did not answer. It may be down, or blocked on this network.`,
         primary: false,
       }
@@ -93,8 +100,10 @@ function outcomeCard(outcome: PairOutcome, host: string): OutcomeCard {
       return {
         icon: "server-off",
         tone: "danger",
-        title: "This is not a Kimo relay",
-        desc: "The link's server does not speak Kimo. Check the link is complete, or ask for a new one.",
+        title: t("ui.pair.pairroute.this-is-not-a-kimo-relay"),
+        desc: t(
+          "ui.pair.pairroute.the-link-s-server-does-not-speak-kimo-check-the-link-is-complete-or-ask-for-a-new-one",
+        ),
         primary: false,
       }
   }
@@ -121,7 +130,7 @@ function pairErrorOutcome(error: unknown): PairOutcome {
 /** "Works once · 12 min left" (whole minutes, rounded up). */
 function pairMeta(exp: number, nowMs: number): string {
   const minutes = Math.max(1, Math.ceil((exp * 1000 - nowMs) / 60_000))
-  return `Works once · ${minutes} min left`
+  return t("ui.pair.route.meta", { n: String(minutes) })
 }
 
 const hostOf = (url: string) => {
@@ -219,7 +228,7 @@ export function PairRoute({
               data-action="open-kimo"
               onClick={() => navigate("/")}
             >
-              Open Kimo
+              {t("ui.pair.pairroute.1")}
             </Button>
           </div>
         </section>
@@ -237,17 +246,15 @@ export function PairRoute({
         <div className="join-card__head">
           <KimoLogo size={16} variant="small" />
           <div className="join-card__text">
-            <span className="join-card__title">Add this device</span>
+            <span className="join-card__title">{t("ui.pair.pairroute.t1")}</span>
             <span className="join-card__meta">to {host}</span>
           </div>
         </div>
-        <p className="pair-card__desc">
-          It can then start sharing files on this relay, like the device that sent the link.
-        </p>
+        <p className="pair-card__desc">{t("ui.pair.pairroute.2")}</p>
         {!busy && parsed && <span className="join-card__meta">{pairMeta(parsed.exp, now)}</span>}
         <div className="pair-card__field">
           <label className="pair-card__label" htmlFor={nameId}>
-            Device name
+            {t("ui.pair.pairroute.3")}
           </label>
           <Input
             id={nameId}
@@ -272,7 +279,7 @@ export function PairRoute({
               data-action="not-now"
               onClick={() => navigate("/")}
             >
-              Not now
+              {t("ui.pair.pairroute.4")}
             </Button>
           )}
           <Button

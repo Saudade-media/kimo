@@ -23,6 +23,7 @@ import {
   WifiOff,
 } from "lucide-react"
 import { useContext, useState } from "react"
+import { t } from "../lib/i18n"
 import { SettingsFailContext } from "../settings/panes"
 import { type StoredTest, type TestStrip, testStrip } from "./model"
 import "./polish.css"
@@ -122,7 +123,7 @@ export function TestResult({ test, hint, onRetry, onCopy, retrying = false }: Te
           disabled={retrying}
           onClick={onRetry}
         >
-          Retry test
+          {t("ui.ai.settings.testresult.1")}
         </CompactButton>
         <CompactButton
           variant="ghost"
@@ -135,14 +136,14 @@ export function TestResult({ test, hint, onRetry, onCopy, retrying = false }: Te
             const text = lines.join("\n")
             if (onCopy) onCopy(text)
             else if (!navigator.clipboard)
-              fail("copy the details", new Error("The clipboard isn't available here"))
+              fail(t("errors.copyDetails"), new Error("The clipboard isn't available here"))
             else
               void navigator.clipboard
                 .writeText(text)
-                .catch((e: unknown) => fail("copy the details", e))
+                .catch((e: unknown) => fail(t("errors.copyDetails"), e))
           }}
         >
-          Copy details
+          {t("ui.ai.settings.testresult.2")}
         </CompactButton>
       </div>
     </div>

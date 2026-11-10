@@ -6,16 +6,17 @@
  */
 
 import type { InkKind, InkToken } from "@kimo/ui"
+import { type MessageKey, t } from "../lib/i18n"
 
 // --- Frameworks (rule "Switch": React + Tailwind · HTML + CSS · Tokens (DTCG)) ----------------
 
 export type Framework = "react" | "html" | "tokens"
 
 /** Framework Switch (ebO2s, SegmentedText FC6O7): labels in node order. */
-export const FRAMEWORKS: readonly { value: Framework; label: string }[] = [
-  { value: "react", label: "React + Tailwind" },
-  { value: "html", label: "HTML + CSS" },
-  { value: "tokens", label: "Tokens" },
+export const FRAMEWORKS: readonly { value: Framework; label: MessageKey }[] = [
+  { value: "react", label: "ui.code.framework.react" },
+  { value: "html", label: "ui.code.framework.html" },
+  { value: "tokens", label: "ui.code.framework.tokens" },
 ]
 
 const DEFAULT_FRAMEWORK: Framework = "react"
@@ -63,25 +64,28 @@ export const tokensMeta = (used: number, total: number) => `${used} used · ${to
 
 /** Truncation Bar › Title (zsmQI): "Showing 400 of 2,318 lines". */
 export const truncatedTitle = (total: number) =>
-  `Showing ${formatCount(CODE_TAB_MAX_LINES)} of ${formatCount(total)} lines`
+  t("ui.codetab.model.showing", {
+    shown: formatCount(CODE_TAB_MAX_LINES),
+    total: formatCount(total),
+  })
 
 /** Truncation Bar › Copy all (SunOY): "Copy all 2,318 lines". */
-export const copyAllLabel = (total: number) => `Copy all ${formatCount(total)} lines`
+export const copyAllLabel = (total: number) =>
+  t("ui.codetab.model.copyAll", { n: formatCount(total) })
 
 /** Footer › Status (CyKZV / f8uYp). */
 export const liveStatus = (paused: boolean) =>
   paused
-    ? `Live · paused while > ${formatCount(CODE_TAB_MAX_LINES)} lines`
+    ? t("ui.codetab.model.paused", { n: formatCount(CODE_TAB_MAX_LINES) })
     : "Live · updates as you edit"
 
 /** Rule "Copy": the toast after the Copy icon. */
-export const copiedToast = (path: string) => `Copied ${path}`
+export const copiedToast = (path: string) => t("ui.code.tab.copied", { path })
 
 /** Notice (xHvmD) title for an unsupported node type ("Prompt nodes have no code"). */
-export const unsupportedTitle = (kind: string) => `${kind} nodes have no code`
+export const unsupportedTitle = (kind: string) => t("ui.code.tab.unsupportedTitle", { kind })
 
-export const UNSUPPORTED_DESC =
-  "Notes, prompts and placeholder tags exist only on the canvas, and exporters skip them. Select a frame, shape, text or instance."
+export const unsupportedDesc = () => t("ui.code.tab.unsupportedDesc")
 
 /** Node types the exporters skip (`@kimo/exporters` SKIPPED). */
 export const UNSUPPORTED_TYPES: ReadonlySet<string> = new Set(["note", "prompt"])

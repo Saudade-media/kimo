@@ -1,3 +1,4 @@
+import { t } from "@kimo/i18n"
 import { Copy, LoaderCircle, RefreshCw } from "lucide-react"
 import type { ComponentPropsWithRef } from "react"
 import { cx } from "../internal/util"
@@ -76,7 +77,12 @@ export function MessageMeta({
       )}
       <span className="kimo-msg-meta__spacer" aria-hidden="true" />
       {onCopy && (
-        <button type="button" className="kimo-msg-meta__action" aria-label="Copy" onClick={onCopy}>
+        <button
+          type="button"
+          className="kimo-msg-meta__action"
+          aria-label={t("ui.pkg.message.meta.messagemeta.copy")}
+          onClick={onCopy}
+        >
           <Copy aria-hidden="true" />
         </button>
       )}
@@ -84,7 +90,7 @@ export function MessageMeta({
         <button
           type="button"
           className="kimo-msg-meta__action"
-          aria-label="Regenerate"
+          aria-label={t("ui.pkg.message.meta.messagemeta.regenerate")}
           onClick={onRegenerate}
         >
           <RefreshCw aria-hidden="true" />

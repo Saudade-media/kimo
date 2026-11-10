@@ -28,20 +28,21 @@ import {
 } from "@kimo/ui"
 import { type ReactNode, useCallback, useEffect, useState } from "react"
 import { causeOf } from "../editor/errors"
+import { t } from "../lib/i18n"
 import { ConfigDiffDialog } from "./ConfigDiffDialog"
 import { AgentIcon } from "./icons"
 import {
   clientMeta,
   configSnippet,
   DEFAULT_POLICY,
-  FILES_OPTIONS,
   type FilesScope,
   filesForScope,
+  filesOptions,
   filesScopeOf,
   HOST_ORDER,
   type HostRowView,
   hostRowView,
-  LEVEL_OPTIONS,
+  levelOptions,
   maskToken,
   type ServerError,
   scopeLabel,
@@ -159,7 +160,7 @@ export function AgentsMcpPane(props: AgentsMcpPaneProps) {
   const fail = props.onError ?? logError
   const copy =
     props.onCopy ??
-    ((text: string) => copyText(text).catch((e: unknown) => fail("copy to the clipboard", e)))
+    ((text: string) => copyText(text).catch((e: unknown) => fail(t("errors.copyToClipboard"), e)))
   const pill = serverPill(data.status, data.connections.length, server.error)
   const hosts = HOST_ORDER.map((h) => data.hosts.find((x) => x.host === h)).filter(
     (h): h is McpHostConfigStatus => !!h,
@@ -172,7 +173,7 @@ export function AgentsMcpPane(props: AgentsMcpPaneProps) {
       await host.policies.set(client, policy)
       setData((d) => ({ ...d, policies: { ...d.policies, [client]: policy } }))
     } catch (e) {
-      fail("change the permissions", e, () => void setPolicy(client, policy))
+      fail(t("errors.changePermissions"), e, () => void setPolicy(client, policy))
     }
   }
   const openPreview = async (h: HostRowView, action: "install" | "remove") => {
@@ -180,7 +181,7 @@ export function AgentsMcpPane(props: AgentsMcpPaneProps) {
       const p = await host.installer.preview(h.host, action, scope, project)
       setPreview({ host: h.host, label: h.name, action, ...p })
     } catch (e) {
-      fail(`read the ${h.name} config`, e, () => void openPreview(h, action))
+      fail(t("errors.readHostConfig", { host: h.name }), e, () => void openPreview(h, action))
     }
   }
   // Board 37 F7 (T0J64): the dialog stays open until the write settles; a failure shows the
@@ -206,8 +207,8 @@ export function AgentsMcpPane(props: AgentsMcpPaneProps) {
     } catch (e) {
       const cause = causeOf(e)
       setWriteError({
-        title: `Couldn't write ${tildePath(p.path, home)}`,
-        body: `${cause ? `${cause} ` : ""}Nothing was changed.`,
+        title: t("ui.agents.agentsmcppane.writeFailed", { path: tildePath(p.path, home) }),
+        body: t("ui.agents.agentsmcppane.nothingChanged", { cause: cause ? `${cause} ` : "" }),
       })
     } finally {
       setWriting(false)
@@ -223,7 +224,7 @@ export function AgentsMcpPane(props: AgentsMcpPaneProps) {
         icon={<AgentIcon name="copy" size={14} />}
         onClick={() => copy(configSnippet(h.host, shim))}
       >
-        Copy config
+        {t("ui.agents.agentsmcppane.24")}
       </Button>
     )
     switch (h.state) {
@@ -237,7 +238,7 @@ export function AgentsMcpPane(props: AgentsMcpPaneProps) {
             className="agents-button"
             onClick={() => void openPreview(h, "remove")}
           >
-            Remove
+            {t("ui.agents.agentsmcppane.25")}
           </Button>,
         ]
       case "outdated":
@@ -249,7 +250,7 @@ export function AgentsMcpPane(props: AgentsMcpPaneProps) {
             className="agents-button agents-button--ghost-primary"
             onClick={() => void openPreview(h, "remove")}
           >
-            Remove
+            {t("ui.agents.agentsmcppane.26")}
           </Button>,
           <Button
             key="update"
@@ -259,7 +260,7 @@ export function AgentsMcpPane(props: AgentsMcpPaneProps) {
             icon={<AgentIcon name="arrow-up" size={14} />}
             onClick={() => void openPreview(h, "install")}
           >
-            Update
+            {t("ui.agents.agentsmcppane.27")}
           </Button>,
         ]
       case "not-installed":
@@ -273,7 +274,7 @@ export function AgentsMcpPane(props: AgentsMcpPaneProps) {
             icon={<AgentIcon name="plus" size={14} />}
             onClick={() => void openPreview(h, "install")}
           >
-            Install
+            {t("ui.agents.agentsmcppane.28")}
           </Button>,
         ]
       default:
@@ -295,7 +296,7 @@ export function AgentsMcpPane(props: AgentsMcpPaneProps) {
   )
   const titleBar = (
     <div className="settings-title-bar agents-pane__title-bar">
-      <h2 className="settings-title">Agents &amp; MCP</h2>
+      <h2 className="settings-title">{t("ui.agents.agentsmcppane.t9")}</h2>
       <span className="agents-spacer" />
       <AgentTonePill tone={pill.tone} label={pill.label} data-testid="agents-server-status" />
     </div>
@@ -338,11 +339,15 @@ export function AgentsMcpPane(props: AgentsMcpPaneProps) {
         <Banner
           tone="danger"
           icon={<AgentIcon name="circle-x" />}
-          title="MCP server failed to start"
+          title={t("ui.agents.agentsmcppane.23")}
           body={err.message}
           actions={[
-            { id: "change-port", label: "Change port", variant: "ghost" },
-            { id: "retry", label: "Retry", variant: "primary" },
+            {
+              id: "change-port",
+              label: t("ui.agents.agentsmcppane.change-port"),
+              variant: "ghost",
+            },
+            { id: "retry", label: t("settings.retry"), variant: "primary" },
           ]}
           onAction={(id) => {
             if (id === "retry") void server.restart?.()
@@ -354,13 +359,15 @@ export function AgentsMcpPane(props: AgentsMcpPaneProps) {
           <ErrorServerCard status={data.status} server={server} />
           {server.startOnLaunch && (
             <SettingRow
-              label="Start server when Kimo opens"
-              description={`On next launch Kimo retries ${err.port ?? data.status?.http.port ?? ""} once, then shows this state again.`}
+              label={t("ui.agents.agentsmcppane.22")}
+              description={t("ui.agents.agentsmcppane.retryOnLaunch", {
+                port: String(err.port ?? data.status?.http.port ?? ""),
+              })}
               control={(ids) => (
                 <Toggle
                   checked={server.startOnLaunch?.value ?? false}
                   onChange={server.startOnLaunch?.set}
-                  label="Start server when Kimo opens"
+                  label={t("ui.agents.agentsmcppane.21")}
                   aria-describedby={ids.descriptionId}
                 />
               )}
@@ -369,7 +376,7 @@ export function AgentsMcpPane(props: AgentsMcpPaneProps) {
           {server.log && (
             <SettingRow
               last
-              label="Server log"
+              label={t("ui.agents.agentsmcppane.20")}
               description={`${tildePath(server.log.path, home)}${server.log.lastError ? ` · last error ${server.log.lastError}` : ""}`}
               control={
                 <Button
@@ -379,7 +386,7 @@ export function AgentsMcpPane(props: AgentsMcpPaneProps) {
                   icon={<AgentIcon name="folder-open" size={14} />}
                   onClick={server.log.reveal}
                 >
-                  Reveal in Finder
+                  {t("ui.agents.agentsmcppane.29")}
                 </Button>
               }
             />
@@ -400,15 +407,15 @@ export function AgentsMcpPane(props: AgentsMcpPaneProps) {
           <EmptyState
             className="agents-pane__empty"
             icon={<AgentIcon name="bot" />}
-            title="No agents connected"
-            description="Connect Claude Code, Codex or any MCP client to edit .kimo files. Its edits stay teal and undoable until kept."
+            title={t("ui.agents.agentsmcppane.19")}
+            description={t("ui.agents.agentsmcppane.18")}
           />
           <div className="agents-pane__howto">
-            <span className="agents-pane__group-title">How to connect</span>
+            <span className="agents-pane__group-title">{t("ui.agents.agentsmcppane.t8")}</span>
             {[
-              "Install Kimo in your agent below. It adds one entry and keeps a backup.",
-              "Restart the agent (or run /mcp) so it picks up the kimo server.",
-              "Ask it to open a file:",
+              t("ui.agents.agentsmcppane.step1"),
+              t("ui.agents.agentsmcppane.step2"),
+              t("ui.agents.agentsmcppane.step3"),
             ].map((text, i) => (
               <div key={text} className="agents-pane__step">
                 <span className="agents-pane__step-num">
@@ -423,14 +430,14 @@ export function AgentsMcpPane(props: AgentsMcpPaneProps) {
                 size="sm"
                 tone="ghost"
                 className="agents-icon-button agents-icon-button--13"
-                label="Copy prompt"
+                label={t("ui.agents.agentsmcppane.17")}
                 icon={<AgentIcon name="copy" size={13} />}
                 onClick={() => copy(prompt)}
               />
             </div>
           </div>
           <div className="agents-pane__hosts-title">
-            <span className="agents-pane__group-title">Connect an agent</span>
+            <span className="agents-pane__group-title">{t("ui.agents.agentsmcppane.t6")}</span>
           </div>
           {order
             .map((h) => views.find((v) => v.host === h))
@@ -454,21 +461,21 @@ export function AgentsMcpPane(props: AgentsMcpPaneProps) {
         <ServerCard status={status} server={server} copy={copy} />
         {server.startOnLaunch && (
           <SettingRow
-            label="Start server when Kimo opens"
-            description="Off: agents get “Kimo isn’t running” until you start it here or run `kimo mcp --headless`."
+            label={t("ui.agents.agentsmcppane.16")}
+            description={t("ui.agents.agentsmcppane.15")}
             control={(ids) => (
               <Toggle
                 checked={server.startOnLaunch?.value ?? false}
                 onChange={server.startOnLaunch?.set}
-                label="Start server when Kimo opens"
+                label={t("ui.agents.agentsmcppane.14")}
                 aria-describedby={ids.descriptionId}
               />
             )}
           />
         )}
         <SettingRow
-          label="Streamable HTTP on localhost"
-          description="For hosts that can’t spawn a process. Port is tried first; Kimo never picks a random one silently."
+          label={t("ui.agents.agentsmcppane.13")}
+          description={t("ui.agents.agentsmcppane.12")}
           control={
             <span className="agents-pane__control">
               {server.port && (
@@ -485,7 +492,7 @@ export function AgentsMcpPane(props: AgentsMcpPaneProps) {
               )}
               <Toggle
                 checked={status?.http.enabled ?? false}
-                label="Streamable HTTP on localhost"
+                label={t("ui.agents.agentsmcppane.11")}
                 onChange={(on) =>
                   void host.http.setEnabled(on).then(
                     (s) => setData((d) => ({ ...d, status: s })),
@@ -504,20 +511,20 @@ export function AgentsMcpPane(props: AgentsMcpPaneProps) {
         />
         {server.askBeforeDestructive && (
           <SettingRow
-            label="Ask before destructive or out-of-scope changes"
+            label={t("ui.agents.agentsmcppane.10")}
             description="With Ask before changes on, deleting 2+ frames, edits outside the client’s files and variable or theme changes need approval."
             control={
               <Toggle
                 checked={server.askBeforeDestructive.value}
                 onChange={server.askBeforeDestructive.set}
-                label="Ask before destructive or out-of-scope changes"
+                label={t("ui.agents.agentsmcppane.9")}
               />
             }
           />
         )}
         <div className="agents-pane__group">
           <div className="agents-pane__group-row agents-pane__group-row--28">
-            <span className="agents-pane__group-title">Connect an agent</span>
+            <span className="agents-pane__group-title">{t("ui.agents.agentsmcppane.t6")}</span>
             <span className="agents-spacer" />
             <Button
               size="sm"
@@ -526,11 +533,11 @@ export function AgentsMcpPane(props: AgentsMcpPaneProps) {
               icon={<AgentIcon name="refresh-cw" size={14} />}
               onClick={() =>
                 void loadHosts().catch((e: unknown) =>
-                  fail("scan the agent configs", e, () => void loadHosts()),
+                  fail(t("errors.scanAgentConfigs"), e, () => void loadHosts()),
                 )
               }
             >
-              Rescan
+              {t("ui.agents.agentsmcppane.30")}
             </Button>
           </div>
           <span className="agents-pane__group-desc">
@@ -541,13 +548,13 @@ export function AgentsMcpPane(props: AgentsMcpPaneProps) {
         {views.map(hostRow)}
         <div className="agents-pane__group">
           <div className="agents-pane__group-row">
-            <span className="agents-pane__group-title">Connected clients</span>
+            <span className="agents-pane__group-title">{t("ui.agents.agentsmcppane.t5")}</span>
             <span className="agents-spacer" />
             <span className="agents-pane__count">{data.connections.length} connected</span>
           </div>
           <span className="agents-pane__group-desc">
             Each connection is one origin (`mcp:&lt;client&gt;`) with its own undo stack.
-            Permissions apply to new calls immediately.
+            {t("ui.agents.agentsmcppane.31")}
           </span>
         </div>
         {data.connections.map((c) => {
@@ -586,7 +593,9 @@ export function AgentsMcpPane(props: AgentsMcpPaneProps) {
                   onDisconnect={() =>
                     void host
                       .disconnect(c.connectionId)
-                      .catch((e: unknown) => fail(`disconnect ${c.identity.label}`, e))
+                      .catch((e: unknown) =>
+                        fail(t("errors.disconnect", { name: c.identity.label }), e),
+                      )
                   }
                 />
               )}
@@ -596,10 +605,8 @@ export function AgentsMcpPane(props: AgentsMcpPaneProps) {
         <div className="agents-pane__log-link">
           <AgentIcon name="history" size={16} className="agents-pane__log-icon" />
           <span className="agents-pane__log-text">
-            <span className="agents-pane__log-label">Activity log</span>
-            <span className="agents-pane__log-desc">
-              Every agent call, per file, with revision and undo. Also in the editor’s Activity tab.
-            </span>
+            <span className="agents-pane__log-label">{t("ui.agents.agentsmcppane.t4")}</span>
+            <span className="agents-pane__log-desc">{t("ui.agents.agentsmcppane.32")}</span>
           </span>
           <Button
             size="sm"
@@ -608,7 +615,7 @@ export function AgentsMcpPane(props: AgentsMcpPaneProps) {
             icon={<AgentIcon name="arrow-up-right" size={14} />}
             onClick={props.onOpenActivity}
           >
-            Open log
+            {t("ui.agents.agentsmcppane.33")}
           </Button>
         </div>
       </div>
@@ -635,7 +642,7 @@ function ServerCard({
     <div className="agents-card" data-testid="agents-server-card">
       <div className="agents-card__head">
         <AgentIcon name="server" size={16} className="agents-card__icon" />
-        <span className="agents-card__title">MCP server</span>
+        <span className="agents-card__title">{t("ui.agents.agentsmcppane.t2")}</span>
         <span className="agents-card__version">{version}</span>
         <span className="agents-spacer" />
         {server.restart && (
@@ -646,7 +653,7 @@ function ServerCard({
             icon={<AgentIcon name="rotate-cw" size={14} />}
             onClick={() => void server.restart?.()}
           >
-            Restart
+            {t("ui.agents.agentsmcppane.34")}
           </Button>
         )}
         {running && server.stop && (
@@ -657,7 +664,7 @@ function ServerCard({
             icon={<AgentIcon name="square" size={14} />}
             onClick={() => void server.stop?.()}
           >
-            Stop
+            {t("ui.agents.agentsmcppane.35")}
           </Button>
         )}
         {!running && server.start && (
@@ -668,24 +675,24 @@ function ServerCard({
             icon={<AgentIcon name="play" size={14} />}
             onClick={() => void server.start?.()}
           >
-            Start
+            {t("ui.agents.agentsmcppane.36")}
           </Button>
         )}
       </div>
       <div className="agents-card__endpoints">
         <Endpoint
-          label="Local socket"
+          label={t("ui.agents.agentsmcppane.8")}
           value={status ? tildePath(status.socket.path) : "—"}
           onCopy={() => status && copy(status.socket.path)}
         />
         <Endpoint
-          label="HTTP"
+          label={t("ui.agents.agentsmcppane.7")}
           value={status?.http.enabled && status.http.url ? status.http.url : "Off"}
           onCopy={status?.http.url ? () => copy(status.http.url as string) : undefined}
         />
         {server.token && (
           <Endpoint
-            label="Token"
+            label={t("ui.agents.agentsmcppane.6")}
             value={server.token.value ? maskToken(server.token.value) : "No token"}
             onCopy={server.token.value ? () => copy(server.token?.value ?? "") : undefined}
           >
@@ -774,7 +781,7 @@ function ErrorServerCard({
     <div className="agents-card agents-card--error" data-testid="agents-server-card">
       <div className="agents-card__head">
         <AgentIcon name="server" size={16} className="agents-card__icon" />
-        <span className="agents-card__title">MCP server</span>
+        <span className="agents-card__title">{t("ui.agents.agentsmcppane.t2")}</span>
         <span className="agents-card__code">{err.code}</span>
         <span className="agents-spacer" />
         <Button
@@ -784,16 +791,16 @@ function ErrorServerCard({
           icon={<AgentIcon name="rotate-cw" size={14} />}
           onClick={() => void server.restart?.()}
         >
-          Retry
+          {t("ui.agents.agentsmcppane.37")}
         </Button>
       </div>
       <Endpoint
-        label="Local socket"
+        label={t("ui.agents.agentsmcppane.5")}
         value={status ? tildePath(status.socket.path) : "—"}
         state={status?.socket.listening ? "ok" : "error"}
       />
       <Endpoint
-        label="HTTP"
+        label={t("ui.agents.agentsmcppane.4")}
         value={status?.http.url ?? `http://127.0.0.1:${err.port ?? ""}/mcp`}
         state="error"
       />
@@ -821,7 +828,7 @@ function ErrorServerCard({
           disabled={free === false}
           onClick={() => void server.port?.set(port)}
         >
-          {`Use ${port} and restart`}
+          {t("ui.agents.agentsmcppane.usePort", { port: String(port) })}
         </Button>
       </div>
       <span className="agents-card__note">
@@ -863,8 +870,8 @@ function Permissions({
       <div className="agents-perms__row">
         <span className="agents-perms__label">Can</span>
         <SegmentedText
-          label="Can"
-          options={LEVEL_OPTIONS}
+          label={t("ui.agents.agentsmcppane.3")}
+          options={levelOptions()}
           value={policy.level}
           onChange={(level) => onPolicy({ ...policy, level })}
         />
@@ -875,8 +882,8 @@ function Permissions({
         <div className="agents-perms__row">
           <span className="agents-perms__label">Files</span>
           <SegmentedText<FilesScope>
-            label="Files"
-            options={FILES_OPTIONS}
+            label={t("ui.agents.agentsmcppane.2")}
+            options={filesOptions()}
             value={scope}
             onChange={(s) => onPolicy({ ...policy, files: filesForScope(s, connection.cwd) })}
           />
@@ -887,12 +894,10 @@ function Permissions({
       )}
       {/* Board 34 Perm row (YsgKV / P1NeQ), now "Ask before changes": Label · Toggle · Note. */}
       <div className="agents-perms__row" data-testid="agents-perms-auto">
-        <span className="agents-perms__label">Ask first</span>
-        <Toggle checked={ask} label="Ask before changes" onChange={(on) => onAsk(on)} />
+        <span className="agents-perms__label">{t("ui.agents.agentsmcppane.t1")}</span>
+        <Toggle checked={ask} label={t("ui.agents.agentsmcppane.1")} onChange={(on) => onAsk(on)} />
         <span className="agents-perms__auto-note">
-          {ask
-            ? "On: anything outside its permissions asks first"
-            : "Off: every request runs without asking"}
+          {ask ? t("ui.agents.agentsmcppane.auto-on") : t("ui.agents.agentsmcppane.auto-off")}
         </span>
       </div>
       <div className="agents-perms__footer">
@@ -905,7 +910,7 @@ function Permissions({
           icon={<AgentIcon name="unplug" size={14} />}
           onClick={onDisconnect}
         >
-          Disconnect
+          {t("ui.agents.agentsmcppane.38")}
         </Button>
       </div>
     </div>

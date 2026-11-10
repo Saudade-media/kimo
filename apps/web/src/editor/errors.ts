@@ -1,3 +1,4 @@
+import { t } from "../lib/i18n"
 /**
  * The editor's failure copy (audit A5): every failed action shows "Couldn't <what>. <cause>."
  * (docs/style/writing.md "Errors say what failed"), never a console line alone.
@@ -23,6 +24,7 @@ export function causeOf(e: unknown): string {
 
 /** "Couldn't add the image. Image is too large (40 MB; the limit is 25 MB)." */
 export function failureText(what: string, e?: unknown): string {
-  const cause = e === undefined ? "" : causeOf(e)
-  return cause ? `Couldn't ${what}. ${cause}` : `Couldn't ${what}.`
+  return e === undefined
+    ? t("errors.couldnt", { what })
+    : t("errors.couldntCause", { what, cause: causeOf(e) })
 }

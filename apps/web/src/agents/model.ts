@@ -17,6 +17,7 @@ import type {
   McpServerStatus,
 } from "@kimo/platform"
 import type { AgentPillTone } from "@kimo/ui"
+import { type MessageKey, t, tn } from "../lib/i18n"
 
 // --- Formatting ----------------------------------------------------------------------------------
 
@@ -66,31 +67,31 @@ export function clientOf(origin: string): string {
 
 // --- Permission levels ---------------------------------------------------------------------------
 
-const LEVEL_LABEL: Record<McpPermissionLevel, string> = {
-  read: "Read only",
-  edit: "Edit",
-  "edit+delete": "Edit + delete",
+const LEVEL_LABEL: Record<McpPermissionLevel, MessageKey> = {
+  read: "ui.agents.model.level.read",
+  edit: "ui.agents.model.level.edit",
+  "edit+delete": "ui.agents.model.level.editDelete",
 }
 
-export const LEVEL_OPTIONS: { value: McpPermissionLevel; label: string }[] = [
-  { value: "read", label: "Read only" },
-  { value: "edit", label: "Edit" },
-  { value: "edit+delete", label: "Edit + delete" },
+export const levelOptions = (): { value: McpPermissionLevel; label: string }[] => [
+  { value: "read", label: t(LEVEL_LABEL.read) },
+  { value: "edit", label: t(LEVEL_LABEL.edit) },
+  { value: "edit+delete", label: t(LEVEL_LABEL["edit+delete"]) },
 ]
 
 /** Files scope of a policy (rule "Permissions": current file / this folder / any). */
 export type FilesScope = "current" | "folder" | "any"
 
-export const FILES_OPTIONS: { value: FilesScope; label: string }[] = [
-  { value: "current", label: "Current file" },
-  { value: "folder", label: "This folder" },
-  { value: "any", label: "Any file" },
+export const filesOptions = (): { value: FilesScope; label: string }[] => [
+  { value: "current", label: t("ui.agents.model.files.current") },
+  { value: "folder", label: t("ui.agents.model.files.folder") },
+  { value: "any", label: t("ui.agents.model.files.any") },
 ]
 
-const FILES_LABEL: Record<FilesScope, string> = {
-  current: "current file",
-  folder: "this folder",
-  any: "any file",
+const FILES_LABEL: Record<FilesScope, MessageKey> = {
+  current: "ui.agents.model.files.current",
+  folder: "ui.agents.model.files.folder",
+  any: "ui.agents.model.files.any",
 }
 
 /** Reads the files scope back from a policy's allow-list. */
@@ -137,7 +138,7 @@ export const DEFAULT_POLICY: McpClientPolicy = {
 
 /** "Edit · this folder", "Read only · current file" (AgentClientRow Scope badge). */
 export function scopeLabel(policy: McpClientPolicy, cwd?: string): string {
-  return `${LEVEL_LABEL[policy.level]} · ${FILES_LABEL[filesScopeOf(policy, cwd)]}`
+  return `${t(LEVEL_LABEL[policy.level])} · ${t(FILES_LABEL[filesScopeOf(policy, cwd)])}`
 }
 
 /**
@@ -169,7 +170,10 @@ export function transportLabel(c: McpConnectionInfo, status?: McpServerStatus | 
 /** "Since 10:42 · 2 files open · stdio" (AgentClientRow Meta). */
 export function clientMeta(c: McpConnectionInfo, status?: McpServerStatus | null): string {
   const n = c.docs.length
-  return `Since ${clock(c.connectedAt)} · ${n} ${n === 1 ? "file" : "files"} open · ${transportLabel(c, status)}`
+  return tn("ui.agents.model.clientMetaOne", "ui.agents.model.clientMeta", n, {
+    since: clock(c.connectedAt),
+    transport: transportLabel(c, status),
+  })
 }
 
 /** Generic icon per host kind (never a vendor logo). */
@@ -202,10 +206,10 @@ export function serverPill(
       tone: "danger",
       label: status?.socket.listening ? "Error · HTTP down" : "Error · server down",
     }
-  if (!status?.socket.listening) return { tone: "neutral", label: "Stopped" }
+  if (!status?.socket.listening) return { tone: "neutral", label: t("ui.agents.model.stopped") }
   if (status.documentHost === "starting" || status.documentHost === "restarting")
-    return { tone: "neutral", label: "Starting…" }
-  if (connections === 0) return { tone: "success", label: "Running · no clients" }
+    return { tone: "neutral", label: t("ui.agents.model.starting") }
+  if (connections === 0) return { tone: "success", label: t("ui.agents.model.running-no-clients") }
   return {
     tone: "success",
     label: `Running · ${connections} ${connections === 1 ? "client" : "clients"}`,
@@ -264,7 +268,7 @@ export function hostRowView(
     case "installed":
       return {
         ...base,
-        status: { tone: "success", label: "Installed" },
+        status: { tone: "success", label: t("ui.agents.model.installed") },
         path: `${path} · ${HOST_KEY[h.host]}`,
         muted: false,
       }
@@ -281,15 +285,15 @@ export function hostRowView(
     case "not-installed":
       return {
         ...base,
-        status: { tone: "neutral", label: "Not installed" },
+        status: { tone: "neutral", label: t("ui.agents.model.not-installed") },
         path: `${path} · not configured`,
         muted: false,
       }
     default:
       return {
         ...base,
-        status: { tone: "neutral", label: "Not found" },
-        path: `No ${h.label} install found on ${machine}`,
+        status: { tone: "neutral", label: t("ai.cli.missing") },
+        path: t("ui.agents.model.noInstall", { host: h.label, machine }),
         muted: true,
       }
   }
@@ -649,12 +653,17 @@ export function changesLabel(s: Pick<SessionOps, "rows" | "nodes">): string {
 
 // --- Approval prompt (rule "Approval") --------------------------------------------------------------
 
-const GRANT_PHRASE: Record<string, string> = {
-  globals: "change variables and themes",
-  components: "edit components",
-  save: "save this file",
-  export: "export files",
-  "files.create": "create a file",
+const GRANT_PHRASE: Record<string, MessageKey> = {
+  globals: "ui.agents.model.grant.globals",
+  components: "ui.agents.model.grant.components",
+  save: "ui.agents.model.grant.save",
+  export: "ui.agents.model.grant.export",
+  "files.create": "ui.agents.model.grant.filesCreate",
+}
+
+function grantPhrase(grant: string): string {
+  const key = GRANT_PHRASE[grant]
+  return key ? t(key) : grant
 }
 
 function basename(p: string): string {
@@ -695,27 +704,33 @@ export function approvalTitle(r: McpApprovalRequest, store?: DocStore | null): s
     case "file":
       return `${who} wants to ${reason.action} ${basename(reason.path)}`
     case "grant":
-      return `${who} wants to ${GRANT_PHRASE[reason.grant] ?? reason.grant}`
+      return t("ui.agents.model.wantsGrant", {
+        who,
+        grant: grantPhrase(reason.grant),
+      })
     case "scope":
-      return `${who} wants to edit ${plural(reason.nodeIds.length, "layer")} outside its scope`
+      return t("ui.agents.model.outsideScope", {
+        who,
+        layers: tn("ui.agents.model.layerOne", "ui.agents.model.layers", reason.nodeIds.length),
+      })
   }
 }
 
 /** The prompt description (Desc Ckwa6). */
 export function approvalDescription(r: McpApprovalRequest, level: McpPermissionLevel): string {
-  const tail = "Nothing is applied while you decide. The canvas shows a dry run."
+  const tail = t("ui.agents.model.approvalTail")
   const reason = r.reason
   switch (reason.kind) {
     case "destructive":
-      return `Its permission is ${LEVEL_LABEL[level]}, so deletes need your OK. ${tail}`
+      return t("ui.agents.model.approvalDestructive", { level: t(LEVEL_LABEL[level]), tail })
     case "level":
-      return `Its permission is ${LEVEL_LABEL[reason.have]}, so this call needs your OK. ${tail}`
+      return t("ui.agents.model.approvalLevel", { level: t(LEVEL_LABEL[reason.have]), tail })
     case "file":
-      return `${tildePath(reason.path)} is outside the files it may touch. Allowing applies to this call only.`
+      return t("ui.agents.model.approvalFile", { path: tildePath(reason.path) })
     case "grant":
-      return `Its permission doesn’t include ${GRANT_PHRASE[reason.grant] ?? reason.grant}. ${tail}`
+      return t("ui.agents.model.approvalGrant", { grant: grantPhrase(reason.grant), tail })
     case "scope":
-      return `These layers are outside its node scope. Allowing applies to this call only.`
+      return t("ui.agents.model.approvalScope")
   }
 }
 
@@ -872,11 +887,11 @@ export function dryRunFromApproval(r: McpApprovalRequest, store?: DocStore | nul
 
 export type KindFilter = "writes-errors" | "all" | "writes" | "errors"
 
-export const KIND_FILTERS: { value: KindFilter; label: string }[] = [
-  { value: "writes-errors", label: "Writes + errors" },
-  { value: "all", label: "All calls" },
-  { value: "writes", label: "Writes" },
-  { value: "errors", label: "Errors" },
+export const KIND_FILTERS: { value: KindFilter; label: MessageKey }[] = [
+  { value: "writes-errors", label: "ui.agents.filters.writesErrors" },
+  { value: "all", label: "ui.agents.filters.all" },
+  { value: "writes", label: "ui.agents.filters.writes" },
+  { value: "errors", label: "ui.agents.filters.errors" },
 ]
 
 const WRITE_KINDS = new Set<McpActivityKind>([
@@ -993,7 +1008,9 @@ function activityRowView(
   // Board 24 (h) uKH9b: an undone entry stays in the log; the tool line says who and when.
   if (flags.undone && !flags.stale)
     tool =
-      flags.undoneAt !== undefined ? `Undone by you · ${clock(flags.undoneAt)}` : "Undone by you"
+      flags.undoneAt !== undefined
+        ? t("ui.agents.model.undoneByYou", { time: clock(flags.undoneAt) })
+        : t("ui.agents.model.undoneByYouPlain")
   return {
     key: `e${e.seq}`,
     entry: e,
@@ -1191,16 +1208,17 @@ export function presenceMeta(
 /** Now-row copy: the running call when the host reports it, else per connection state. */
 export function nowCopy(c: McpConnectionInfo): { label: string; tool: string } | null {
   if (c.call) return { label: c.call.label, tool: c.call.tool }
-  return NOW_COPY[c.state]
+  const fallback = NOW_COPY[c.state]
+  return fallback && { label: t(fallback.label), tool: fallback.tool }
 }
 
 /** Fallback Now-row copy per connection state (hosts without `McpConnectionInfo.call`). */
-const NOW_COPY: Record<McpConnectionInfo["state"], { label: string; tool: string } | null> = {
+const NOW_COPY: Record<McpConnectionInfo["state"], { label: MessageKey; tool: string } | null> = {
   idle: null,
-  reading: { label: "Reading the document", tool: "kimo_query" },
-  editing: { label: "Applying changes", tool: "kimo_apply_ops" },
-  rendering: { label: "Rendering", tool: "kimo_render" },
-  "waiting-approval": { label: "Waiting for your approval", tool: "kimo_apply_ops" },
+  reading: { label: "ui.agents.now.reading", tool: "kimo_query" },
+  editing: { label: "ui.agents.now.editing", tool: "kimo_apply_ops" },
+  rendering: { label: "ui.agents.now.rendering", tool: "kimo_render" },
+  "waiting-approval": { label: "ui.agents.now.waitingApproval", tool: "kimo_apply_ops" },
 }
 
 // --- Copy config -----------------------------------------------------------------------------------

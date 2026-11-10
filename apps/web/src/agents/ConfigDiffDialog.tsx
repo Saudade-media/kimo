@@ -15,6 +15,7 @@
  */
 import { Banner, CompactButton, DialogScrim, useDismiss } from "@kimo/ui"
 import { useEffect, useRef } from "react"
+import { t } from "../lib/i18n"
 import { AgentIcon } from "./icons"
 
 export interface DiffRow {
@@ -102,10 +103,10 @@ export function ConfigDiffDialog(p: ConfigDiffDialogProps) {
   }, [])
   const title =
     p.action === "remove"
-      ? `Remove Kimo from ${p.label}?`
+      ? t("ui.agents.configdiff.removeTitle", { tool: p.label })
       : p.action === "update"
-        ? `Update ${p.label} config?`
-        : `Add Kimo to ${p.label}?`
+        ? t("ui.agents.configdiff.update", { tool: p.label })
+        : t("ui.agents.configdiff.add", { tool: p.label })
   let marked = false
   return (
     <DialogScrim>
@@ -168,11 +169,11 @@ export function ConfigDiffDialog(p: ConfigDiffDialogProps) {
             icon={<AgentIcon name="copy" size={14} />}
             onClick={() => p.onCopy(unifiedDiffText(rows))}
           >
-            Copy diff
+            {t("ui.agents.configdiffdialog.1")}
           </CompactButton>
           <span className="agents-spacer" />
           <CompactButton variant="ghost" height={28} padX={10} onClick={p.onCancel}>
-            Cancel
+            {t("ui.agents.configdiffdialog.2")}
           </CompactButton>
           <CompactButton
             variant="primary"
@@ -182,12 +183,12 @@ export function ConfigDiffDialog(p: ConfigDiffDialogProps) {
             onClick={p.onConfirm}
           >
             {p.writing
-              ? "Writing…"
+              ? t("ui.agents.configdiff.writing")
               : p.writeError
-                ? "Try again"
+                ? t("ui.agents.configdiff.tryAgain")
                 : p.action === "remove"
-                  ? "Remove"
-                  : "Write config"}
+                  ? t("ui.agents.configdiff.remove")
+                  : t("ui.agents.configdiff.write")}
           </CompactButton>
         </div>
         <p className="agents-config-diff__footnote">

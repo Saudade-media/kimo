@@ -16,16 +16,17 @@
 import { Button, PropField, PropRow, PropSection, Select } from "@kimo/ui"
 import { type CropSession, cropPx, cropStore } from "../../canvas/crop"
 import { imagePaints, writePaintOps } from "../../canvas/crop-mode"
+import { type MessageKey, t } from "../../lib/i18n"
 import { usePanel } from "../panel-context"
 import "./image-crop.css"
 
 type Mode = "cover" | "contain" | "stretch" | "crop"
 
-const MODE_OPTIONS: readonly { value: Mode; label: string }[] = [
-  { value: "cover", label: "Cover" },
-  { value: "contain", label: "Contain" },
-  { value: "stretch", label: "Stretch" },
-  { value: "crop", label: "Crop" },
+const MODE_OPTIONS: readonly { value: Mode; label: MessageKey }[] = [
+  { value: "cover", label: "ui.image.fit.cover" },
+  { value: "contain", label: "ui.image.fit.contain" },
+  { value: "stretch", label: "ui.image.fit.stretch" },
+  { value: "crop", label: "ui.image.fit.crop" },
 ]
 
 export function ImageCropSection({ crop }: { crop: CropSession }) {
@@ -44,13 +45,18 @@ export function ImageCropSection({ crop }: { crop: CropSession }) {
     />
   )
   return (
-    <PropSection title="Image" className="image-crop" data-pen="g9PSe" aria-label="Image crop">
+    <PropSection
+      title={t("insp.image")}
+      className="image-crop"
+      data-pen="g9PSe"
+      aria-label={t("insp.imageCrop")}
+    >
       <PropRow className="image-crop__row">
         <Select<Mode>
           dense
-          label="Image mode"
+          label={t("insp.imageMode")}
           className="rp-select-fill"
-          options={MODE_OPTIONS}
+          options={MODE_OPTIONS.map((o) => ({ value: o.value, label: t(o.label) }))}
           value="crop"
           onChange={(m) => {
             if (m === "crop") return
@@ -89,7 +95,7 @@ export function ImageCropSection({ crop }: { crop: CropSession }) {
           className="image-crop__reset"
           onClick={() => store.actions?.reset()}
         >
-          Reset
+          {t("ui.editor.sections.imagecropsection.1")}
         </Button>
         <Button
           variant="primary"
@@ -97,7 +103,7 @@ export function ImageCropSection({ crop }: { crop: CropSession }) {
           className="image-crop__apply"
           onClick={() => store.actions?.apply()}
         >
-          Apply
+          {t("ui.editor.sections.imagecropsection.2")}
         </Button>
       </div>
     </PropSection>

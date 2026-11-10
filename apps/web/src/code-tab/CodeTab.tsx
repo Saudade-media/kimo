@@ -27,6 +27,7 @@ import { kindLabel, MIXED, nodeName, shared, typeIcon } from "../editor/props"
 import type { FileSession } from "../editor/session"
 import { EXPORT_OPTIONS_EVENT, readExportTailwind, readExportToggles } from "../export/model"
 import { useUi } from "../lib/hooks"
+import { t } from "../lib/i18n"
 import { Icon } from "../lib/icons"
 import "./code-tab.css"
 import { type CodeFile, type GeneratedCode, generateCode } from "./generate"
@@ -51,8 +52,8 @@ import {
   skippedKind,
   tokensMeta,
   truncatedTitle,
-  UNSUPPORTED_DESC,
   UNSUPPORTED_TYPES,
+  unsupportedDesc,
   unsupportedTitle,
   writeFramework,
 } from "./model"
@@ -260,10 +261,8 @@ export function CodeTab({
           <span className="code-tab__empty-icon">
             <Icon name="code-xml" size={18} />
           </span>
-          <span className="code-tab__empty-title">Select a layer to see its code</span>
-          <span className="code-tab__empty-desc">
-            Code follows your selection live. To export a whole page, use Export.
-          </span>
+          <span className="code-tab__empty-title">{t("ui.code.tab.codetab.t2")}</span>
+          <span className="code-tab__empty-desc">{t("ui.code.tab.codetab.4")}</span>
           <CompactButton
             variant="secondary"
             height={28}
@@ -271,7 +270,7 @@ export function CodeTab({
             icon={<Icon name="download" size={14} />}
             onClick={() => onOpenExport?.({ ids: [] })}
           >
-            Export page…
+            {t("ui.code.tab.codetab.5")}
           </CompactButton>
         </div>
       </div>
@@ -306,7 +305,7 @@ export function CodeTab({
           <NoticeCard
             icon={<Icon name="circle-slash" size={14} />}
             title={unsupportedTitle(skippedKind(first.node.type))}
-            description={UNSUPPORTED_DESC}
+            description={unsupportedDesc()}
           />
         </div>
       </div>
@@ -323,22 +322,22 @@ export function CodeTab({
       <div className="code-tab__bar">
         <SegmentedText
           className="code-tab__switch"
-          label="Framework"
-          options={FRAMEWORKS}
+          label={t("ui.code.tab.codetab.3")}
+          options={FRAMEWORKS.map((f) => ({ value: f.value, label: t(f.label) }))}
           value={framework}
           onChange={pickFramework}
         />
         <span className="code-tab__spacer" />
         <IconButton
           className="code-tab__copy"
-          label="Copy file"
+          label={t("ui.code.tab.codetab.2")}
           icon={<Icon name="copy" size={14} />}
           disabled={!current}
           onClick={copyFile}
         />
       </div>
       <div className="code-tab__files">
-        <div className="code-tab__chips" role="tablist" aria-label="Generated files">
+        <div className="code-tab__chips" role="tablist" aria-label={t("ui.code.tab.codetab.1")}>
           {files.map((f, i) => (
             <FileChip
               key={f.path}
@@ -408,7 +407,7 @@ export function CodeTab({
               className="code-tab__open-export-button"
               onClick={openExport}
             >
-              Open export…
+              {t("ui.code.tab.codetab.6")}
             </CompactButton>
           </div>
         </div>
@@ -418,7 +417,7 @@ export function CodeTab({
         <span className="code-tab__status">{liveStatus(truncated)}</span>
         <span className="code-tab__spacer" />
         <button type="button" className="code-tab__open-export" onClick={openExport}>
-          <span className="code-tab__open-export-label">Open export…</span>
+          <span className="code-tab__open-export-label">{t("ui.code.tab.codetab.t1")}</span>
           <Icon name="arrow-up-right" size={12} />
         </button>
       </div>

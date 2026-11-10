@@ -15,6 +15,7 @@
  * with {@link AreaWaits.setClaims}.
  */
 import { type ClaimView, claimsFor, type DocStore } from "@kimo/editor-state"
+import { t } from "../lib/i18n"
 
 export interface AreaBusyDetail {
   holder: string
@@ -88,7 +89,7 @@ export function areaBusyCopy(o: {
     ? `${o.holderLabel} is ${o.owner}'s agent and claimed`
     : `${o.holderLabel} claimed`
   return {
-    title: `Waiting: ${o.holderLabel} is editing ${o.frame}`,
+    title: t("ui.mp.areabusy.waiting", { holder: o.holderLabel, frame: o.frame }),
     desc: `${who} ${o.frame} ${agoText(o.since, o.now)}. ${o.agent} can work on another frame now, or wait until ${o.frame} is free.`,
   }
 }

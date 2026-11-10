@@ -11,10 +11,12 @@ import {
   SCHEMA_URL,
 } from "@kimo/core-schema"
 import { createDocStore, createUiStore } from "@kimo/editor-state"
+import { richSelection, translateOps } from "../../src/canvas/rich-text/panel-bridge"
 import { addSlotProp, componentOfSelection } from "../../src/editor/m3/actions"
 import { M3Controller } from "../../src/editor/m3/controller"
 import { resolveComponentDrop } from "../../src/editor/m3/drop"
 import { routeOps } from "../../src/editor/m3/route"
+import { styleOps } from "../../src/editor/text"
 
 const doc = (nodes: Record<string, Record<string, unknown>>, extra: Record<string, unknown> = {}) =>
   ({ $schema: SCHEMA_URL, format: "1.0.0", nodes, ...extra }) as unknown as KimoDocument
@@ -75,6 +77,26 @@ describe("routeOps", () => {
         },
       },
     ])
+  })
+
+  test("a colour change on styled-run text inside an instance lands in the overrides", () => {
+    const d = card()
+    const title = (d.nodes as Record<string, Record<string, unknown>>).title00001
+    if (!title) throw new Error("missing title node")
+    title.content = [{ text: "Plan", fill: "#E5484D" }, { text: " Pro" }]
+    const view = viewOf(d)
+    const id = "inst000001/title00001"
+    const node = view.getNode(id)
+    expect(node).toBeDefined()
+    if (!node) return
+    const sel = richSelection([{ id, node }], null) as { id: string; node: typeof node }[]
+    const ops = styleOps(sel, "fill", () => "#000000")
+    const out = translateOps(ops, sel, (i) => view.getNode(i), null, ["text/runs"])
+    const r = routeOps(view, realOf(d), out)
+    expect(r.ok).toBe(true)
+    if (!r.ok) return
+    const o = r.ops.find((x) => x.op === "update" && x.id === "inst000001")
+    expect(JSON.stringify(o)).toContain("title00001")
   })
 
   test("unset on a composite id removes the field (and the entry when empty)", () => {

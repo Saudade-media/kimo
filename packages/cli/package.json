@@ -20,9 +20,9 @@
     "@kimo/editor-state": "workspace:*",
     "@kimo/mcp-server": "workspace:*",
     "@kimo/platform": "workspace:*",
-    "@modelcontextprotocol/server": "2.3.1"
+    "@modelcontextprotocol/server": "2.4.0"
   },
   "devDependencies": {
-    "@modelcontextprotocol/client": "2.3.1"
+    "@modelcontextprotocol/client": "2.4.0"
   }
 }

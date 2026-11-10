@@ -16052,7 +16052,7 @@
 
 , "P2VCCU": {"type":"text","parent":"f2kVgQ","order":"a0","name":"Action","content":"Rectangle","style":{"font":{"$ref":"font-sans"},"size":{"$ref":"text-sm"},"weight":400},"fill":{"$ref":"text-primary"}}
 
-, "P2XUAP5YpH": {"type":"text","parent":"5TMhe5A2va","order":"a2Pl2","name":"Note","w":{"mode":"fill"},"content":"Mentions are blue. Bold, italic, strike, links and lists use Figma's keys or markdown.","grow":"fixed-width","style":{"font":{"$ref":"font-sans"},"size":{"$ref":"text-xs"},"weight":400,"lineHeight":1.45},"fill":{"$ref":"text-tertiary"}}
+, "P2XUAP5YpH": {"type":"text","parent":"5TMhe5A2va","order":"a2Pl2","name":"Note","w":{"mode":"fill"},"content":"Mentions are blue. Bold, italic, strike, links and lists use the usual shortcuts or markdown.","grow":"fixed-width","style":{"font":{"$ref":"font-sans"},"size":{"$ref":"text-xs"},"weight":400,"lineHeight":1.45},"fill":{"$ref":"text-tertiary"}}
 
 , "P2iKza": {"type":"frame","parent":"rYitk0","order":"a3","name":"plum","w":{"mode":"fill"},"h":28,"radius":{"$ref":"radius-sm"},"layout":{"dir":"row","gap":8,"pad":[0,6],"align":"center"}}
 
@@ -48634,7 +48634,7 @@
 
 , "vTGEaP0u5P": {"type":"ellipse","parent":"AzvI1dx3HA","order":"a1i0M","name":"Avatar · Kimo","w":24,"h":24,"fill":{"$ref":"agent"},"stroke":{"paint":{"$ref":"bg-app"},"width":2}}
 
-, "vTIDTJn0Gp": {"type":"text","parent":"edDBpSL1Um","order":"a2mjc","name":"Intro","w":{"mode":"fill"},"content":"Figma-style comments. Press C, click or drag to pin a thread, then reply, react and resolve. Comments live in the file, sync with the room and never export.","grow":"fixed-width","style":{"font":{"$ref":"font-sans"},"size":{"$ref":"text-lg"},"weight":400,"lineHeight":1.45},"fill":{"$ref":"text-secondary"}}
+, "vTIDTJn0Gp": {"type":"text","parent":"edDBpSL1Um","order":"a2mjc","name":"Intro","w":{"mode":"fill"},"content":"Press C, click or drag to pin a thread, then reply, react and resolve. Comments live in the file, sync with the room and never export.","grow":"fixed-width","style":{"font":{"$ref":"font-sans"},"size":{"$ref":"text-lg"},"weight":400,"lineHeight":1.45},"fill":{"$ref":"text-secondary"}}
 
 , "vTTbE0": {"type":"frame","parent":"G7oYyd","order":"a0","name":"Tabs","w":{"mode":"fill"},"layout":{"dir":"row","gap":2,"pad":[8,8,4,8],"align":"center"}}
 

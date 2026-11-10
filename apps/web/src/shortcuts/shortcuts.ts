@@ -444,7 +444,7 @@ export const SHORTCUT_LIST: readonly Shortcut[] = [
   },
   {
     id: "toggleLocked",
-    label: "ui.shortcuts.lock-unlock",
+    label: "ui.shortcuts.toggle-lock",
     scope: "layers",
     group: "selection",
     combos: [{ keys: ["l"], mod: true, shift: true, label: "L" }],

@@ -2202,7 +2202,7 @@
   "ui.shortcuts.last-tab": "最后一个标签页",
   "ui.shortcuts.line": "直线",
   "ui.shortcuts.link-text-selected": "链接…（已选中文本）",
-  "ui.shortcuts.lock-unlock": "锁定 / 解锁",
+  "ui.shortcuts.toggle-lock": "锁定 / 解锁",
   "ui.shortcuts.move": "移动",
   "ui.shortcuts.new-file": "新建文件",
   "ui.shortcuts.new-tab": "新建标签页",

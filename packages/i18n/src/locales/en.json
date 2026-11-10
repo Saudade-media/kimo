@@ -2202,7 +2202,7 @@
   "ui.shortcuts.last-tab": "Last tab",
   "ui.shortcuts.line": "Line",
   "ui.shortcuts.link-text-selected": "Link… (text selected)",
-  "ui.shortcuts.lock-unlock": "Lock / unlock",
+  "ui.shortcuts.toggle-lock": "Lock / unlock",
   "ui.shortcuts.move": "Move",
   "ui.shortcuts.new-file": "New file",
   "ui.shortcuts.new-tab": "New tab",

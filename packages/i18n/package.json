@@ -1,6 +1,6 @@
 {
   "name": "@kimo/i18n",
-  "version": "1.2.1-beta.7",
+  "version": "1.2.1",
   "private": true,
   "description": "Kimo language packs: typed message keys, locale loading and lookups",
   "license": "MIT",

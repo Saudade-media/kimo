@@ -14,6 +14,48 @@ the dates are those of the milestone commits.
 
 ## [Unreleased]
 
+## [1.2.1] - 2026-11-18
+
+Kimo Cloud workspaces, documents with a million layers, and the editor in Simplified Chinese:
+everything from the 1.2.1 betas, now on the Stable channel.
+
+### Added
+
+- Kimo Cloud workspaces. A plan belongs to a workspace, and its members open and edit every file
+  in it. Each member is a seat: $8 a month for the first, then $4 for each extra member. Viewers
+  stay free and need no account.
+- Invite people by email, approve edit requests from view links, and keep several workspaces per
+  account.
+- The editor in Simplified Chinese. Pick it in Settings.
+- Export any layer from the right panel's Export section, or with ⇧⌘E.
+- Set each corner's radius on its own, and rename a layer from the right panel.
+- Rename files from Home and the editor. ⌘R reloads the window and keeps your tabs.
+- Agents work in files opened from a share link, with avatars, Activity and approval prompts. A
+  view link stays read-only for them.
+
+### Changed
+
+- Documents with a million layers open, autosave, reopen, export and edit at 60 fps in the
+  browser.
+- A share link opens the file in a new tab of the open window.
+- Kimo Cloud keeps each workspace file's keys, so files open at once on any signed-in device.
+  Kimo Cloud is no longer described as end-to-end encrypted; self-hosted relays still are.
+- The right card shows agents and people in one avatar stack.
+- The web app lives at relay.getkimo.design. app.getkimo.design redirects there.
+- Large documents are stored in the browser in parts. Older versions can't open such a document
+  (about 90,000 layers and up) once this version saved it.
+
+### Fixed
+
+- The Beta update channel works.
+- Shared images show right away for guests and reach everyone in a shared file at once.
+- Clicking inside a selected frame keeps it, and a multi-selection drags together, across
+  auto-layout frames too.
+- Text keeps its font while you edit it, and changes to text inside an instance are kept.
+- Opening a .pen file keeps the layers of instances that have their own children.
+- The Text section shows typography token values, and the Row gap field shows its 0 default.
+- Autosave no longer fails without a word on very large documents.
+
 ## [1.2.1-beta.7] - 2026-11-18
 
 Documents with a million layers open, save and stay smooth, and the editor speaks Simplified

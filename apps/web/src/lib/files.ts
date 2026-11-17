@@ -1,6 +1,6 @@
 /**
  * Browser file library: an index of local files (IndexedDB database `kimo-files`) plus one
- * y-indexeddb database per document, written through `@kimo/sync`'s `IndexedDbProvider`.
+ * database of Yjs updates per document, written through `@kimo/sync`'s `IndexedDbProvider`.
  * Also the `.kimo` open/save helpers (File System Access API with an upload/download fallback).
  */
 
@@ -8,8 +8,8 @@ import {
   importPen,
   isPenDocument,
   type KimoDocument,
-  localComponents,
   penImageUrls,
+  serializeParts,
 } from "@kimo/core-schema"
 import {
   createDocStore,
@@ -33,7 +33,10 @@ import {
   type ManifestEntry,
   sniffImage,
 } from "./assets"
+import { componentIds } from "./component-index"
 import { fileDeleted } from "./file-events"
+import { currentHeader } from "./header"
+import { liveDocument } from "./live-doc"
 import { buildSampleDocument, newDocument } from "./sample"
 import { isZip, readZip, writeZip } from "./zip"
 
@@ -171,10 +174,10 @@ export async function duplicateFile(id: string, name: string): Promise<string> {
 
 /** Component count and `meta.library` of a store (Design systems, board 37 §4). */
 export function libraryStats(store: DocStore): { components: number; library: boolean } {
-  const doc = store.toDocument()
+  // No scan: this runs after every edit burst.
   return {
-    components: localComponents(doc).length,
-    library: (doc.meta as { library?: unknown } | undefined)?.library === true,
+    components: componentIds(store).size,
+    library: (currentHeader(store).meta as { library?: unknown } | undefined)?.library === true,
   }
 }
 
@@ -409,6 +412,25 @@ export interface ExportedFile {
   missingAssets: string[]
 }
 
+/** UTF-8 bytes of text given in pieces. */
+function utf8(pieces: Iterable<string>): Uint8Array {
+  const encoder = new TextEncoder()
+  const chunks: Uint8Array[] = []
+  let size = 0
+  for (const p of pieces) {
+    const bytes = encoder.encode(p)
+    chunks.push(bytes)
+    size += bytes.byteLength
+  }
+  const out = new Uint8Array(size)
+  let at = 0
+  for (const c of chunks) {
+    out.set(c, at)
+    at += c.byteLength
+  }
+  return out
+}
+
 const safeName = (name: string) => name.replace(/[\\/:*?"<>|]+/g, "-") || "Untitled"
 
 /**
@@ -430,8 +452,14 @@ export async function exportFile(
    */
   embedFonts: boolean,
 ): Promise<ExportedFile> {
-  let doc: KimoDocument = store.toDocument()
-  const refs = assetRefs(doc.nodes)
+  // Read in place and written node by node: a large document has no room for a copy of itself.
+  let doc: KimoDocument = liveDocument(store)
+  const refs = new Set<string>()
+  for (const id of store.nodeIds()) assetRefs(store.getNode(id), refs)
+  const text = (): Generator<string> => {
+    const { nodes: _nodes, ...header } = doc as unknown as Record<string, unknown>
+    return serializeParts(header, store.nodeIds(), (id) => store.getNode(id))
+  }
   // A package (the design has images) also carries the font files its text uses, listed in its
   // manifest (board 28). A plain `.kimo` stays plain: fonts alone don't turn it into a package.
   if (refs.size) {
@@ -453,7 +481,7 @@ export async function exportFile(
   if (!refs.size)
     return {
       fileName: `${safeName(name)}.kimo`,
-      data: new Blob([serialize(doc)], { type: "application/json" }),
+      data: new Blob([...text()], { type: "application/json" }),
       missingAssets: [],
     }
   const files: { name: string; data: Uint8Array }[] = []
@@ -474,8 +502,7 @@ export async function exportFile(
   }
   if (!missingAssets.length)
     doc.assets = { ...((doc.assets ?? {}) as Record<string, ManifestEntry>), ...entries }
-  const text = new TextEncoder().encode(serialize(doc))
-  const zip = writeZip([{ name: `${safeName(name)}.kimo`, data: text }, ...files])
+  const zip = writeZip([{ name: `${safeName(name)}.kimo`, data: utf8(text()) }, ...files])
   return {
     fileName: `${safeName(name)}.kimoz`,
     data: new Blob([zip as Uint8Array<ArrayBuffer>], { type: "application/zip" }),

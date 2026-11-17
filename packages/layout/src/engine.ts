@@ -87,6 +87,26 @@ interface Content {
 
 const EMPTY: Content = { empty: true, minX: 0, minY: 0, maxX: 0, maxY: 0 }
 
+/**
+ * Slot of each style key in `Entry.style`. An array per entry, not an object keyed by name:
+ * keys written one by one turn the object into a hash table of about 800 bytes per node.
+ */
+const STYLE_SLOTS = new Map<string, number>()
+const UNSET = Symbol("unset")
+const styleSlot = (key: string): number => {
+  let i = STYLE_SLOTS.get(key)
+  if (i === undefined) {
+    i = STYLE_SLOTS.size
+    STYLE_SLOTS.set(key, i)
+  }
+  return i
+}
+/** The value last given to the Yoga setter `key` (undefined when never set). */
+const styleOf = (e: { style: unknown[] }, key: string): unknown => {
+  const v = e.style[styleSlot(key)]
+  return v === UNSET ? undefined : v
+}
+
 interface Entry {
   id: string
   data: LayoutNodeData
@@ -109,12 +129,14 @@ interface Entry {
   measured: boolean
   /** Kind whose measure function is installed (text or box). */
   measureKind: Kind | null
-  style: Record<string, unknown>
+  /** Last value given to each Yoga setter, by {@link styleSlot} (see `put`). */
+  style: unknown[]
   emptyW: number | undefined
   emptyH: number | undefined
   text: TextMeasureInput | null
   autoText: boolean
-  textCache: Map<number | undefined, TextMetrics>
+  /** Made on the first measure (most nodes are not text). */
+  textCache: Map<number | undefined, TextMetrics> | null
   issues: LayoutIssue[]
   // set by a pass
   content: Content
@@ -226,6 +248,14 @@ export function createLayoutEngine(options: LayoutEngineOptions = {}): LayoutEng
   let roots: Entry[] = []
   let current: LayoutResult | null = null
   let version = 0
+  /** Roots (set form of `roots`), the paint order of each root's subtree, and the root ids. */
+  let rootSet = new Set<Entry>()
+  let subtrees = new Map<string, string[]>()
+  let rootList: string[] = []
+  /** The flat paint order, built on demand from `subtrees` (null after a structural change). */
+  let flatOrder: string[] | null = null
+  /** Entries that hold issues (a pass reads only these, not every entry). */
+  const issueEntries = new Set<Entry>()
   /** The engine's own view when the host passes neither `expanded` nor a view as `nodes`. */
   let own: { base: unknown; view: InstanceView } | null = null
   /**
@@ -267,6 +297,7 @@ export function createLayoutEngine(options: LayoutEngineOptions = {}): LayoutEng
     const i: LayoutIssue = { code, severity, nodeId: e.id, message }
     if (path !== undefined) i.path = path
     e.issues.push(i)
+    issueEntries.add(e)
     options.onIssue?.(i)
   }
 
@@ -353,12 +384,12 @@ export function createLayoutEngine(options: LayoutEngineOptions = {}): LayoutEng
       attached: [],
       measured: false,
       measureKind: null,
-      style: {},
+      style: [],
       emptyW: undefined,
       emptyH: undefined,
       text: null,
       autoText: false,
-      textCache: new Map(),
+      textCache: null,
       issues: [],
       content: EMPTY,
       originX: 0,
@@ -454,8 +485,11 @@ export function createLayoutEngine(options: LayoutEngineOptions = {}): LayoutEng
 
   /** Calls a Yoga setter only when the value changed since the last call. */
   const put = <T>(e: Entry, key: string, v: T, apply: (v: T) => void) => {
-    if (e.style[key] === v && Object.hasOwn(e.style, key)) return
-    e.style[key] = v
+    const i = styleSlot(key)
+    const s = e.style
+    if (i < s.length && s[i] === v) return
+    while (s.length < i) s.push(UNSET)
+    s[i] = v
     apply(v)
   }
 
@@ -541,8 +575,9 @@ export function createLayoutEngine(options: LayoutEngineOptions = {}): LayoutEng
     const n = e.data
     const y = e.y
     e.issues = []
+    issueEntries.delete(e)
     for (const x of src.issues(e.id)) expansionIssue(e, x)
-    e.textCache.clear()
+    e.textCache?.clear()
     if (isRef(n.visible)) value(e, n.visible, "/visible") // records an unresolved binding
     if (e.kind === "leaf" && !LEAF_TYPES.has(n.type) && n.type !== "instance")
       issue(e, "UNSUPPORTED_NODE", `unknown node type "${n.type}"`, "/type")
@@ -585,7 +620,7 @@ export function createLayoutEngine(options: LayoutEngineOptions = {}): LayoutEng
       let mode: SpecMode = "fit"
       if (e.kind === "group") {
         // Groups have no size: updateContent() sets their children's bounds.
-        size = (a === "w" ? e.style.w : e.style.h) as number | "auto"
+        size = styleOf(e, a === "w" ? "w" : "h") as number | "auto"
       } else if (e.autoText) {
         const m = measure(e, undefined)
         size = a === "w" ? m.w : m.h
@@ -715,7 +750,7 @@ export function createLayoutEngine(options: LayoutEngineOptions = {}): LayoutEng
   // --- Measurement --------------------------------------------------------------------------
 
   const measure = (e: Entry, maxWidth: number | undefined): TextMetrics => {
-    const cached = e.textCache.get(maxWidth)
+    const cached = e.textCache?.get(maxWidth)
     if (cached) return cached
     let m: TextMetrics = { w: 0, h: 0 }
     if (e.text) {
@@ -727,6 +762,7 @@ export function createLayoutEngine(options: LayoutEngineOptions = {}): LayoutEng
         issue(e, "TEXT_MEASURE_FAILED", err instanceof Error ? err.message : String(err))
       }
     }
+    if (!e.textCache) e.textCache = new Map()
     e.textCache.set(maxWidth, m)
     return m
   }
@@ -853,7 +889,11 @@ export function createLayoutEngine(options: LayoutEngineOptions = {}): LayoutEng
     if (!e.flow) {
       const items = clampItemsOf(e)
       // Wrapping lines: Yoga breaks them on the clamped sizes, as CSS does (see below).
-      for (const c of items) setClampMode(c, c.parent?.style.wrap === Wrap.Wrap ? "yoga" : "css")
+      for (const c of items)
+        setClampMode(
+          c,
+          (c.parent ? styleOf(c.parent, "wrap") : undefined) === Wrap.Wrap ? "yoga" : "css",
+        )
       e.y.calculateLayout(undefined, undefined, Direction.LTR)
       if (items.length > 0) resolveFlexClamps(e, items)
     }
@@ -1004,7 +1044,7 @@ export function createLayoutEngine(options: LayoutEngineOptions = {}): LayoutEng
   const flexLines = (p: Entry): Entry[][] => {
     const kids = p.attached
     if (kids.length === 0) return []
-    if (p.style.wrap !== Wrap.Wrap) return [kids]
+    if (styleOf(p, "wrap") !== Wrap.Wrap) return [kids]
     const EPS = 1e-3
     const row = p.dir === "row"
     const lines: Entry[][] = []
@@ -1034,6 +1074,11 @@ export function createLayoutEngine(options: LayoutEngineOptions = {}): LayoutEng
     nodes: Map<string, NodeLayout>
     changed: Set<string>
     only: Set<Entry> | null
+    /** Layouts that changed nodes had before this pass (incremental passes). */
+    previous: Map<string, NodeLayout> | null
+    /** Roots with a changed node (incremental passes), and the root being emitted. */
+    dirtyRoots: Set<string> | null
+    root: string
   }
 
   /**
@@ -1123,6 +1168,8 @@ export function createLayoutEngine(options: LayoutEngineOptions = {}): LayoutEng
       if (text) next.text = text
       if (content) next.content = content
       out.changed.add(e.id)
+      if (prev) out.previous?.set(e.id, prev)
+      out.dirtyRoots?.add(out.root)
     }
     e.layout = next
     out.nodes.set(e.id, next)
@@ -1145,17 +1192,103 @@ export function createLayoutEngine(options: LayoutEngineOptions = {}): LayoutEng
     for (const c of e.children) emit(c, T, visible, childForce, out)
   }
 
-  const paintOrder = (): string[] => {
+  /** Paint order of one root's subtree. */
+  const subtreeOrder = (root: Entry): string[] => {
     const order: string[] = []
     const walk = (e: Entry) => {
       order.push(e.id)
       for (const c of e.children) walk(c)
     }
-    for (const r of roots) walk(r)
+    walk(root)
     return order
   }
 
-  const finish = (nodes: Map<string, NodeLayout>, order: string[], changed: Set<string>) => {
+  /** The whole paint order (the roots' subtrees, concatenated), cached until one changes. */
+  const paintOrder = (): string[] => {
+    if (flatOrder) return flatOrder
+    const order: string[] = []
+    for (const id of rootList) {
+      const ids = subtrees.get(id)
+      if (ids) for (const x of ids) order.push(x)
+    }
+    flatOrder = order
+    return order
+  }
+
+  /** Rebuilds the per-root order of every root (a full pass). */
+  const indexRoots = () => {
+    rootSet = new Set(roots)
+    subtrees = new Map()
+    rootList = []
+    for (const r of roots) {
+      rootList.push(r.id)
+      subtrees.set(r.id, subtreeOrder(r))
+    }
+    flatOrder = null
+  }
+
+  const rootOf = (e: Entry): Entry => {
+    let r = e
+    for (let i = 0; r.parent && i < 100000; i++) r = r.parent
+    return r
+  }
+
+  /** Issues of every entry that has some, in paint order. */
+  const collectIssues = (): LayoutIssue[] => {
+    const issues: LayoutIssue[] = []
+    if (issueEntries.size === 0) return issues
+    if (issueEntries.size > 256) {
+      for (const id of paintOrder()) {
+        const e = entries.get(id)
+        if (e) for (const i of e.issues) issues.push(i)
+      }
+      return issues
+    }
+    // Few: sort them by their position in the tree (child indexes from the root down).
+    const index = new Map<Entry | null, Map<Entry, number>>()
+    const at = (parent: Entry | null, e: Entry): number => {
+      let m = index.get(parent)
+      if (!m) {
+        m = new Map()
+        const list = parent ? parent.children : roots
+        for (let i = 0; i < list.length; i++) m.set(list[i] as Entry, i)
+        index.set(parent, m)
+      }
+      return m.get(e) ?? -1
+    }
+    const keyed: { e: Entry; path: number[] }[] = []
+    for (const e of issueEntries) {
+      if (!e.alive || e.issues.length === 0) continue
+      const path: number[] = []
+      let ok = true
+      for (let c: Entry | null = e; c; c = c.parent) {
+        const i = at(c.parent, c)
+        if (i < 0) {
+          ok = false
+          break
+        }
+        path.push(i)
+      }
+      if (ok) keyed.push({ e, path: path.reverse() })
+    }
+    keyed.sort((a, b) => {
+      const n = Math.min(a.path.length, b.path.length)
+      for (let i = 0; i < n; i++) {
+        const d = (a.path[i] as number) - (b.path[i] as number)
+        if (d !== 0) return d
+      }
+      return a.path.length - b.path.length
+    })
+    for (const k of keyed) for (const i of k.e.issues) issues.push(i)
+    return issues
+  }
+
+  const finish = (
+    nodes: Map<string, NodeLayout>,
+    changed: Set<string>,
+    dirtyRoots: Set<string> | null = null,
+    previous: Map<string, NodeLayout> | null = null,
+  ) => {
     let bounds: Rect | null = null
     for (const r of roots) {
       const l = r.layout
@@ -1173,15 +1306,24 @@ export function createLayoutEngine(options: LayoutEngineOptions = {}): LayoutEng
         }
       }
     }
-    const issues: LayoutIssue[] = []
-    for (const id of order) {
-      const e = entries.get(id)
-      if (e) for (const i of e.issues) issues.push(i)
-    }
+    const issues = collectIssues()
     for (const t of reindex) indexTop(t)
     reindex = new Set()
     componentDeps = new Map()
-    current = { version: ++version, nodes, order, bounds, issues, changed }
+    const result = {
+      version: ++version,
+      nodes,
+      bounds,
+      issues,
+      changed,
+      roots: rootList,
+      subtrees,
+      ...(dirtyRoots ? { dirtyRoots } : {}),
+      ...(previous ? { previous } : {}),
+    }
+    // The flat order is derived from the per-root ones only when something reads it.
+    Object.defineProperty(result, "order", { enumerable: true, get: paintOrder })
+    current = result as typeof result & { order: readonly string[] }
     textGeneration = input.measureText.generation
     healthy = true
     return current
@@ -1189,6 +1331,7 @@ export function createLayoutEngine(options: LayoutEngineOptions = {}): LayoutEng
 
   const freeEntry = (e: Entry) => {
     e.alive = false
+    issueEntries.delete(e)
     clampItems.delete(e)
     if (e.measured) e.y.unsetMeasureFunc()
     e.y.free()
@@ -1407,7 +1550,15 @@ export function createLayoutEngine(options: LayoutEngineOptions = {}): LayoutEng
     for (const e of entries.values()) if (isTop(e.id)) reindex.add(e.id)
     flushBases()
     for (const r of roots) calc(r, null)
-    const out: Emit = { nodes: new Map(), changed: new Set(), only: null }
+    indexRoots()
+    const out: Emit = {
+      nodes: new Map(),
+      changed: new Set(),
+      only: null,
+      previous: null,
+      dirtyRoots: null,
+      root: "",
+    }
     for (const r of roots) emit(r, IDENTITY, true, true, out)
     // `changed` relative to the previous pass (everything on the first one).
     const changed = new Set<string>()
@@ -1417,7 +1568,7 @@ export function createLayoutEngine(options: LayoutEngineOptions = {}): LayoutEng
         changed.add(id)
     }
     if (prevNodes) for (const id of prevNodes.keys()) if (!out.nodes.has(id)) changed.add(id)
-    return finish(out.nodes, paintOrder(), changed)
+    return finish(out.nodes, changed)
   }
 
   /**
@@ -1498,6 +1649,21 @@ export function createLayoutEngine(options: LayoutEngineOptions = {}): LayoutEng
   const update = (inp: LayoutInput, dirty: DirtySet): LayoutResult => {
     if (!current) return compute(inp)
     const dirtyIds = [...dirty.nodes]
+    if (dirty.remeasure && !dirty.header && dirtyIds.length === 0) {
+      if (!healthy || entries.size === 0) return compute(inp)
+      healthy = false
+      begin(inp)
+      const texts = new Set<string>()
+      for (const id of dirty.remeasure) {
+        const e = entries.get(id)
+        if (e?.alive && e.kind === "text") texts.add(id)
+      }
+      if (texts.size === 0) {
+        healthy = true
+        return current
+      }
+      return pass([...texts], new Set(), (e) => texts.has(e.id), null)
+    }
     if (dirty.header) {
       if (dirty.valuesOnly && dirtyIds.length === 0 && healthy && entries.size > 0)
         return rebind(inp)
@@ -1593,10 +1759,13 @@ export function createLayoutEngine(options: LayoutEngineOptions = {}): LayoutEng
     // Bound nodes below a changed theme pin are queued as changed (see below).
     const queue = [...ids]
     const rethemed = new Set<string>()
+    /** Roots holding a node this pass re-read, changed, added or removed (by id). */
+    const dirtyRoots = new Set<string>()
     for (let qi = 0; qi < queue.length; qi++) {
       const id = queue[qi] as string
       const old = entries.get(id)
       const n = src.getNode(id)
+      if (old) dirtyRoots.add(rootOf(old).id)
       if (!old) {
         if (!n) continue
         const p = parentEntry(n.parent)
@@ -1653,18 +1822,42 @@ export function createLayoutEngine(options: LayoutEngineOptions = {}): LayoutEng
 
     // Re-sync child lists: detach every affected Yoga child first, then rebuild and attach.
     const removed: Entry[] = []
-    for (const p of resync) if (p) detach(p)
+    /** Roots whose subtree order must be rebuilt (a child list below them changed). */
+    const reorder = new Set<Entry>()
+    for (const p of resync)
+      if (p) {
+        dirtyRoots.add(rootOf(p).id)
+        detach(p)
+      }
     for (const p of resync) {
       if (p && !p.alive) continue
       const before = p ? p.children : roots
       const list: Entry[] = []
+      const inList = new Set<Entry>()
       for (const id of p ? src.children(p.id) : rootIds()) {
         const e = build(id, p, true)
-        if (e && !list.includes(e)) list.push(e)
+        if (e && !inList.has(e)) {
+          inList.add(e)
+          list.push(e)
+        }
       }
-      for (const c of before) if (!list.includes(c)) removed.push(c)
+      for (const c of before)
+        if (!inList.has(c)) {
+          removed.push(c)
+          if (!p) {
+            // No longer a root (deleted, or moved into a container).
+            subtrees.delete(c.id)
+            dirtyRoots.add(c.id)
+          }
+        }
       if (p) p.children = list
-      else roots = list
+      else {
+        roots = list
+        rootSet = inList
+        rootList = list.map((e) => e.id)
+        flatOrder = null
+        for (const c of list) if (!subtrees.has(c.id)) reorder.add(c)
+      }
       for (const c of list) {
         c.parent = p
         if (!p) {
@@ -1679,7 +1872,11 @@ export function createLayoutEngine(options: LayoutEngineOptions = {}): LayoutEng
         seeds.add(p)
       }
     }
-    for (const p of resync) if (p?.alive) attach(p)
+    for (const p of resync)
+      if (p?.alive) {
+        attach(p)
+        reorder.add(rootOf(p))
+      }
     for (const e of fresh) if (!e.parent || !fresh.has(e.parent)) configure(e)
     for (const e of fresh) if (isTop(e.id)) reindex.add(e.id)
     if (all)
@@ -1709,17 +1906,46 @@ export function createLayoutEngine(options: LayoutEngineOptions = {}): LayoutEng
     for (const e of seeds) if (e.alive) mark(e)
     for (const e of fresh) mark(e)
 
+    for (const e of fresh) if (e.alive) reorder.add(rootOf(e))
+    for (const r of reorder) {
+      if (!r.alive || !rootSet.has(r)) continue
+      subtrees.set(r.id, subtreeOrder(r))
+      dirtyRoots.add(r.id)
+      flatOrder = null
+    }
+
+    // Only the roots on a dirty path are calculated and emitted (roots are independent trees).
+    let dirty: Entry[] = roots
+    if (only.size * 4 < roots.length) {
+      dirty = []
+      for (const e of only) if (!e.parent && rootSet.has(e)) dirty.push(e)
+    }
     flushBases()
-    for (const r of roots) calc(r, only)
-    const out: Emit = { nodes: new Map(prevResult.nodes), changed: new Set(), only }
+    for (const r of dirty) calc(r, only)
+    // The node table is updated in place (see LayoutResult.nodes); what changed nodes had
+    // before is kept in `previous`.
+    const previous = new Map<string, NodeLayout>()
+    const out: Emit = {
+      nodes: prevResult.nodes as Map<string, NodeLayout>,
+      changed: new Set(),
+      only,
+      previous,
+      dirtyRoots,
+      root: "",
+    }
     for (const id of removedIds) {
       if (topDeps.has(id)) unindex(id)
+      const was = out.nodes.get(id)
+      if (was) previous.set(id, was)
       out.nodes.delete(id)
       out.changed.add(id)
     }
-    for (const r of roots) emit(r, IDENTITY, true, false, out)
-    const order = resync.size > 0 ? paintOrder() : (prevResult.order as string[])
-    return finish(out.nodes, order, out.changed)
+    for (const r of dirty) {
+      out.root = r.id
+      dirtyRoots.add(r.id)
+      emit(r, IDENTITY, true, false, out)
+    }
+    return finish(out.nodes, out.changed, dirtyRoots, previous)
   }
 
   return {

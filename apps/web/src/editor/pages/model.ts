@@ -7,6 +7,7 @@
 import { listPages, type PageInfo, pageOfRoot } from "@kimo/core-schema"
 import type { DocStore, NodeData, Op } from "@kimo/editor-state"
 import type { UiStore } from "../../canvas/contract"
+import { rootShapeRev } from "../../lib/tree-hub"
 
 type PageDoc = { pages?: unknown }
 
@@ -36,11 +37,44 @@ function rootOnPage(doc: PageDoc, n: NodeData | undefined, pageId: string | null
   return pageOfRoot(doc, n) === pageId
 }
 
+interface RootsMemo {
+  rev: number
+  pages: string
+  page: string | null
+  roots: readonly string[]
+  set: ReadonlySet<string> | null
+}
+
+/** The last answer of {@link activeRoots}, kept while the root list and the pages stay. */
+const activeRootsMemo = new WeakMap<DocStore, RootsMemo>()
+
+function rootsOf(store: DocStore, page: string | null): RootsMemo {
+  const doc = headerOf(store)
+  // Asked on every edit and frame: the roots are filtered again only when one was added,
+  // removed, reordered or moved to another page, or the page list changed.
+  const rev = store.rootsRev
+  const pages = JSON.stringify(doc.pages ?? null)
+  const memo = activeRootsMemo.get(store)
+  if (memo && memo.rev === rev && memo.pages === pages && memo.page === page) return memo
+  const id = activePageId(store, page)
+  const roots = store.children(null).filter((r) => rootOnPage(doc, store.getNode(r), id))
+  const next: RootsMemo = { rev: rev ?? -1, pages, page, roots, set: null }
+  // A store that does not count root changes is asked every time.
+  if (rev !== undefined) activeRootsMemo.set(store, next)
+  return next
+}
+
 /** Root ids of the active page, in sibling order. */
 export function activeRoots(store: DocStore, page: string | null): string[] {
-  const doc = headerOf(store)
-  const id = activePageId(store, page)
-  return store.children(null).filter((r) => rootOnPage(doc, store.getNode(r), id))
+  // A copy: callers own the returned array.
+  return rootsOf(store, page).roots.slice()
+}
+
+/** {@link activeRoots} as a set (shared: do not change it). */
+export function activeRootSet(store: DocStore, page: string | null): ReadonlySet<string> {
+  const memo = rootsOf(store, page)
+  memo.set ??= new Set(memo.roots)
+  return memo.set
 }
 
 /**
@@ -54,6 +88,8 @@ export function pageScopedSource(store: DocStore, ui: UiStore) {
       parent === null && (at === undefined || at === null)
         ? activeRoots(store, ui.getState().page)
         : store.children(parent, at),
+    /** The active page's roots as a set (shared: do not change it). */
+    rootSet: (): ReadonlySet<string> => activeRootSet(store, ui.getState().page),
   }
 }
 
@@ -101,15 +137,37 @@ export function withActivePage(store: DocStore, ui: UiStore, ops: readonly Op[])
   return changed ? next : ops
 }
 
+/** Layer count of each root's subtree, kept while the subtree keeps its shape. */
+const subtreeCounts = new WeakMap<DocStore, Map<string, { rev: number; n: number }>>()
+
 /** "N layers": the number of nodes on a page (its roots and their descendants, real nodes). */
 export function pageLayerCount(store: DocStore, roots: readonly string[]): number {
+  let counts = subtreeCounts.get(store)
+  if (!counts) {
+    counts = new Map()
+    subtreeCounts.set(store, counts)
+  }
+  // Roots that are gone leave their entry behind: dropped once they outnumber the live ones.
+  if (counts.size > 2 * roots.length + 1024)
+    for (const id of [...counts.keys()]) if (!store.getNode(id)) counts.delete(id)
+  let total = 0
   let n = 0
   const walk = (id: string) => {
     n++
     for (const c of store.children(id)) walk(c)
   }
-  for (const r of roots) walk(r)
-  return n
+  for (const r of roots) {
+    const rev = rootShapeRev(store, r)
+    let entry = counts.get(r)
+    if (!entry || entry.rev !== rev) {
+      n = 0
+      walk(r)
+      entry = { rev, n }
+      counts.set(r, entry)
+    }
+    total += entry.n
+  }
+  return total
 }
 
 /** Root ids per page key ("" = implicit page), every root assigned exactly once. */

@@ -577,6 +577,8 @@ export class CanvasController {
   private dirty = new Set<string>()
   private dirtyHeader = false
   private fullPending = false
+  /** Text nodes whose font arrived: measured again on the next pass. */
+  private fontDirty = new Set<string>()
   private raf = 0
   private pendingPointer: { e: PointerEvent; p: Point } | null = null
   /** The plain press being handled (set by `onDown`, read by the `mousedown` that follows it). */
@@ -692,7 +694,7 @@ export class CanvasController {
   }
 
   /** True when a change to `id` cannot touch the active page (its root is on another page). */
-  private offPage(id: string): boolean {
+  private offPage(id: string, pageRoots?: () => ReadonlySet<string>): boolean {
     let n = this.store.getNode(id)
     let root = id
     for (let guard = 0; n && typeof n.parent === "string" && guard < 4096; guard++) {
@@ -700,7 +702,8 @@ export class CanvasController {
       n = this.store.getNode(root)
     }
     if (!n) return false
-    return !this.shownRoots.has(root) && !this.paged.children(null).includes(root)
+    if (this.shownRoots.has(root)) return false
+    return !(pageRoots ? pageRoots() : this.paged.rootSet()).has(root)
   }
 
   private makeView(): InstanceView {
@@ -793,17 +796,26 @@ export class CanvasController {
       this.store.onChange((c) => {
         // Board 27 §1: edits on other pages don't reach the canvas; a root that leaves the
         // active page (moved to another page) or a `pages` change needs a full pass.
-        const shown = c.nodes.size > 0 ? this.paged.children(null) : null
-        for (const id of c.nodes) {
-          if (this.shownRoots.has(id) && shown && !shown.includes(id)) this.fullPending = true
-          else if (!this.offPage(id)) this.dirty.add(id)
+        // A load is a full pass whatever it holds: its nodes are not looked at one by one
+        // (each lookup read the page's root list, 12 s of a 300k-node load).
+        const load = c.cause === "load"
+        // Read once per change, however many nodes it holds.
+        let shown: ReadonlySet<string> | null = null
+        const pageRoots = () => {
+          shown ??= this.paged.rootSet()
+          return shown
         }
+        if (!load)
+          for (const id of c.nodes) {
+            if (this.shownRoots.has(id) && !pageRoots().has(id)) this.fullPending = true
+            else if (!this.offPage(id, pageRoots)) this.dirty.add(id)
+          }
         if (c.header && this.pagesKeyNow() !== this.pagesKey) this.fullPending = true
         // Board 35: layers agents add on this page grow in (render only).
         const lr = this.layoutResult
         this.buildMotion.noteChange(
           c,
-          (id) => !!lr?.nodes.has(id) || this.offPage(id) || c.cause === "load",
+          (id) => load || !!lr?.nodes.has(id) || this.offPage(id, pageRoots),
         )
         // M6: placeholder frames and prompt nodes are tracked incrementally.
         if (c.cause === "load") this.agent.scanAll()
@@ -817,7 +829,10 @@ export class CanvasController {
       r.fonts.onFontLoaded((key) => {
         // A text being edited picks up the face as soon as it arrives.
         if (this.editing) mirrorFontFace(r.fonts, key.family, key.weight, key.style === "italic")
-        this.fullPending = true
+        // Only the text that waited for this family measures again (not the whole document).
+        const waiters = r.takeFontWaiters?.(key.family)
+        if (waiters) for (const id of waiters) this.fontDirty.add(id)
+        else this.fullPending = true
         this.schedule()
       }),
     )
@@ -893,7 +908,8 @@ export class CanvasController {
     const p = this.pendingPointer
     this.pendingPointer = null
     if (p) this.dragMove(p.e, p.p)
-    if (this.fullPending || this.dirtyHeader || this.dirty.size) this.relayout()
+    if (this.fullPending || this.dirtyHeader || this.dirty.size || this.fontDirty.size)
+      this.relayout()
   }
 
   private computeFull(): void {
@@ -919,7 +935,21 @@ export class CanvasController {
   private relayout(): void {
     const ids = [...this.dirty]
     const header = this.dirtyHeader
-    const full = this.fullPending || !this.layoutResult
+    const fonts = [...this.fontDirty]
+    this.fontDirty.clear()
+    // A font arrived: its text measures again first. With a header change, the full pass does.
+    let full = this.fullPending || !this.layoutResult || (fonts.length > 0 && header)
+    if (fonts.length > 0 && !full) {
+      this.resolver.invalidate()
+      try {
+        this.layoutResult = this.engine.update(this.input(), { nodes: [], remeasure: fonts })
+        this.renderer.invalidate(fonts)
+        this.renderer.setLayout(this.layoutResult)
+        this.opts.onLayout?.(this.layoutResult)
+      } catch {
+        full = true
+      }
+    }
     this.dirty.clear()
     this.dirtyHeader = false
     this.fullPending = false

@@ -206,3 +206,49 @@ Document fonts as assets land (M4), the 5k-node perf gate fails on the main-thre
 - **Pixel readout.** `Renderer.samplePixel(world)` replays the root pictures into a 1×1 CPU
   surface (transparent background) to read the document's own color and alpha of one document
   pixel (board 10 #4 "Pixel readout"); the host calls it on hover above the pixel-grid zoom.
+
+## Addendum (2026-11): contracts for large documents
+
+The pipeline keeps one rule: a frame costs what is visible, an edit costs what changed, and
+only a load may cost the whole document. These contracts follow from it.
+
+- `LayoutResult` of an incremental pass updates `nodes` and `subtrees` in place. Do not keep
+  an older result to compare boxes: the boxes a pass replaced are in `previous`. `roots` and
+  `subtrees` give paint order per root, `dirtyRoots` names the roots a pass touched, and
+  `order` is built on first read after a structural change.
+- `Renderer.setLayout` syncs only `dirtyRoots` when the result follows the last one; the hit
+  index is built per root on first use and drops only dirty roots.
+- A font that arrives re-measures only the text that waited for it: `Renderer.takeFontWaiters`
+  hands the node ids over and `DirtySet.remeasure` passes them to the engine.
+- Every paragraph is built from one font collection per font generation. A collection per
+  paragraph clones the variable font for each text (27 KB of wasm heap and 13 times the build
+  time). Drawable paragraphs are a bounded cache.
+- Zoomed out on WebGL, a root without a raster replays only within `REPLAY_FRAME_OPS` per
+  frame; past it, roots fill in as their rasters are made. A first frame records for at most
+  `RECORD_FIRST_MS`. Both only apply to documents too large to draw in one frame, and the
+  picture at rest is the same.
+- Scoped validation reads the store in place (`ValidateOptions.childrenOf`), and the first
+  scoped edit after a load is compared with a scoped run of its own nodes.
+- UI code reads the store in place (`liveDocument`, `M3Controller.peek`) for lookups and
+  scans. `store.toDocument()` copies every node: keep it for planners and small documents. An
+  export writes node by node (`serializeParts`).
+- Panels keep what they derive per root (`rootShapeRev`): the layer count and the layer rows
+  of a root are read again only when that root's shape changed.
+- The store keeps its sorted child lists while a node keeps its place among its siblings, and
+  counts root-list changes (`DocStore.rootsRev`) so the active page's roots are filtered again
+  only then.
+- Browser storage appends updates and compacts in tiers (`packages/sync/README.md`): an
+  autosave never rewrites a large document.
+
+Benches: `apps/web/bench/scale.ts` (headless) and `apps/web/bench/browser.ts` (the built app in
+Chromium), both run through `scripts/safe-run.sh`. Measured in the browser on an M5 Max:
+a 1M-node document of screens opens in about 19 s (23 s from browser storage) and holds 2.5 to
+2.8 GB of the tab's 4.2 GB heap; it holds a frame for pan, hover, edit, insert, delete and
+drag, and an export takes about 4 s. Load, edits and an export pass with the heap capped at
+3.3 GB. While the viewport moves, recording and rasterizing share `MOVING_FRAME_MS`; a zoom
+sweep from fit still has a few 150 to 300 ms pauses, which are garbage collections of that
+heap, and the frame labels are placed for every top-level frame on each zoom step. Not covered
+yet: one container or one page with very many direct children (the renderer culls roots one
+by one, a root's picture is recorded whole, and a structural edit sorts the sibling list
+again). At 100k siblings an edit takes 17 to 33 ms and an insert 50 to 220 ms; at 1M an edit
+takes about 270 ms.

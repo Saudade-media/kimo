@@ -6,7 +6,7 @@
  * separating comma at the start of the line and a blank line between entries, LF line
  * endings and a trailing newline. `serialize(parse(s)) === s` for every canonical `s`.
  */
-import { stripDefaults } from "./defaults-ops"
+import { stripDefaults, stripNodeDefaults } from "./defaults-ops"
 import { isObject, type JsonValue, KimoParseError, parseJson, setOwn } from "./json"
 import type { KimoDocument } from "./schema/document"
 
@@ -356,6 +356,59 @@ export function serialize(
     return `${JSON.stringify(k)}: ${body}`
   })
   return members.length === 0 ? "{}\n" : `{\n${members.join(",\n")}\n}\n`
+}
+
+/** Nodes per piece of {@link serializeParts}. */
+const PART_NODES = 2000
+
+/**
+ * {@link serialize} for a document too large to copy: the header as data, the nodes read one
+ * at a time through `node`. Yields the text in pieces; joined, they are exactly what
+ * `serialize({ ...header, nodes })` returns.
+ *
+ * @param header The document without `nodes`.
+ * @param ids Every node id, in any order.
+ */
+export function* serializeParts(
+  header: Record<string, unknown>,
+  ids: Iterable<string>,
+  node: (id: string) => unknown,
+  options: SerializeOptions = {},
+): Generator<string> {
+  const c = canonicalize(
+    { ...header, nodes: {} } as unknown as KimoDocument,
+    options,
+  ) as unknown as Record<string, JsonValue>
+  let head = "{\n"
+  for (const k of Object.keys(c)) {
+    if (k === "nodes") continue
+    const v = c[k] as JsonValue
+    const body = TABLES.has(k) && isObject(v) ? table(v as Record<string, JsonValue>) : compact(v)
+    head += `${JSON.stringify(k)}: ${body},\n`
+  }
+  head += '"nodes": '
+  const strip = options.stripDefaults !== false
+  let piece = head
+  let count = 0
+  for (const id of [...ids].sort(byCodeUnit)) {
+    const raw = node(id)
+    if (raw === undefined) continue
+    // The same path a whole document takes, for a table of this one node.
+    const one = order(
+      { nodes: { [id]: strip ? stripNodeDefaults(raw) : raw } },
+      "struct",
+      null,
+      true,
+      "",
+    ) as { nodes: Record<string, JsonValue> }
+    const line = `${JSON.stringify(id)}: ${compact(one.nodes[id] as JsonValue)}`
+    piece += count === 0 ? `{\n${line}` : `\n\n, ${line}`
+    if (++count % PART_NODES === 0) {
+      yield piece
+      piece = ""
+    }
+  }
+  yield `${piece}${count === 0 ? "{}" : "\n}"}\n}\n`
 }
 
 /**

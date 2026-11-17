@@ -18,10 +18,10 @@
   "dependencies": {
     "@kimo/editor-state": "workspace:*",
     "lib0": "^0.2.119",
-    "y-indexeddb": "^9.0.12",
     "yjs": "^13.6.33"
   },
   "devDependencies": {
-    "@kimo/core-schema": "workspace:*"
+    "@kimo/core-schema": "workspace:*",
+    "fake-indexeddb": "^6.2.8"
   }
 }

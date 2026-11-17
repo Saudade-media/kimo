@@ -24,6 +24,7 @@
  * positions.
  */
 import {
+  compareCodeUnits,
   compareSiblings,
   DOCUMENT_LEVEL_CODES,
   formatStatus,
@@ -420,9 +421,13 @@ export class YjsDocStore implements DocStore {
   private readonly byParent = new Map<string | null, Set<string>>()
   /**
    * Sorted child lists per parent and `at` (perf: `children()` is called for every node on
-   * every layout / expansion pass). Dropped for the old and new parent of each refreshed node.
+   * every layout / expansion pass). Dropped for the old and new parent of a refreshed node
+   * whose place among its siblings (parent, `at`, `order`) changed.
    */
   private readonly sortedKids = new Map<string | null, Map<string, readonly string[]>>()
+  /** parent id → how many of its children carry an `at` (they sit outside the plain list). */
+  private readonly atKids = new Map<string | null, number>()
+  private rootsRev_ = 0
 
   private epoch = randomToken(8)
   private seq = 0
@@ -469,6 +474,11 @@ export class YjsDocStore implements DocStore {
   }
   /** Binding targets (`$ref`) of every node that has any (header-scoped validation). */
   private readonly refsOf = new Map<string, readonly string[]>()
+  /**
+   * Nodes added, removed or reparented since the parent graph was last known to be a forest
+   * (see {@link treeIntact}): what a tree repair has to look at.
+   */
+  private readonly treeSuspects = new Set<string>()
   /** Set when node upkeep (not the header) asked for a full re-validation (see apply). */
   private nodesDirtyAll = false
   /**
@@ -576,14 +586,42 @@ export class YjsDocStore implements DocStore {
     return [...this.mirror.keys()]
   }
 
+  get rootsRev(): number {
+    return this.rootsRev_
+  }
+
+  /**
+   * The children of `parent` whose `order` is the given one, from the sorted list when it is
+   * cached and holds every child (none carries an `at`); else null.
+   */
+  private childIdsWithOrder(parent: string | null, order: string): string[] | null {
+    if ((this.atKids.get(parent) ?? 0) > 0) return null
+    const list = this.sortedKids.get(parent)?.get("\u0000")
+    if (!list) return null
+    const orderAt = (i: number) => String(this.mirror.get(list[i] as string)?.order)
+    let lo = 0
+    let hi = list.length
+    while (lo < hi) {
+      const mid = (lo + hi) >>> 1
+      if (compareCodeUnits(orderAt(mid), order) < 0) lo = mid + 1
+      else hi = mid
+    }
+    const out: string[] = []
+    for (let i = lo; i < list.length && orderAt(i) === order; i++) out.push(list[i] as string)
+    return out
+  }
+
   children(parent: string | null, at?: string | null): string[] {
     const want = at ?? undefined
     let byAt = this.sortedKids.get(parent)
     const cached = byAt?.get(want === undefined ? "\u0000" : want)
     // A copy: callers own the returned array.
     if (cached) return cached.slice()
+    const kids = this.byParent.get(parent)
+    // Nothing is cached for a node without children (most nodes: a map each adds up).
+    if (!kids || kids.size === 0) return []
     const list: { id: string; order: string }[] = []
-    for (const id of this.byParent.get(parent) ?? []) {
+    for (const id of kids) {
       const n = this.mirror.get(id) as NodeData
       if ((n.at ?? undefined) === want) list.push({ id, order: String(n.order) })
     }
@@ -708,10 +746,13 @@ export class YjsDocStore implements DocStore {
     let candidateResult: ValidationResult | null = null
     let scope: Scope | null = null
     if (this.options.validation !== "none" && draft.touched) {
-      const base = this.baselineIssues()
       scope = this.options.validation === "incremental" ? this.scopeOf(draft) : null
+      const base = this.baselineFor(scope)
       this.countRun(scope)
-      candidateResult = validate(draft.toDocument(), this.scopedOptions(scope))
+      candidateResult = validate(
+        draft.toDocument(scope ? "view" : true),
+        this.scopedOptions(scope, draft),
+      )
       const errors = candidateResult.errors.filter((i) => !base.errors.has(issueKey(i)))
       if (errors.length > 0) {
         return fail(
@@ -750,7 +791,10 @@ export class YjsDocStore implements DocStore {
     this.transact(options.origin, "ops", () => this.commit(draft))
     const after = this.revision
     // The candidate's issues are the committed state's now: no need to re-check those nodes.
-    if (candidateResult) this.absorb(candidateResult, scope)
+    // (Without a baseline yet, a scoped result cannot start one: the next scoped edit checks
+    // its own nodes again.)
+    if (candidateResult && (this.baseline !== null || scope === null))
+      this.absorb(candidateResult, scope)
     // A header edit marks everything dirty (its observer cannot tell what changed); one the
     // scoped run covered (variable values, theme order) leaves the baseline exact.
     if (scope?.variables && !wasAll && !this.nodesDirtyAll) this.dirtyAll = false
@@ -851,6 +895,8 @@ export class YjsDocStore implements DocStore {
   repair(): TreeRepair[] {
     this.assertAlive()
     if (this.ro) return []
+    if (this.treeIntact()) return []
+    this.treeSuspects.clear()
     const nodes = new Map<string, TreeFields>()
     for (const [id, n] of this.mirror) {
       const parent = typeof n.parent === "string" ? n.parent : null
@@ -881,6 +927,34 @@ export class YjsDocStore implements DocStore {
     })
     this.log_({ kind: "repair", revision: this.revision, time: this.options.now(), repairs })
     return repairs
+  }
+
+  /**
+   * True when the parent graph is known to be a forest without planning repairs over the whole
+   * document: it was one when the suspects were last cleared, and a cycle or an orphan can only
+   * appear through a node that was added, removed or reparented since (the suspects).
+   */
+  private treeIntact(): boolean {
+    const suspects = this.treeSuspects
+    if (suspects.size === 0) return true
+    if (suspects.size > 512) return false
+    for (const id of suspects) {
+      const n = this.mirror.get(id)
+      if (!n) {
+        // Removed: any node still naming it as parent is an orphan.
+        if ((this.byParent.get(id)?.size ?? 0) > 0) return false
+        continue
+      }
+      const seen = new Set<string>([id])
+      for (let p = n.parent; typeof p === "string"; ) {
+        const pn = this.mirror.get(p)
+        if (!pn || seen.has(p)) return false
+        seen.add(p)
+        p = pn.parent
+      }
+    }
+    suspects.clear()
+    return true
   }
 
   editText(id: string, edits: readonly TextEdit[], options: TextEditOptions): ApplyResult {
@@ -1156,6 +1230,7 @@ export class YjsDocStore implements DocStore {
     return {
       getNode: (id) => this.mirror.get(id),
       childIdsOf: (parent) => this.byParent.get(parent) ?? empty,
+      childIdsWithOrder: (parent, order) => this.childIdsWithOrder(parent, order),
       getVariable: (name) => this.yVars.get(name),
       variableNames: () => this.yVars.keys(),
       getThemeAxis: (axis) => this.yThemes.get(axis) as readonly string[] | undefined,
@@ -1309,10 +1384,7 @@ export class YjsDocStore implements DocStore {
   /** Re-reads one node from the Y.Doc into the mirror and the parent index. */
   private refresh(id: string): void {
     const old = this.mirror.get(id)
-    if (old) {
-      this.byParent.get(parentKey(old))?.delete(id)
-      this.sortedKids.delete(parentKey(old))
-    }
+    if (old) this.byParent.get(parentKey(old))?.delete(id)
     const y = this.yNodes.get(id)
     let next: NodeData | undefined
     if (y instanceof Y.Map) {
@@ -1343,7 +1415,6 @@ export class YjsDocStore implements DocStore {
       if (refs.length > 0) this.refsOf.set(id, refs)
       else this.refsOf.delete(id)
       const key = parentKey(n)
-      this.sortedKids.delete(key)
       let set = this.byParent.get(key)
       if (!set) {
         set = new Set()
@@ -1354,6 +1425,29 @@ export class YjsDocStore implements DocStore {
       this.mirror.delete(id)
       this.refsOf.delete(id)
     }
+    // The sorted lists stay while the node keeps its place among its siblings (most edits).
+    const placed =
+      old !== undefined &&
+      next !== undefined &&
+      parentKey(old) === parentKey(next) &&
+      old.at === next.at &&
+      old.order === next.order
+    if (!placed) {
+      if (old) this.sortedKids.delete(parentKey(old))
+      if (next) this.sortedKids.delete(parentKey(next))
+      for (const [n, by] of [
+        [old, -1],
+        [next, 1],
+      ] as const) {
+        if (n === undefined || (n.at ?? undefined) === undefined) continue
+        const count = (this.atKids.get(parentKey(n)) ?? 0) + by
+        if (count > 0) this.atKids.set(parentKey(n), count)
+        else this.atKids.delete(parentKey(n))
+      }
+    }
+    const root = (old && parentKey(old) === null) || (next && parentKey(next) === null)
+    if (root && !(placed && old?.page === next?.page)) this.rootsRev_++
+    if (!old || !next || old.parent !== next.parent) this.treeSuspects.add(id)
     this.pendingNodes.add(id)
     this.markDirty(id, old, next)
   }
@@ -1459,9 +1553,14 @@ export class YjsDocStore implements DocStore {
     return { nodes, variables: changed }
   }
 
-  private scopedOptions(scope: Scope | null): ValidateOptions | undefined {
+  private scopedOptions(scope: Scope | null, draft: Draft): ValidateOptions | undefined {
     if (!scope) return this.options.validateOptions
-    const o: ValidateOptions = { ...this.options.validateOptions, nodes: scope.nodes }
+    const o: ValidateOptions = {
+      ...this.options.validateOptions,
+      nodes: scope.nodes,
+      childrenOf: (p) => draft.childIds(p),
+      siblingsWithOrder: (p, order) => draft.childIdsWithOrder(p, order),
+    }
     if (scope.variables) o.variables = scope.variables
     return o
   }
@@ -1574,6 +1673,22 @@ export class YjsDocStore implements DocStore {
   }
 
   /**
+   * The committed state's issues an op group of `scope` is compared with. While no baseline
+   * exists (a loaded document that was never validated here), a scoped group is compared with
+   * the issues of its own nodes only, so the first edit of a large document does not validate
+   * all of it; the baseline starts with the first group that needs a full run.
+   */
+  private baselineFor(scope: Scope | null): Baseline {
+    if (scope === null || this.baseline !== null || this.options.validation === "full")
+      return this.baselineIssues()
+    const draft = new Draft(this.base(), this.draftOptions())
+    this.countRun(scope)
+    const r = validate(draft.toDocument("view"), this.scopedOptions(scope, draft))
+    const keyed = (list: ValidationIssue[]) => new Map(list.map((i) => [issueKey(i), i]))
+    return { errors: keyed(r.errors), warnings: keyed(r.warnings) }
+  }
+
+  /**
    * Issues of the committed state. Recomputed fully when there is none yet or a change needed
    * it; otherwise only the nodes changed since (undo/redo, remote updates) are re-checked.
    */
@@ -1584,10 +1699,10 @@ export class YjsDocStore implements DocStore {
       this.options.validation === "full" ||
       this.dirty.size > Math.max(256, this.mirror.size / 4)
     if (full || this.dirty.size > 0) {
-      const doc = new Draft(this.base(), this.draftOptions()).toDocument()
+      const draft = new Draft(this.base(), this.draftOptions())
       const scope: Scope | null = full ? null : { nodes: new Set(this.dirty), variables: null }
       this.countRun(scope)
-      const r = validate(doc, this.scopedOptions(scope))
+      const r = validate(draft.toDocument(scope ? "view" : true), this.scopedOptions(scope, draft))
       this.absorb(r, scope)
     }
     return this.baseline as Baseline

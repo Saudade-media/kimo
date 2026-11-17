@@ -6,6 +6,7 @@
 import type { DocStore, NodeData, UiState } from "@kimo/editor-state"
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react"
 import type { UiStore } from "../canvas/contract"
+import { treeHubFor } from "./tree-hub"
 
 /** Selects a slice of UI state. `select` must return a stable value for unchanged state. */
 export function useUi<T>(ui: UiStore, select: (s: UiState) => T): T {
@@ -115,55 +116,6 @@ export function useNodes(store: DocStore, ids: readonly string[]): readonly Node
 export interface NodeEntry {
   id: string
   node: NodeData
-}
-
-interface TreeHub {
-  rev: number
-  sigs: Map<string, string>
-  listeners: Set<() => void>
-}
-const treeHubs = new WeakMap<DocStore, TreeHub>()
-
-function treeSig(store: DocStore, id: string): string {
-  const n = store.getNode(id)
-  if (!n) return ""
-  // M3: whether it is a main and what an instance points at (canvas labels, layer glyphs).
-  const main = n.component !== undefined && n.component !== false ? "C" : ""
-  // Board 27 §1: a root's page (spec §5.6) decides which page tree it is listed in.
-  return `${String(n.parent)}\u0000${String(n.order)}\u0000${String(n.at)}\u0000${String(n.name)}\u0000${main}\u0000${typeof n.of === "string" ? n.of : ""}\u0000${typeof n.page === "string" ? n.page : ""}`
-}
-
-function treeHubFor(store: DocStore): TreeHub {
-  let hub = treeHubs.get(store)
-  if (!hub) {
-    const h: TreeHub = { rev: 0, sigs: new Map(), listeners: new Set() }
-    const scan = () => {
-      h.sigs.clear()
-      for (const id of store.nodeIds()) h.sigs.set(id, treeSig(store, id))
-    }
-    scan()
-    store.onChange((c) => {
-      let changed = false
-      if (c.cause === "load") {
-        scan()
-        changed = true
-      } else {
-        for (const id of c.nodes) {
-          const next = treeSig(store, id)
-          if (next === (h.sigs.get(id) ?? "")) continue
-          changed = true
-          if (next) h.sigs.set(id, next)
-          else h.sigs.delete(id)
-        }
-      }
-      if (!changed) return
-      h.rev++
-      for (const cb of [...h.listeners]) cb()
-    })
-    hub = h
-    treeHubs.set(store, h)
-  }
-  return hub
 }
 
 /**

@@ -32,7 +32,9 @@
  * of their own get an OpenTypeFeatureRow (LFdEa) marked "not in font" when the face lacks them —
  * checked against the face's GSUB / GPOS FeatureList (`fonts/font-features.ts`).
  */
+
 import { type KimoDocument, resolveVariable } from "@kimo/core-schema"
+import { documentView } from "@kimo/editor-state"
 import type { LayoutResult } from "@kimo/layout"
 import {
   CustomTagField,
@@ -771,7 +773,8 @@ function FontPickerHost({
   const runtime = useOptionalRuntime()
   const { session } = usePanel()
   // The document's fonts as of opening (IN THIS DOCUMENT): recomputed per open, not per edit.
-  const doc = useMemo(() => session.store.toDocument(), [session])
+  // Read in place: a copy of a very large document would not fit.
+  const doc = useMemo(() => documentView(session.store), [session])
   if (!runtime || !fonts) return null
   return (
     <FontPickerWithEntries

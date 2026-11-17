@@ -790,7 +790,16 @@ describe("incremental re-expansion (main-component edits)", () => {
 
     // inst000002 (another component) was never re-expanded.
     expect(v.getNode("inst000002")).toBe(otherRoot as never)
+
     // One re-expansion of inst000001 per invalidation.
     expect(v.instanceCount - count).toBe(4)
+
+    // A plain node read before becomes an instance: asked again, even when nothing moved.
+    table.plain00001 = { type: "rect", parent: null, order: "b0", w: 1 }
+    v.invalidate(["plain00001"], false)
+    expect(v.children("plain00001")).toEqual([])
+    table.plain00001 = { type: "instance", parent: null, order: "b0", of: "other00001" }
+    v.invalidate(["plain00001"], false)
+    expect(v.origin("plain00001")?.instance?.of).toBe("other00001")
   })
 })

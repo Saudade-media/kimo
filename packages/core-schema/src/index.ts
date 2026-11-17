@@ -157,6 +157,7 @@ export {
   parse,
   type SerializeOptions,
   serialize,
+  serializeParts,
   structOrder,
 } from "./serialize"
 export { buildTree, compareCodeUnits, compareSiblings, type Tree } from "./tree"

@@ -135,6 +135,7 @@ export {
   type UiState,
   type Viewport,
 } from "./ui-store"
+export { documentText, documentView } from "./view"
 export { createDocStore, YjsDocStore } from "./yjs-store"
 
 /** A new, empty, valid document at the current format version. */

@@ -168,7 +168,7 @@ export class BuildMotion {
       return false
     }
     for (const id of next.changed) {
-      const a = prev.nodes.get(id)
+      const a = next.previous ? next.previous.get(id) : prev.nodes.get(id)
       const b = next.nodes.get(id)
       if (!a || !b || !a.visible || !b.visible || isNew(id)) continue
       if (sameRect(a.world, b.world)) continue

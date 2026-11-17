@@ -14,6 +14,30 @@ the dates are those of the milestone commits.
 
 ## [Unreleased]
 
+## [1.2.1-beta.7] - 2026-11-18
+
+Documents with a million layers open, save and stay smooth, and the editor speaks Simplified
+Chinese. For installs on the Beta channel.
+
+### Added
+
+- The editor in Simplified Chinese. Pick it in Settings.
+
+### Changed
+
+- Documents with a million layers open, autosave, reopen, export and edit at 60 fps in the
+  browser. Zooming far out on one can still pause briefly.
+- Large documents are stored in the browser in parts. Older versions can't open such a
+  document (about 90,000 layers and up) once this version saved it.
+
+### Fixed
+
+- Autosave no longer fails without a word on very large documents.
+- The Text section shows the font, size and spacing a typography token sets.
+- The Row gap field shows 0 when no row gap is set, as the layout does.
+- Color and size changes to text inside a component instance are kept.
+- A long style name in the Fill row no longer pushes the opacity out of the field.
+
 ## [1.2.1-beta.6] - 2026-11-06
 
 Clearer multi-selection, and text keeps its font while you edit it. For installs on the Beta

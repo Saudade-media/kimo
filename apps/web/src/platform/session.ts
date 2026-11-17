@@ -29,6 +29,7 @@ import {
   createDocStore,
   createEmptyDocument,
   type DocStore,
+  documentText,
   isLocalOrigin,
   openDocument,
   serialize,
@@ -438,17 +439,17 @@ export class FileDocumentSession implements DocumentSession {
   /** Writes the untitled document to its recovery entry (autosave target until saved). */
   async writeUntitledSnapshot(): Promise<void> {
     if (!this.untitled || this.untitledEdits === 0) return
-    const doc = this.prepareWrite(this.store.toDocument())
+    const text = documentText(this.store, this.prepareWrite)
     await this.platform.recovery
       .write({
         id: untitledRecoveryId(this._ref),
         sourceRef: null,
         name: UNTITLED_NAME,
         reason: "untitled",
-        text: serialize(doc),
+        text,
         edits: this.untitledEdits,
         lastAutosaveAt: this.manager.now(),
-        layers: Object.keys(doc.nodes ?? {}).length,
+        layers: this.store.nodeIds().length,
       })
       .catch(() => {})
   }
@@ -545,7 +546,7 @@ export class FileDocumentSession implements DocumentSession {
         const shared = manager.shared
         return shared ? shared.open(this, doc as KimoDocument) : false
       },
-      onFileWrite: (doc) => manager.shared?.writing(this, doc as KimoDocument),
+      onFileWrite: (doc) => manager.shared?.writing(this, doc() as KimoDocument),
     })
     this.provider = p
     this.providerUnsubs.push(
@@ -949,7 +950,7 @@ export class FileDocumentSession implements DocumentSession {
 
   async saveAs(): Promise<FileRef | null> {
     const { platform } = this
-    const text = serialize(this.prepareWrite(this.store.toDocument()))
+    const text = documentText(this.store, this.prepareWrite)
     let target: FileRef | null = null
     const untitled = this.untitled
     try {
@@ -990,7 +991,7 @@ export class FileDocumentSession implements DocumentSession {
     }
     // Board 27 §8 rule gPEqc: library imports stay relative to the file's new location.
     if (!untitled) {
-      const imports = (this.store.toDocument().imports ?? {}) as Record<string, string>
+      const imports = (this.store.toHeader().imports ?? {}) as Record<string, string>
       const rebased = rebaseRelativeRefs(imports, this._ref, target)
       if (rebased) {
         this.store.apply(
@@ -1003,13 +1004,12 @@ export class FileDocumentSession implements DocumentSession {
       }
     }
     // The document as it is now (edits made while the dialog was open included).
-    const written = this.prepareWrite(this.store.toDocument())
-    const out = serialize(written)
+    const out = documentText(this.store, this.prepareWrite)
     const oldRef = this._ref
     const shared = this.manager.shared
     // Multiplayer: a shared document records the store state the new file holds (taken with the
     // document being written), so reopening it there adds nothing the room already has.
-    const committed = shared?.writing(this, written)
+    const committed = shared?.writing(this, this.prepareWrite(this.store.toDocument()))
     await platform.files.writeTextAtomic(target, out, { mkdirs: true })
     committed?.()
     // ...and its room follows the session to the new file before the session reads it.
@@ -1282,12 +1282,11 @@ export class FileDocumentSession implements DocumentSession {
 
   /** Top-level frames of the document (the close prompt's "its 12 frames"). */
   topLevelFrames(): number {
-    const doc = this.store.toDocument() as unknown as {
-      nodes?: Record<string, { type?: string; parent?: string | null }>
-    }
     let n = 0
-    for (const node of Object.values(doc.nodes ?? {}))
+    for (const id of this.store.nodeIds()) {
+      const node = this.store.getNode(id)
       if (node && node.type === "frame" && (node.parent ?? null) === null) n++
+    }
     return n
   }
 

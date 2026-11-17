@@ -105,7 +105,7 @@ export function InstanceSection({ m3, id }: { m3: M3Controller; id: string }) {
               <Icon name="component" size={12} />
             </span>
             <span className="m3-component-chip__name">
-              {componentName(m3.doc(), m3.libraries(), of)}
+              {componentName(m3.peek(), m3.libraries(), of)}
             </span>
             <span className="m3-component-chip__spacer" />
             <span className="m3-component-chip__source">{alias ?? "local"}</span>
@@ -205,7 +205,7 @@ export function PropertiesSection({ m3, id }: { m3: M3Controller; id: string }) 
   const store = m3.session.store
   const n = store.getNode(id)
   const of = String(n?.of ?? "")
-  const props = propsOfInstance(m3.doc(), m3.libraries(), of)
+  const props = propsOfInstance(m3.peek(), m3.libraries(), of)
   const [swapFor, setSwapFor] = useState<{ prop: string; anchor: HTMLElement } | null>(null)
   if (!n || props.length === 0) return null
   const args = isObj(n.args) ? n.args : {}
@@ -247,7 +247,7 @@ export function PropertiesSection({ m3, id }: { m3: M3Controller; id: string }) 
               value={
                 type === "instance"
                   ? typeof value === "string"
-                    ? componentName(m3.doc(), m3.libraries(), value)
+                    ? componentName(m3.peek(), m3.libraries(), value)
                     : undefined
                   : typeof value === "string" || typeof value === "boolean"
                     ? value
@@ -329,7 +329,7 @@ export function PropertiesSection({ m3, id }: { m3: M3Controller; id: string }) 
 export function ThemeSection({ m3, id }: { m3: M3Controller; id: string }) {
   useBusValue(m3.rev)
   const view = m3.view()
-  const doc = m3.doc() as KimoDocument
+  const doc = m3.peek() as KimoDocument
   const libs = m3.libraries()
   const n = view.getNode(id)
   const virtual = view.isVirtual(id)
@@ -463,7 +463,7 @@ export function ComponentSection({ m3, id }: { m3: M3Controller; id: string }) {
   const [enumTab, setEnumTab] = useState<Record<string, string>>({})
   const drag = useRef<string | null>(null)
   if (!n?.component) return null
-  const doc = m3.doc()
+  const doc = m3.peek()
   const props = declaredProps({ doc, libraries: m3.libraries() }, { alias: null, id, node: n })
   const derived = n.type === "instance"
   const meta = isObj(n.meta) ? n.meta : {}
@@ -960,7 +960,7 @@ export function SlotSection({ m3, id }: { m3: M3Controller; id: string }) {
   const n = store.getNode(id)
   const [add, setAdd] = useState<HTMLElement | null>(null)
   if (n?.type !== "frame") return null
-  const doc = m3.doc()
+  const doc = m3.peek()
   // The enclosing main (slots are frames inside a component).
   let main: string | null = null
   for (let cur: unknown = id; typeof cur === "string"; cur = store.getNode(cur)?.parent) {

@@ -12,6 +12,7 @@
  */
 
 import { referencedAssets } from "@kimo/core-schema"
+import { documentView } from "@kimo/editor-state"
 import { createLayoutEngine, type LayoutResult } from "@kimo/layout"
 import { KIMO_OPEN_FILTER } from "@kimo/platform"
 import type { DocumentFontFace, FontFaceKey, OverlayTheme } from "@kimo/renderer"
@@ -429,7 +430,7 @@ function EditorShell({
         if (e) known[k] = e
       }
       if (!manifest && keys.some((k) => isFontAsset(k)))
-        for (const r of referencedAssets(session.store.toDocument() as never))
+        for (const r of referencedAssets(documentView(session.store) as never))
           await assets.info(`./assets/${r}`).catch(() => null)
       const next = await loadDocumentFontFaces({ ...known, ...manifest }, keys, (k) =>
         assets.bytes(k),

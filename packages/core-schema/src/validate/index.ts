@@ -76,6 +76,19 @@ export interface ValidateOptions {
    * are all the issues it can change.
    */
   variables?: Iterable<string>
+  /**
+   * With `nodes` (incremental mode): the ids whose `parent` is the given one (any `at`; null =
+   * roots), from the caller's index. The run then never scans the node table, so its cost
+   * follows the scope, not the document size. The caller guarantees every entry of `nodes` in
+   * the document is an object (a store's node table is).
+   */
+  childrenOf?: (parent: string | null) => Iterable<string>
+  /**
+   * With `childrenOf`: those ids narrowed to one `order`, or null when the caller has no index
+   * for that parent (the run then reads `childrenOf`). Keeps the sibling-order check off the
+   * whole child list of a parent with very many children.
+   */
+  siblingsWithOrder?: (parent: string | null, order: string) => Iterable<string> | null
 }
 
 type Obj = Record<string, unknown>
@@ -179,7 +192,10 @@ export function validate(input: unknown, options: ValidateOptions = {}): Validat
 
 class Validation {
   private readonly doc: KimoDocument
-  private readonly nodes: Record<string, Obj> = {}
+  private readonly nodes: Record<string, Obj>
+  /** The caller's children index of an incremental run (ValidateOptions `childrenOf`). */
+  private readonly childrenOf: ((parent: string | null) => Iterable<string>) | null
+  private readonly siblingsWithOrder: ValidateOptions["siblingsWithOrder"] | null
   private readonly variables: Record<string, Obj> = {}
   private readonly libraries: Libraries
   private readonly features: Set<string>
@@ -198,8 +214,16 @@ class Validation {
     private readonly sink: IssueSink,
   ) {
     this.doc = raw as unknown as KimoDocument
-    if (isObject(raw.nodes)) {
-      for (const [id, n] of Object.entries(raw.nodes)) if (isObject(n)) this.nodes[id] = n
+    this.childrenOf = (options.nodes && options.childrenOf) || null
+    this.siblingsWithOrder = (this.childrenOf && options.siblingsWithOrder) || null
+    if (this.childrenOf && isObject(raw.nodes)) {
+      // Indexed incremental run: read the caller's table in place (no O(document) copy).
+      this.nodes = raw.nodes as Record<string, Obj>
+    } else {
+      this.nodes = {}
+      if (isObject(raw.nodes)) {
+        for (const [id, n] of Object.entries(raw.nodes)) if (isObject(n)) this.nodes[id] = n
+      }
     }
     if (isObject(raw.variables)) {
       for (const [name, v] of Object.entries(raw.variables))
@@ -402,6 +426,8 @@ class Validation {
     let wanted: Set<string> | null = null
     let parents: Set<unknown> | null = null
     let orders: Set<unknown> | null = null
+    /** Siblings answered by the caller's order index (their parents are not scanned). */
+    const near = new Map<string, Obj>()
     if (this.scope) {
       wanted = new Set()
       parents = new Set()
@@ -410,12 +436,23 @@ class Validation {
         const key = groupKey(n)
         if (key === null) continue
         wanted.add(key)
-        parents.add(n.parent)
         orders.add(n.order)
+        const ids = this.siblingsWithOrder?.(n.parent as string | null, n.order as string)
+        if (!ids) {
+          parents.add(n.parent)
+          continue
+        }
+        for (const id of ids) {
+          const s = this.nodes[id]
+          if (s) near.set(id, s)
+        }
       }
     }
-    for (const [id, n] of Object.entries(this.nodes)) {
-      if (parents && !(orders?.has(n.order) && parents.has(n.parent))) continue
+    const scanned = this.siblingCandidates(parents)
+    const candidates =
+      near.size === 0 ? scanned : [...near, ...[...scanned].filter(([id]) => !near.has(id))]
+    for (const [id, n] of candidates) {
+      if (parents && !(orders?.has(n.order) && (near.has(id) || parents.has(n.parent)))) continue
       const key = groupKey(n)
       if (key === null || (wanted && !wanted.has(key))) continue
       getOrInit(
@@ -465,9 +502,9 @@ class Validation {
       if (n.type !== "instance" || !isObject(n.overrides)) continue
       for (const [key, ov] of Object.entries(n.overrides)) {
         if (!isObject(ov) || ov.replace !== true) continue
-        const count = Object.values(this.nodes).filter(
-          (c) => c.parent === id && c.at === key,
-        ).length
+        const count = this.childrenOf
+          ? [...this.childrenOf(id)].filter((c) => this.nodes[c]?.at === key).length
+          : Object.values(this.nodes).filter((c) => c.parent === id && c.at === key).length
         if (count !== 1) {
           this.sink.add(
             "REPLACE_COUNT",
@@ -477,6 +514,21 @@ class Validation {
         }
       }
     }
+  }
+
+  /** Nodes that can share a sibling group with a scoped node: all, or the parents' children. */
+  private siblingCandidates(parents: ReadonlySet<unknown> | null): Iterable<[string, Obj]> {
+    const index = this.childrenOf
+    if (!parents || !index) return Object.entries(this.nodes)
+    const out: [string, Obj][] = []
+    for (const p of parents) {
+      if (p !== null && typeof p !== "string") continue
+      for (const id of index(p)) {
+        const n = this.nodes[id]
+        if (n) out.push([id, n])
+      }
+    }
+    return out
   }
 
   /** Ancestors of a node (nearest first), cycle-safe. */
@@ -1429,13 +1481,24 @@ class Validation {
       }
     }
     const kids = new Map<string, Obj[]>()
-    for (const n of Object.values(this.nodes)) {
-      if (typeof n.parent !== "string" || n.at !== undefined) continue
-      if (this.scope && !this.scope.has(n.parent)) continue
-      const list = kids.get(n.parent) ?? []
-      list.push(n)
-      kids.set(n.parent, list)
-    }
+    if (this.childrenOf) {
+      for (const [id, p] of this.scoped()) {
+        if (p.type !== "frame" || !isObject(p.layout)) continue
+        const list: Obj[] = []
+        for (const c of this.childrenOf(id)) {
+          const n = this.nodes[c]
+          if (n && n.at === undefined) list.push(n)
+        }
+        kids.set(id, list)
+      }
+    } else
+      for (const n of Object.values(this.nodes)) {
+        if (typeof n.parent !== "string" || n.at !== undefined) continue
+        if (this.scope && !this.scope.has(n.parent)) continue
+        const list = kids.get(n.parent) ?? []
+        list.push(n)
+        kids.set(n.parent, list)
+      }
     const rawPages = (this.doc as unknown as Obj).pages
     const pages = isObject(rawPages) ? rawPages : null
     for (const [id, n] of this.scoped()) {

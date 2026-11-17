@@ -9,7 +9,7 @@
  * - `@kimo/sync`: also `FileDocumentProvider`, the runtime-neutral M4 file provider over an
  *   `AtomicFileStore` (`@kimo/platform` files);
  * - `@kimo/sync/file`: `FileProvider` (Bun/Node file system);
- * - `@kimo/sync/indexeddb`: `IndexedDbProvider` (browser/worker, y-indexeddb);
+ * - `@kimo/sync/indexeddb`: `IndexedDbProvider` (browser/worker);
  * - `@kimo/sync/mp`: the `kimo-mp/1` protocol core (no CRDT code; the relay loads only this).
  */
 export type { DocStore } from "@kimo/editor-state"

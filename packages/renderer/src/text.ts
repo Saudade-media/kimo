@@ -8,6 +8,7 @@ import type {
   FontWeight as CkFontWeight,
   ParagraphStyle as CkParagraphStyle,
   TextStyle as CkTextStyle,
+  FontCollection,
   Paint,
   Paragraph,
 } from "canvaskit-wasm"
@@ -36,6 +37,13 @@ export function applyCase(text: string, c: ResolvedTextStyle["case"]): string {
 }
 
 const NO_WRAP_WIDTH = 1e7
+
+/**
+ * Drawable paragraphs kept (one per text node, least recently drawn first out). A paragraph is
+ * only read while its root's picture is recorded; kept without a bound, a 300k-node document
+ * filled the wasm heap and aborted the renderer.
+ */
+const DRAW_CACHE_MAX = 20_000
 
 export class TextEngine {
   private readonly measureCache = new Map<string, TextMetrics>()
@@ -93,13 +101,52 @@ export class TextEngine {
     return style
   }
 
+  /** Node ids by family (lower case) that asked for a face of it that was not there. */
+  private readonly waiting = new Map<string, Set<string>>()
+
   private ensureFonts(input: TextMeasureInput): void {
     for (const r of input.runs) {
       const { fontFamily, fontWeight, italic } = r.style
       const st = italic ? "italic" : "normal"
-      if (!this.fonts.has(fontFamily, fontWeight, st) && !this.fonts.isMissing(fontFamily))
-        void this.fonts.ensureFont(fontFamily, fontWeight, st)
+      if (this.fonts.has(fontFamily, fontWeight, st)) continue
+      const fam = fontFamily.toLowerCase()
+      let ids = this.waiting.get(fam)
+      if (!ids) {
+        ids = new Set()
+        this.waiting.set(fam, ids)
+      }
+      ids.add(input.nodeId)
+      if (!this.fonts.isMissing(fontFamily)) void this.fonts.ensureFont(fontFamily, fontWeight, st)
     }
+  }
+
+  /** The nodes that waited for a face of `family`, handed over once (see `Renderer`). */
+  takeWaiting(family: string): string[] {
+    const fam = family.toLowerCase()
+    const ids = this.waiting.get(fam)
+    if (!ids) return []
+    this.waiting.delete(fam)
+    return [...ids]
+  }
+
+  private collection: FontCollection | null = null
+  private collectionGen = -1
+  /**
+   * One font collection for every paragraph, replaced when a font registers (its typeface
+   * cache would not see the new face). A collection per paragraph, which is what
+   * `MakeFromFontProvider` makes, clones the variable font for each text: 27 KB of wasm heap
+   * kept by the recorded picture and 13 times the build time.
+   */
+  private fontCollection(): FontCollection {
+    if (!this.collection || this.collectionGen !== this.fonts.generation) {
+      this.collection?.delete()
+      const fc = this.ck.FontCollection.Make()
+      fc.setDefaultFontManager(this.fonts.provider)
+      fc.enableFontFallback()
+      this.collection = fc
+      this.collectionGen = this.fonts.generation
+    }
+    return this.collection
   }
 
   /** Builds a laid-out paragraph. Caller owns (and must delete) it. */
@@ -120,9 +167,9 @@ export class TextEngine {
       applyRoundingHack: false,
       replaceTabCharacters: true,
     }
-    const builder = ck.ParagraphBuilder.MakeFromFontProvider(
+    const builder = ck.ParagraphBuilder.MakeFromFontCollection(
       new ck.ParagraphStyle(pstyle),
-      this.fonts.provider,
+      this.fontCollection(),
     )
     const color = fill && "color" in fill ? fill.color : null
     for (const run of input.runs) {
@@ -153,7 +200,11 @@ export class TextEngine {
   measure(input: TextMeasureInput, maxWidth: number | undefined): TextMetrics {
     const key = `${this.fonts.generation}|${maxWidth ?? "-"}|${JSON.stringify(input.runs)}|${input.style.align}`
     const hit = this.measureCache.get(key)
-    if (hit) return hit
+    if (hit) {
+      // A cached measure skips `build`: this node still waits for the faces it lacks.
+      this.ensureFonts(input)
+      return hit
+    }
     const para = this.build(input, null, maxWidth)
     const m = this.metricsOf(para, maxWidth !== undefined)
     para.delete()
@@ -170,10 +221,24 @@ export class TextEngine {
     const fillKey = !fill ? "-" : "color" in fill ? Array.from(fill.color).join(",") : fill.key
     const key = `${this.fonts.generation}|${width ?? "-"}|${fillKey}|${JSON.stringify(input.runs)}|${input.style.align}`
     const cached = this.drawCache.get(input.nodeId)
-    if (cached?.key === key) return cached.para
+    if (cached) this.drawCache.delete(input.nodeId)
+    if (cached?.key === key) {
+      // Back in as the most recently used.
+      this.drawCache.set(input.nodeId, cached)
+      return cached.para
+    }
     cached?.para.delete()
     const para = this.build(input, fill, width)
     this.drawCache.set(input.nodeId, { key, para })
+    if (this.drawCache.size > DRAW_CACHE_MAX) {
+      // The least recently drawn goes: its picture is recorded and no longer reads it.
+      const [oldest, entry] = this.drawCache.entries().next().value as [
+        string,
+        { key: string; para: Paragraph },
+      ]
+      entry.para.delete()
+      this.drawCache.delete(oldest)
+    }
     return para
   }
 
@@ -237,6 +302,8 @@ export class TextEngine {
 
   dispose(): void {
     this.invalidate()
+    this.collection?.delete()
+    this.collection = null
     this.bg?.delete()
     this.bg = null
   }

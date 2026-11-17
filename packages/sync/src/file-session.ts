@@ -22,13 +22,13 @@
 import {
   createEmptyDocument,
   type DocStore,
+  documentText,
   KimoParseError,
   type OpenOptions,
   type OpenResult,
   openDocument,
   type ReadOnlyReason,
   type Revision,
-  serialize,
 } from "@kimo/editor-state"
 import { BaseProvider, type SyncStatus } from "./provider"
 import { recoveryIdFor } from "./sha256"
@@ -148,7 +148,9 @@ export interface FileDocumentProviderOptions {
   /**
    * Adds derived header data to the document right before it is written (file saves, recovery
    * copies, the "ours" side of a merge), without editing the store: board 28 lists the font
-   * assets the text uses in the `assets` manifest here. Must be pure and idempotent.
+   * assets the text uses in the `assets` manifest here. Must be pure and idempotent. For a
+   * save it gets a read-through view of the document (no copy of the nodes) and only its
+   * header members are written.
    */
   prepareWrite?: (doc: KimoDoc) => KimoDoc
   /**
@@ -159,11 +161,12 @@ export interface FileDocumentProviderOptions {
    */
   openInto?: (doc: KimoDoc, store: DocStore) => Promise<boolean>
   /**
-   * Called synchronously with the document right before it is written to the working file; the
-   * function it returns runs once the file holds it (the write landed, or the file already had
-   * that text). Multiplayer records the store state the shared file corresponds to here.
+   * Called synchronously right before the document is written to the working file, with a
+   * function that returns it (a copy: call it only when needed); the function it returns runs
+   * once the file holds it (the write landed, or the file already had that text). Multiplayer
+   * records the store state the shared file corresponds to here.
    */
-  onFileWrite?: (doc: KimoDoc) => (() => void) | undefined
+  onFileWrite?: (doc: () => KimoDoc) => (() => void) | undefined
 }
 
 interface UndoSnapshot {
@@ -863,7 +866,7 @@ export class FileDocumentProvider extends BaseProvider implements FileSessionPro
     if (!store || !this.canSave)
       throw new SaveRefusedError("READ_ONLY", "No recovery writes for a read-only file")
     if (!this.recovery) throw new SaveRefusedError("READ_ONLY", "No recovery store")
-    const text = serialize(this.toWrite(store))
+    const text = documentText(store, this.opts.prepareWrite)
     // A periodic snapshot keeps the reason of a pending save failure (board 17 copy).
     if (reason === "snapshot" && this._lastFailure)
       reason =
@@ -900,8 +903,8 @@ export class FileDocumentProvider extends BaseProvider implements FileSessionPro
       const store = this._store
       if (!store || !this.canSave) throw new SaveRefusedError("READ_ONLY", "File is read-only")
       const revision = store.revision
-      const doc = this.toWrite(store)
-      const text = serialize(doc)
+      // Written node by node: a large document has no room for a copy of itself per save.
+      const text = documentText(store, this.opts.prepareWrite)
       const editsAtStart = this._edits
       if (target === "recovery") {
         this._dirty = false
@@ -932,7 +935,7 @@ export class FileDocumentProvider extends BaseProvider implements FileSessionPro
         }
       }
       this._dirty = false
-      const written = this.opts.onFileWrite?.(doc)
+      const written = this.opts.onFileWrite?.(() => this.toWrite(store))
       if (!force && this.base === text) {
         written?.()
         this._edits = 0

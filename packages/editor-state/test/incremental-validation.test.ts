@@ -346,6 +346,48 @@ describe("incremental validation", () => {
     })
   }
 
+  test("first scoped edits after loading a document that already has errors: same decisions", () => {
+    // Loaded without validation (as a file from disk can be): one instance holds an override
+    // whose layer does not exist. The first edits find no baseline yet.
+    const doc = themedComponents() as unknown as { nodes: Record<string, unknown> }
+    doc.nodes.Inst000009 = {
+      type: "instance",
+      parent: "Grp0000001",
+      order: "a2",
+      of: "Main000001",
+      overrides: { Missing001: { set: { fill: "#FF0000" } } },
+    }
+    const [inc, full] = (["incremental", "full"] as const).map((validation) => {
+      const s = new YjsDocStore({ validation, jitter: 0, random: rng(3) })
+      s.loadDocument(doc as unknown as KimoDocument, { validate: false })
+      return s
+    }) as [YjsDocStore, YjsDocStore]
+    const ops: Op[] = [
+      // An unrelated node, the broken node itself, a new error elsewhere, then a valid edit.
+      { op: "update", id: "Page000001", set: { w: 5 } },
+      { op: "update", id: "Inst000009", set: { x: 3 } },
+      {
+        op: "update",
+        id: "Inst000003",
+        set: { overrides: { Nope000001: { set: { fill: "#00FF00" } } } },
+      },
+      { op: "update", id: "Page000001", set: { w: 7 } },
+    ]
+    const decision = (r: ApplyResult) =>
+      r.ok
+        ? "ok"
+        : r.errors
+            .map((e) => e.code)
+            .sort()
+            .join()
+    for (const op of ops) {
+      const a = inc.apply(op, { origin: "user" })
+      const b = full.apply(op, { origin: "user" })
+      expect(decision(a)).toBe(decision(b))
+    }
+    expect(jsonEqual(inc.toDocument(), full.toDocument())).toBe(true)
+  })
+
   test("document-level lints survive a scoped header edit (no new warnings on the next full run)", () => {
     const doc = themedComponents() as unknown as { variables: Record<string, unknown> }
     doc.variables.unused = { type: "color", value: "#111111" }

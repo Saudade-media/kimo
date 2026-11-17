@@ -23,6 +23,7 @@ import { M3_TOAST_COPY } from "../../canvas/contract"
 import { currentHeader } from "../../lib/header"
 import { type Bus, createBus } from "../../lib/hooks"
 import { t } from "../../lib/i18n"
+import { liveDocument } from "../../lib/live-doc"
 import type { FileSession, Gesture } from "../session"
 import { deleteDependents, deletedRoots } from "./delete-deps"
 import { LibraryManager } from "./libraries"
@@ -182,7 +183,10 @@ export class M3Controller {
   private view_: ExpandedView
   private libVersion = -1
   private doc_: { rev: string; doc: KimoDocument } | null = null
+  private peek_: { rev: string; doc: KimoDocument } | null = null
   private broken_: { key: string; ids: ReadonlySet<string> } | null = null
+  /** Ids of the instance nodes, kept up to date as the store changes (null: not scanned yet). */
+  private instances_: Set<string> | null = null
   private dontAsk = new Set<string>()
   private announced = new Set<string>()
   private nextToast = 1
@@ -227,7 +231,14 @@ export class M3Controller {
           this.importsKey = key
         }
         const all = c.cause === "load" || importsChanged
-        this.view_.invalidate(all ? undefined : c.nodes)
+        if (all) this.instances_ = null
+        else if (this.instances_)
+          for (const id of c.nodes) {
+            if (store.getNode(id)?.type === "instance") this.instances_.add(id)
+            else this.instances_.delete(id)
+          }
+        if (all) this.view_.invalidate()
+        else this.view_.invalidate(c.nodes, this.moved(c.nodes))
         this.rev.set(this.rev.get() + 1)
         if (all || this.touchesComponents(c.nodes)) this.compRev.set(this.compRev.get() + 1)
         if (all) this.scanRows()
@@ -286,6 +297,17 @@ export class M3Controller {
       const n = store.getNode(id)
       if (n) this.rowNodes.set(id, n)
     }
+  }
+
+  /** True when one of `ids` existed before and now sits under another parent or slot. */
+  private moved(ids: ReadonlySet<string>): boolean {
+    const store = this.session.store
+    for (const id of ids) {
+      const prev = this.rowNodes.get(id)
+      const next = store.getNode(id)
+      if (prev && next && (prev.parent !== next.parent || prev.at !== next.at)) return true
+    }
+    return false
   }
 
   /** Updates {@link rowNodes} for `ids`; true when the rows of one of them changed. */
@@ -358,11 +380,39 @@ export class M3Controller {
     const key = `${this.treeRev.get()}|${this.libs.version}|${vars.join("\u0000")}`
     if (this.broken_?.key !== key) {
       const ids = new Set<string>()
-      for (const b of brokenOverrides({ doc: this.doc(), libraries: this.libraries() }))
-        ids.add(b.instance)
+      // Only instances hold overrides: without any, nothing is read (and no document is copied).
+      const instances = this.instanceIds()
+      if (instances.size > 0)
+        for (const b of brokenOverrides(
+          { doc: this.peek(), libraries: this.libraries() },
+          undefined,
+          instances,
+        ))
+          ids.add(b.instance)
       this.broken_ = { key, ids }
     }
     return this.broken_.ids
+  }
+
+  private instanceIds(): ReadonlySet<string> {
+    if (!this.instances_) {
+      const store = this.session.store
+      const ids = new Set<string>()
+      for (const id of store.nodeIds()) if (store.getNode(id)?.type === "instance") ids.add(id)
+      this.instances_ = ids
+    }
+    return this.instances_
+  }
+
+  /**
+   * The current document read in place (nothing copied; one view per revision): for read-only
+   * lookups and scans. {@link doc} copies it, for planners that keep or change what they read.
+   */
+  peek(): KimoDocument {
+    const r = this.session.store.revision
+    const key = `${r.epoch}:${r.seq}`
+    if (this.peek_?.rev !== key) this.peek_ = { rev: key, doc: liveDocument(this.session.store) }
+    return this.peek_.doc
   }
 
   /** The current document (copied once per revision). */

@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test"
 import { readFileSync } from "node:fs"
 import { join } from "node:path"
 import Schema from "typebox/schema"
-import { KimoParseError, parse, serialize, validate } from "../src/index"
+import { KimoParseError, parse, serialize, serializeParts, validate } from "../src/index"
 import { codes, FIXTURES, fixtureFiles, readFixture, uiLibrary } from "./helpers"
 
 const libraries = { ui: uiLibrary() }
@@ -33,6 +33,10 @@ describe("valid fixtures", () => {
     })
     test(`${file} is canonical and accepted by the generated JSON Schema`, () => {
       expect(serialize(parse(text))).toBe(text)
+      // Written node by node (large documents): the same text.
+      const { nodes, ...header } = parse(text) as unknown as { nodes: Record<string, unknown> }
+      const ids = Object.keys(nodes).reverse()
+      expect([...serializeParts(header, ids, (id) => nodes[id])].join("")).toBe(text)
       expect(schemaValidator.Check(parse(text))).toBe(true)
     })
   }

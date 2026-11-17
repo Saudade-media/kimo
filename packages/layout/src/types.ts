@@ -258,14 +258,39 @@ export interface LayoutIssue {
   path?: string
 }
 
-/** Result of a layout pass. Immutable snapshot; incremental passes return a new object. */
+/**
+ * Result of a layout pass. Every pass returns a new object, but an incremental pass updates
+ * `nodes` and `subtrees` of the previous result in place (a copy per edit costs O(document)),
+ * so an earlier result is not a snapshot: read what a pass replaced from `previous`.
+ */
 export interface LayoutResult {
   /** Monotonic pass counter (renderer uses it to skip unchanged layouts). */
   readonly version: number
   /** Node id → layout. Contains every laid-out node reachable from the roots. */
   readonly nodes: ReadonlyMap<string, NodeLayout>
-  /** Paint order: depth-first, parents before children, siblings in sibling order. */
+  /**
+   * Paint order: depth-first, parents before children, siblings in sibling order. The Yoga
+   * engine builds it on first read after a structural change (O(document)): per-frame and
+   * per-edit code reads `roots` and `subtrees` instead.
+   */
   readonly order: readonly string[]
+  /** Root ids in paint order (`order` is their `subtrees`, concatenated). */
+  readonly roots?: readonly string[]
+  /**
+   * Paint order of each root's subtree (the root first). A root keeps the same array while no
+   * child list below it changes.
+   */
+  readonly subtrees?: ReadonlyMap<string, readonly string[]>
+  /**
+   * Incremental passes: ids of the roots that hold a node this pass re-read, moved, added or
+   * removed (a removed root included). Absent on a full pass: every root may have changed.
+   */
+  readonly dirtyRoots?: ReadonlySet<string>
+  /**
+   * Incremental passes: the layouts that `changed` nodes had before this pass (none for a new
+   * node).
+   */
+  readonly previous?: ReadonlyMap<string, NodeLayout>
   /** Union of root world boxes (zoom-to-fit), or null for an empty document. */
   readonly bounds: Rect | null
   readonly issues: readonly LayoutIssue[]
@@ -286,6 +311,11 @@ export interface DirtySet {
    * (perf: a variable mode switch). Without it a header change is a full refresh.
    */
   valuesOnly?: boolean
+  /**
+   * With no `nodes` and no `header`: text nodes to measure again although their data did not
+   * change (the font they waited for arrived). Every other node keeps its layout.
+   */
+  remeasure?: Iterable<string>
 }
 
 /** Keys whose change can affect geometry. Anything else is paint-only (renderer redraws). */

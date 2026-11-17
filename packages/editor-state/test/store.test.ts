@@ -6,6 +6,7 @@ import {
   createEmptyDocument,
   createUiStore,
   DocumentInvalidError,
+  documentText,
   exportDocument,
   importDocument,
   type NormalizedOp,
@@ -365,4 +366,24 @@ describe("UI store", () => {
     expect(ui.getState().hovered).toBeNull()
     off()
   })
+})
+
+test("documentText writes what serialize(toDocument()) writes, without the copy", () => {
+  for (const name of ["components-local.kimo", "themes-multi-axis.kimo", "pages.kimo"]) {
+    const store = createDocStore(fixture(name), { jitter: 0 })
+    store.apply(
+      { op: "insert", id: "Added00001", node: { type: "rect", parent: null, w: 4, h: 4 } },
+      { origin: "user" },
+    )
+    expect(documentText(store)).toBe(serialize(store.toDocument()))
+    // A prepared header is written; the view it gets reads every node.
+    const assets = { "0123456789abcdef.png": { mime: "image/png", bytes: 3 } }
+    let seen = 0
+    const prepare = (d: KimoDocument) => {
+      seen = Object.keys(d.nodes).length
+      return { ...d, assets } as KimoDocument
+    }
+    expect(documentText(store, prepare)).toBe(serialize(prepare(store.toDocument())))
+    expect(seen).toBe(store.nodeIds().length)
+  }
 })

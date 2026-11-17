@@ -449,3 +449,26 @@ describe("validator behaviour", () => {
     expect(codes(bad.errors)).toContain("SCHEMA")
   })
 })
+
+test("a scoped run reports the same order ties from an order index as from a scan", () => {
+  const d = doc({
+    Frame00001: frame(null, "a0"),
+    Frame00002: frame("Frame00001", "a0"),
+    Frame00003: frame("Frame00001", "a0"),
+    Frame00004: frame("Frame00001", "a1"),
+    Frame00005: frame(null, "a0"),
+  })
+  const nodes = d.nodes as unknown as Record<string, { parent: string | null; order: string }>
+  const kids = (p: string | null) => Object.keys(nodes).filter((id) => nodes[id]?.parent === p)
+  const ties = (options: ValidateOptions) =>
+    validate(d, { nodes: ["Frame00003", "Frame00004", "Frame00005"], childrenOf: kids, ...options })
+      .warnings.filter((i) => i.code === "ORDER_DUPLICATE")
+      .map((i) => i.path)
+  // The index answers for the frame's children and has nothing for the roots (scanned).
+  const indexed = ties({
+    siblingsWithOrder: (p, order) =>
+      p === null ? null : kids(p).filter((id) => nodes[id]?.order === order),
+  })
+  expect(indexed).toEqual(ties({}))
+  expect(indexed).toHaveLength(2)
+})

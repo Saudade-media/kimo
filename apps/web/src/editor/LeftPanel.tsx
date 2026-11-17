@@ -45,6 +45,7 @@ import { t, tn } from "../lib/i18n"
 import { matches } from "../shortcuts/shortcuts"
 import { openRowMenu } from "./clipboard/menu-bus"
 import { computeTreeDrop, refuseParent, type TreeDrop, treeDropOps } from "./clipboard/tree-drop"
+import { layerRows, type Row, type RowCache } from "./layer-rows"
 import { activeRoots, pageLayerCount } from "./pages/model"
 import { pageSwitcherBus } from "./pages/PageSwitcher"
 import { PagesFooter, PagesStrip, usePageList } from "./pages/PagesStrip"
@@ -165,13 +166,6 @@ function LayerTreeHeader({ session }: { session: FileSession }) {
   )
 }
 
-interface Row {
-  id: string
-  depth: number
-  hasChildren: boolean
-  parent: string | null
-}
-
 const NO_AGENT_NODES: ReadonlySet<string> = new Set()
 
 /** Board 27 rules F1FPb: a hovered collapsed container opens after 600 ms of "into". */
@@ -246,6 +240,8 @@ function LayerTree({
   const anchor = useRef<string | null>(null)
   /** Set when keyboard navigation moved focus: the focused row takes DOM focus once mounted. */
   const moveFocus = useRef(false)
+  /** Rows per root as last walked (see {@link layerRows}). */
+  const rowCache = useRef<RowCache | null>(null)
 
   // Roots start open; instances start closed (board 11: instance rows collapsed until opened).
   const isOpen = useCallback(
@@ -259,36 +255,21 @@ function LayerTree({
   const rows = useMemo(() => {
     void shape
     void treeRev
-    const view = m3.view()
-    const out: Row[] = []
-    const q = query.trim().toLowerCase()
-    const memo = new Map<string, boolean>()
-    const matches = (id: string): boolean => {
-      const hit = memo.get(id)
-      if (hit !== undefined) return hit
-      const n = view.getNode(id) as NodeData | undefined
-      const ok =
-        !!n &&
-        (nodeName(n).toLowerCase().includes(q) ||
-          kindLabel(n).toLowerCase().includes(q) ||
-          view.children(id).some(matches))
-      memo.set(id, ok)
-      return ok
-    }
     // Board 27 §1 rule "Layers tree": only the active page's roots (pages are never rows).
     void pagesHeader
-    const onPage = new Set(activeRoots(store, page))
-    const walk = (parent: string | null, depth: number) => {
-      for (const id of view.children(parent)) {
-        if (parent === null && !onPage.has(id)) continue
-        if (q && !matches(id)) continue
-        const kids = view.children(id).length > 0
-        out.push({ id, depth, hasChildren: kids, parent })
-        if (kids && isOpen(id, depth)) walk(id, depth + 1)
-      }
-    }
-    walk(null, 0)
-    return out
+    const q = query.trim().toLowerCase()
+    const result = layerRows({
+      store,
+      view: m3.view(),
+      onPage: new Set(activeRoots(store, page)),
+      isOpen,
+      matches: q
+        ? (n) => nodeName(n).toLowerCase().includes(q) || kindLabel(n).toLowerCase().includes(q)
+        : null,
+      cache: rowCache.current,
+    })
+    rowCache.current = result.cache
+    return result.rows
   }, [m3, shape, treeRev, query, isOpen, store, page, pagesHeader])
 
   const index = useMemo(() => new Map(rows.map((r, i) => [r.id, i])), [rows])
@@ -795,7 +776,7 @@ const LayerItem = memo(function LayerItem({
         kind={kind}
         name={
           kind === "replaced"
-            ? (replacedName(view, m3.doc(), m3.libraries(), id) ?? nodeName(n))
+            ? (replacedName(view, m3.peek(), m3.libraries(), id) ?? nodeName(n))
             : nodeName(n)
         }
         title={kind === "replaced" ? `Replaced by ${nodeName(n)}` : undefined}

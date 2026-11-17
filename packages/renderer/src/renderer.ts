@@ -61,7 +61,11 @@ import {
 } from "./types"
 
 interface RootEntry {
-  ids: string[]
+  ids: readonly string[]
+  /** Union of the ids' world boxes (undefined: not computed for the current layout). */
+  lb?: Rect | null
+  /** Frame that last replayed this root's picture (`frames` + 1, like `used`). */
+  replayedAt?: number
   /** NodeData identities at record time (frozen store objects change identity on edit). */
   data: unknown[]
   picture: SkPicture | null
@@ -123,8 +127,8 @@ type Rasters = { raster: RootRaster | null; levels?: RootRaster[] }
 
 /** The content key of one top-level instance and what it was computed from. */
 interface InstanceKey {
-  /** Paint order array of the layout the ids were walked in (same array: same tree). */
-  order: readonly string[]
+  /** Structure token of the layout the ids were walked in (same token: same tree). */
+  order: object
   ids: string[]
   data: unknown[]
   layouts: unknown[]
@@ -208,6 +212,27 @@ const RASTER_FRAME_MS = 6
  */
 const RECORD_FRAME_MS = 10
 /**
+ * The same budget for a frame with nothing on screen yet (an opening document): it draws
+ * completely unless recording it takes longer than this, then the rest fills in over the next
+ * frames instead of blocking for seconds (a 100k-node document zoomed to fit).
+ */
+const RECORD_FIRST_MS = 250
+/**
+ * While the viewport moves (see MOTION_MS), recording and rasterizing share this much of a
+ * frame, so a pan or zoom over a huge document keeps its frame rate and the screen fills in
+ * over the next frames. At rest the larger budgets above and below fill it fast.
+ */
+const MOVING_FRAME_MS = 6
+/**
+ * Zoomed out, a root without a raster yet is replayed until this many draw ops were replayed
+ * in the frame; roots past that wait for their raster (a softer one meanwhile, if they have
+ * one). A document that fits the budget draws as before; one with 100k visible nodes used to
+ * replay ~900 ms per frame for a minute while two rasters per frame filled in.
+ */
+const REPLAY_FRAME_OPS = 8000
+/** While roots wait for rasters, the raster budget of a frame is this many times larger. */
+const RASTER_FILL_FACTOR = 4
+/**
  * Motion raster cache: while the viewport is moving (pan/zoom within the last `MOTION_MS`),
  * roots whose pictures hold filtered layers (background / layer blur, layer shadows, blend
  * layers) are drawn from a raster at any zoom — replaying them costs GPU time every frame
@@ -272,13 +297,17 @@ export class CanvasKitRenderer implements Renderer {
   private motion: MotionFrame | null = null
   private readonly motionRoots = new Set<string>()
   private roots = new Map<string, RootEntry>()
-  private rootOrder: string[] = []
-  /** Root grouping of the last `setLayout` (reused while the paint order array is the same). */
+  private rootOrder: readonly string[] = []
+  /**
+   * Root grouping of the last `setLayout`: the engine's per-root order (`subtrees`), or one
+   * derived from the paint order array (`order`), reused while that array is the same.
+   */
   private grouping: {
-    order: readonly string[]
+    order: readonly string[] | null
     nodes: unknown
-    next: Map<string, string[]>
-    roots: string[]
+    next: ReadonlyMap<string, readonly string[]>
+    roots: readonly string[]
+    subtrees: ReadonlyMap<string, readonly string[]> | null
   } | null = null
   /**
    * M3: draw top-level instances from {@link SharedPicture}s (default on; `false` records every
@@ -304,6 +333,10 @@ export class CanvasKitRenderer implements Renderer {
   private recRoot: string | null = null
   private recWrap: RootEntry["wrap"] = null
   private hitIndex: HitIndex | null = null
+  /** Roots whose hit entries are stale since the index was last used (null: all of them). */
+  private hitDirty: Set<string> | null = null
+  /** Replaced whenever a child list anywhere in the layout changes (see InstanceKey.order). */
+  private structure: object = {}
 
   private surface: Surface | null = null
   private canvasEl: HTMLCanvasElement | OffscreenCanvas | null = null
@@ -329,6 +362,8 @@ export class CanvasKitRenderer implements Renderer {
    * per frame raise it, so a slow machine does not defer roots to a later frame.
    */
   rasterFrameMs = RASTER_FRAME_MS
+  /** Zoomed out: the last frame left roots waiting for their raster (see REPLAY_FRAME_OPS). */
+  private filling = false
   private rasterPx = 0
   /** Timestamp until which the viewport counts as moving (motion raster cache). */
   private motionUntil = 0
@@ -362,6 +397,7 @@ export class CanvasKitRenderer implements Renderer {
     recorded: 0,
     sharedRecorded: 0,
     wrapped: 0,
+    replayed: 0,
   }
 
   private iconProvider: IconProvider | null = null
@@ -647,12 +683,17 @@ export class CanvasKitRenderer implements Renderer {
     this.textEngine?.invalidate()
     this.dropAll(false)
     this.hitIndex = null
+    this.hitDirty = null
+  }
+
+  takeFontWaiters(family: string): string[] {
+    return this.textEngine?.takeWaiting(family) ?? []
   }
 
   invalidate(nodeIds?: Iterable<string>): void {
-    this.hitIndex = null
     this.sharedMemo.byId.clear()
     if (!nodeIds) {
+      this.hitDirty = null
       // Everything may have changed, but node data and layout are compared on `setLayout`
       // (identity / `changed`), so only what read a changed header is dropped here: pictures
       // with bindings, or whose default text fill changed (a variable mode switch over 1k
@@ -677,81 +718,197 @@ export class CanvasKitRenderer implements Renderer {
     }
     const ids = [...nodeIds]
     this.textEngine?.invalidate(ids)
-    const set = new Set(ids)
-    for (const e of this.roots.values())
-      if (e.picture && e.ids.some((id) => set.has(id))) this.drop(e)
+    // The roots that hold these nodes now. A node that left a root (moved, deleted) changes
+    // that root's ids, which the next `setLayout` sees.
+    for (const id of ids) {
+      const root = this.rootOfNode(id)
+      const e = root === null ? undefined : this.roots.get(root)
+      if (!e || root === null) continue
+      if (e.picture || e.wrap) this.drop(e)
+      this.hitDirty?.add(root)
+    }
     this.requestFrame()
   }
 
   setLayout(layout: LayoutResult): void {
     if (this.layout === layout) return
+    const before = this.layout
     this.layout = layout
     this.sharedMemo.byId.clear()
-    this.hitIndex = null
     const nodes = this.scene?.nodes
-    // Group paint order into root subtrees (order is depth-first, parents first). The engine
-    // hands back the same order array when no child list changed: reuse the grouping.
-    let next: Map<string, string[]>
-    let order: string[]
     const g = this.grouping
-    if (g && g.order === layout.order && g.nodes === nodes) {
-      next = g.next
-      order = g.roots
-    } else {
-      const rootOf = new Map<string, string>()
-      next = new Map()
-      order = []
-      for (const id of layout.order) {
-        const parent = nodes?.getNode(id)?.parent
-        const root = (typeof parent === "string" && rootOf.get(parent)) || id
-        rootOf.set(id, root)
-        let list = next.get(root)
-        if (!list) {
-          list = []
-          next.set(root, list)
-          order.push(root)
+    const subtrees = layout.subtrees
+    if (subtrees && layout.roots) {
+      // The engine keeps each root's paint order: nothing to regroup. An incremental pass
+      // also names the roots it touched, so only those are compared (an edit in a document of
+      // a million nodes reads one root).
+      const dirty = layout.dirtyRoots
+      if (
+        dirty &&
+        before &&
+        g &&
+        g.subtrees === subtrees &&
+        g.nodes === nodes &&
+        layout.version === before.version + 1
+      ) {
+        for (const root of dirty) {
+          if (this.syncRoot(root, subtrees.get(root), layout, nodes)) this.structure = {}
+          this.hitDirty?.add(root)
         }
-        list.push(id)
+        if (g.roots !== layout.roots) this.structure = {}
+      } else {
+        for (const [root, e] of this.roots)
+          if (!subtrees.has(root)) {
+            this.drop(e)
+            this.roots.delete(root)
+          }
+        for (const [root, ids] of subtrees) this.syncRoot(root, ids, layout, nodes)
+        this.structure = {}
+        this.hitDirty = null
       }
-      this.grouping = { order: layout.order, nodes, next, roots: order }
-    }
-    for (const [root, e] of this.roots)
-      if (!next.has(root)) {
-        this.drop(e)
-        this.roots.delete(root)
+      this.grouping = { order: null, nodes, next: subtrees, roots: layout.roots, subtrees }
+      this.rootOrder = layout.roots
+    } else {
+      // A layout without per-root order (another engine, tests): group the paint order into
+      // root subtrees (depth-first, parents first), reusing the grouping of the same array.
+      let next: ReadonlyMap<string, readonly string[]>
+      let order: readonly string[]
+      if (g && g.order === layout.order && g.nodes === nodes) {
+        next = g.next
+        order = g.roots
+      } else {
+        const rootOf = new Map<string, string>()
+        const made = new Map<string, string[]>()
+        const roots: string[] = []
+        for (const id of layout.order) {
+          const parent = nodes?.getNode(id)?.parent
+          const root = (typeof parent === "string" && rootOf.get(parent)) || id
+          rootOf.set(id, root)
+          let list = made.get(root)
+          if (!list) {
+            list = []
+            made.set(root, list)
+            roots.push(root)
+          }
+          list.push(id)
+        }
+        next = made
+        order = roots
+        this.grouping = { order: layout.order, nodes, next, roots, subtrees: null }
+        this.structure = {}
       }
-    for (const [root, ids] of next) {
-      const prev = this.roots.get(root)
-      if (prev?.picture || prev?.wrap) {
-        const same =
-          prev.ids.length === ids.length &&
-          prev.ids.every(
-            (id, i) =>
-              id === ids[i] && nodes?.getNode(id) === prev.data[i] && !layout.changed.has(id),
-          )
-        if (!same) this.drop(prev)
-        prev.ids = ids
-      } else
-        this.roots.set(root, {
-          ids,
-          data: [],
-          picture: null,
-          bounds: null,
-          nodes: ids.length,
-          draws: 0,
-          layers: 0,
-          pendingIcons: false,
-          timed: false,
-          header: NO_HEADER,
-          wrap: null,
-          raster: null,
-          used: 0,
-        })
+      for (const [root, e] of this.roots)
+        if (!next.has(root)) {
+          this.drop(e)
+          this.roots.delete(root)
+        }
+      for (const [root, ids] of next) this.syncRoot(root, ids, layout, nodes)
+      this.rootOrder = order
+      this.hitDirty = null
     }
     for (const id of this.instanceKeys.keys())
       if (!layout.nodes.has(id)) this.instanceKeys.delete(id)
-    this.rootOrder = order
     this.requestFrame()
+  }
+
+  /**
+   * Brings root `root` to its subtree `ids` in `layout` (undefined: the root is gone): what it
+   * recorded is dropped unless every node is the same object at the same place. True when its
+   * list of ids changed.
+   */
+  private syncRoot(
+    root: string,
+    ids: readonly string[] | undefined,
+    layout: LayoutResult,
+    nodes: RenderScene["nodes"] | undefined,
+  ): boolean {
+    const prev = this.roots.get(root)
+    if (!ids) {
+      if (prev) {
+        this.drop(prev)
+        this.roots.delete(root)
+      }
+      return true
+    }
+    if (!prev) {
+      this.roots.set(root, {
+        ids,
+        data: [],
+        picture: null,
+        bounds: null,
+        nodes: ids.length,
+        draws: 0,
+        layers: 0,
+        pendingIcons: false,
+        timed: false,
+        header: NO_HEADER,
+        wrap: null,
+        raster: null,
+        used: 0,
+      })
+      return true
+    }
+    const moved = prev.ids !== ids
+    if (prev.picture || prev.wrap) {
+      const same =
+        prev.ids.length === ids.length &&
+        prev.ids.every(
+          (id, i) =>
+            id === ids[i] && nodes?.getNode(id) === prev.data[i] && !layout.changed.has(id),
+        )
+      if (!same) this.drop(prev)
+    } else prev.nodes = ids.length
+    prev.ids = ids
+    prev.lb = undefined
+    return moved
+  }
+
+  /** Root of node `id` in the scene (its topmost ancestor), when the renderer draws it. */
+  private rootOfNode(id: string): string | null {
+    const nodes = this.scene?.nodes
+    if (!nodes) return null
+    let root = id
+    for (let i = 0; i < 4096; i++) {
+      const p = nodes.getNode(root)?.parent
+      if (typeof p !== "string") break
+      root = p
+    }
+    return this.roots.has(root) ? root : null
+  }
+
+  /** Union of the world boxes of root `e`'s nodes (culling before it is recorded); cached. */
+  private layoutBounds(layout: LayoutResult, e: RootEntry): Rect | null {
+    if (e.lb !== undefined) return e.lb
+    // A clipping root paints its subtree inside its own box (its own shadow or stroke is what
+    // the caller's margin is for): no need to read every node.
+    const root = e.ids[0]
+    const s = this.scene
+    const rn = root === undefined ? undefined : s?.nodes.getNode(root)
+    const rl = root === undefined ? undefined : layout.nodes.get(root)
+    if (
+      root !== undefined &&
+      rn &&
+      rl &&
+      rn.type === "frame" &&
+      s?.resolve.value(root, rn.clip) === true
+    ) {
+      e.lb = rl.world
+      return e.lb
+    }
+    let x0 = Number.POSITIVE_INFINITY
+    let y0 = Number.POSITIVE_INFINITY
+    let x1 = Number.NEGATIVE_INFINITY
+    let y1 = Number.NEGATIVE_INFINITY
+    for (const id of e.ids) {
+      const b = layout.nodes.get(id)?.world
+      if (!b) continue
+      if (b.x < x0) x0 = b.x
+      if (b.y < y0) y0 = b.y
+      if (b.x + b.w > x1) x1 = b.x + b.w
+      if (b.y + b.h > y1) y1 = b.y + b.h
+    }
+    e.lb = x1 >= x0 ? { x: x0, y: y0, w: x1 - x0, h: y1 - y0 } : null
+    return e.lb
   }
 
   setViewport(viewport: Viewport): void {
@@ -1315,7 +1472,7 @@ export class CanvasKitRenderer implements Renderer {
     // The engine hands back the same paint-order array while no child list changed: the
     // subtree's ids are the ones walked last time.
     let ids: string[]
-    if (prev && prev.order === ctx.layout.order) ids = prev.ids
+    if (prev && prev.order === this.structure) ids = prev.ids
     else {
       ids = []
       const walk = (x: string) => {
@@ -1348,7 +1505,7 @@ export class CanvasKitRenderer implements Renderer {
         same = false
     }
     if (same && prev) {
-      prev.order = ctx.layout.order
+      prev.order = this.structure
       return prev.key
     }
     const parts: string[] = [theme]
@@ -1357,7 +1514,7 @@ export class CanvasKitRenderer implements Renderer {
         `${this.token(data[i] as LayoutNodeData, i === 0)}@${this.layoutToken(layouts[i] as NodeLayout, i === 0)}`,
       )
     const key = parts.join("\n")
-    this.instanceKeys.set(id, { order: ctx.layout.order, ids, data, layouts, theme, key })
+    this.instanceKeys.set(id, { order: this.structure, ids, data, layouts, theme, key })
     return key
   }
 
@@ -1393,6 +1550,7 @@ export class CanvasKitRenderer implements Renderer {
       this.last.rasterized = 0
       this.last.sharedRecorded = 0
       this.last.wrapped = 0
+      this.last.replayed = 0
       // Progressive only once something is on screen: an opening document draws completely
       // in its first frame (the fastest path to a full canvas).
       let progressive = false
@@ -1403,6 +1561,17 @@ export class CanvasKitRenderer implements Renderer {
             break
           }
       let behind = false
+      const filling = this.filling
+      const moved = now() < this.motionUntil
+      const rasterBudget = moved
+        ? MOVING_FRAME_MS
+        : this.rasterFrameMs * (filling ? RASTER_FILL_FACTOR : 1)
+      const recordBudget = moved ? MOVING_FRAME_MS : RECORD_FRAME_MS
+      /** Time this frame's budgets are measured against (one shared pool while moving). */
+      const rasterSpent = () => (moved ? rasterMs + recordMs : rasterMs)
+      const recordSpent = () => (moved ? rasterMs + recordMs : recordMs)
+      let replayOps = 0
+      let waiting = 0
       // Animated shaders: live roots get the current clock (see SHADER_FRAME_MS).
       const animate = this.shaderAnimation && !reducedMotion()
       if (animate && this.clockStart < 0) this.clockStart = now()
@@ -1451,7 +1620,7 @@ export class CanvasKitRenderer implements Renderer {
         if (!sr && target && sp.bounds) {
           sr = this.levelAt(sp, target) ?? sp.raster
           if (sr?.scale !== target) {
-            if (rasterMs < this.rasterFrameMs || !sr) {
+            if (rasterSpent() < (moved ? MOVING_FRAME_MS : this.rasterFrameMs) || !sr) {
               const t = now()
               sr = this.rasterize(sp, sp.picture, sp.bounds, target) ?? sr
               rasterMs += now() - t
@@ -1488,11 +1657,7 @@ export class CanvasKitRenderer implements Renderer {
         if (l && !l.visible) continue
         // Board 35: a root with moving layers draws live from the painter this frame.
         if (this.motion && this.motionRoots.has(root)) {
-          let lb: Rect | null = null
-          for (const id of e.ids) {
-            const nl = ctx.layout.nodes.get(id)
-            if (nl) lb = union(lb, nl.world)
-          }
+          const lb = this.layoutBounds(ctx.layout, e)
           const m = 256
           if (
             lb &&
@@ -1522,11 +1687,7 @@ export class CanvasKitRenderer implements Renderer {
         }
         if (!e.picture) {
           // Not recorded yet: cull by layout boxes (+ a margin for shadows/strokes) first.
-          let lb: Rect | null = null
-          for (const id of e.ids) {
-            const nl = ctx.layout.nodes.get(id)
-            if (nl) lb = union(lb, nl.world)
-          }
+          const lb = this.layoutBounds(ctx.layout, e)
           const m = 256
           if (
             lb &&
@@ -1552,7 +1713,10 @@ export class CanvasKitRenderer implements Renderer {
           }
         }
         if (!pic) {
-          if (progressive && recordMs >= RECORD_FRAME_MS) {
+          if (
+            recordSpent() >= (progressive ? recordBudget : RECORD_FIRST_MS) &&
+            this.backend === "webgl"
+          ) {
             behind = true
             continue
           }
@@ -1613,7 +1777,7 @@ export class CanvasKitRenderer implements Renderer {
           const sp = wrap.sp
           let sr = this.levelAt(sp, target) ?? sp.raster
           if (sr?.scale !== target) {
-            if (rasterMs < this.rasterFrameMs) {
+            if (rasterSpent() < rasterBudget) {
               const t = now()
               sr = this.rasterize(sp, sp.picture, sp.bounds as Rect, target) ?? null
               rasterMs += now() - t
@@ -1643,16 +1807,28 @@ export class CanvasKitRenderer implements Renderer {
         if (!r && target && e.bounds) {
           r = this.levelAt(e, target) ?? e.raster
           if (r?.scale !== target) {
-            if (rasterMs < this.rasterFrameMs) {
+            if (rasterSpent() < rasterBudget) {
               const t = now()
               r = this.rasterize(e, pic, e.bounds, target) ?? null
               rasterMs += now() - t
               this.last.rasterized++
             } else {
               // Over this frame's budget: an acceptable stale raster (zoomed out: a sharper
-              // one); otherwise replay.
-              if (!r || r.scale < staleMin) r = null
+              // one); otherwise replay, within the replay budget (see REPLAY_FRAME_OPS). Past
+              // it, a softer raster if the root has one, else the root waits for its raster.
+              // While roots wait, only those replayed last frame replay (nothing drawn blinks).
               behind = true
+              // Zoomed out and moving: a softer raster stands in rather than a replay.
+              if ((!r || r.scale < staleMin) && !(moved && bucket && r)) {
+                const replay =
+                  !bucket || (filling ? e.replayedAt === this.frames : replayOps < REPLAY_FRAME_OPS)
+                if (replay) r = null
+                else if (!r) {
+                  waiting++
+                  drawn -= e.nodes
+                  continue
+                }
+              }
             }
           }
         }
@@ -1669,9 +1845,13 @@ export class CanvasKitRenderer implements Renderer {
           continue
         }
         canvas.drawPicture(pic)
+        this.last.replayed++
+        e.replayedAt = this.frames + 1
+        replayOps += e.draws
         draws += e.draws
       }
       canvas.restore()
+      this.filling = waiting > 0
       this.last.recordMs = recordMs
       this.last.rasterMs = rasterMs
       if (behind) this.requestFrame()
@@ -1770,8 +1950,17 @@ export class CanvasKitRenderer implements Renderer {
 
   private index(): HitIndex | null {
     if (!this.layout || !this.scene) return null
-    if (!this.hitIndex || this.hitIndex.source !== this.layout)
+    if (!this.hitIndex) {
       this.hitIndex = new HitIndex(this.layout, this.scene.nodes, this.scene.resolve)
+      this.hitDirty = new Set()
+    } else if (
+      this.hitIndex.source !== this.layout ||
+      this.hitDirty === null ||
+      this.hitDirty.size
+    ) {
+      this.hitIndex.update(this.layout, this.hitDirty)
+      this.hitDirty = new Set()
+    }
     return this.hitIndex
   }
 
@@ -2036,6 +2225,7 @@ export class CanvasKitRenderer implements Renderer {
       rasterized: this.last.rasterized,
       sharedRecorded: this.last.sharedRecorded,
       wrapped: this.last.wrapped,
+      replayed: this.last.replayed,
     }
   }
 }

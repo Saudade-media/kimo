@@ -36,12 +36,6 @@ yjs 13.6.33                     MIT
   https://github.com/yjs/yjs
   Used by: @kimo/editor-state, @kimo/sync
 
-y-indexeddb 9.0.12              MIT
-  Copyright (c) 2014 Kevin Jahns; Chair of Computer Science 5 (Databases &
-  Information Systems), RWTH Aachen University, Germany
-  https://github.com/yjs/y-indexeddb
-  Used by: @kimo/sync
-
 zustand 5.0.15                  MIT
   Copyright (c) 2019 Paul Henschel
   https://github.com/pmndrs/zustand

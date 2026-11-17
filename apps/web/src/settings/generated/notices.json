@@ -296,13 +296,6 @@
    "text": "9a3f22684ea9"
   },
   {
-   "name": "y-indexeddb",
-   "version": "9.0.12",
-   "license": "MIT",
-   "source": "npm",
-   "text": "273fd4745c0c"
-  },
-  {
    "name": "yjs",
    "version": "13.6.33",
    "license": "MIT",

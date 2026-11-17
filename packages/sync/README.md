@@ -9,7 +9,7 @@ themselves: every edit still goes through the `editor-state` op layer, with an o
 |---|---|---|
 | `@kimo/sync` | `SyncProvider`, `BaseProvider`, network provider types | anywhere |
 | `@kimo/sync/file` | `FileProvider` | Bun, Node |
-| `@kimo/sync/indexeddb` | `IndexedDbProvider` (y-indexeddb) | browser, worker |
+| `@kimo/sync/indexeddb` | `IndexedDbProvider` | browser, worker |
 
 The main entry imports neither `node:*` nor IndexedDB code, so the web editor can import it
 without bundling `fs`. A test checks this.
@@ -64,9 +64,19 @@ import { IndexedDbProvider } from "@kimo/sync/indexeddb"
 await new IndexedDbProvider("kimo:doc:<id>").attach(store)
 ```
 
-The provider keeps a private bridge `Y.Doc` that `y-indexeddb` persists, and relays updates
-between it and the store. The provider therefore only uses the `DocStore` API. `attach` rejects
-where `indexedDB` is missing. Tests are skipped under Bun, which has no IndexedDB.
+The provider appends the store's updates to an `updates` object store (the layout
+`y-indexeddb` used, so older databases open) and keeps no copy of the document in memory. It
+only uses the `DocStore` API. `attach` rejects where `indexedDB` is missing.
+
+- **Large updates.** An update above 16 MiB is stored as consecutive parts, because a browser
+  refuses one value above about 127 MiB. App versions before this change cannot read a
+  database that holds parts.
+- **Compaction.** After 500 appends the newest small updates merge into one. The whole
+  document is rewritten only when that tail weighs half of the largest update, so a save never
+  costs the document size on a large file.
+- **Errors.** A failed write sets the status to `error` and is written again with the next one.
+
+Tests run on `fake-indexeddb`.
 
 ## Network provider (multiplayer, not implemented in v1)
 

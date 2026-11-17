@@ -23,9 +23,7 @@ const SRC = join(import.meta.dir, "../src")
 describe("entry points", () => {
   test("@kimo/sync main entry pulls no Node or IndexedDB code", () => {
     const specs = [...closure(join(SRC, "index.ts")).values()].flat()
-    expect(
-      specs.filter((s) => s.startsWith("node:") || s === "y-indexeddb" || s === "yjs"),
-    ).toEqual([])
+    expect(specs.filter((s) => s.startsWith("node:") || s === "yjs")).toEqual([])
   })
 
   test("@kimo/sync/mp imports no CRDT, editor-state or Node code (the blind relay loads it)", () => {

@@ -1020,6 +1020,8 @@ export interface RenderStats {
    */
   sharedRecorded?: number
   wrapped?: number
+  /** Root pictures replayed op by op in the last frame (not drawn from a raster). */
+  replayed?: number
 }
 
 /** Error thrown/reported by the renderer. */
@@ -1102,6 +1104,12 @@ export interface Renderer {
   setDocument(scene: RenderScene): void
   /** Paint-only changes (fill, opacity, effects…): drop cached paints/pictures for these ids (all when omitted). */
   invalidate(nodeIds?: Iterable<string>): void
+  /**
+   * The text nodes measured or drawn while a face of `family` was not registered, handed over
+   * once: when a face of it loads, only these re-measure and re-record (a font arriving used
+   * to re-lay out and re-record the whole document). Absent: re-measure everything.
+   */
+  takeFontWaiters?(family: string): string[]
   setLayout(layout: LayoutResult): void
   setViewport(viewport: Viewport): void
   setOverlay(overlay: Overlay): void

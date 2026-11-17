@@ -29,6 +29,8 @@ export interface DraftBase {
   getNode(id: string): NodeData | undefined
   /** Ids of nodes whose `parent` is `parent` (any `at`). */
   childIdsOf(parent: string | null): Iterable<string>
+  /** Those of them whose `order` is the given one, or null without an index to answer from. */
+  childIdsWithOrder?(parent: string | null, order: string): Iterable<string> | null
   getVariable(name: string): unknown
   variableNames(): Iterable<string>
   getThemeAxis(axis: string): readonly string[] | undefined
@@ -107,6 +109,17 @@ export class Draft {
     const out: string[] = []
     for (const id of this.base.childIdsOf(parent)) if (!this.nodes.has(id)) out.push(id)
     for (const [id, n] of this.nodes) if (n && n.parent === parent) out.push(id)
+    return out
+  }
+
+  /** {@link childIds} narrowed to one `order`, or null when the base has no index for it. */
+  childIdsWithOrder(parent: string | null, order: string): string[] | null {
+    const base = this.base.childIdsWithOrder?.(parent, order)
+    if (!base) return null
+    const out: string[] = []
+    for (const id of base) if (!this.nodes.has(id)) out.push(id)
+    for (const [id, n] of this.nodes)
+      if (n && n.parent === parent && n.order === order) out.push(id)
     return out
   }
 
@@ -434,7 +447,7 @@ export class Draft {
    * The candidate document (committed state + overlay) for validation. Shares (frozen) node
    * objects with the store; do not mutate.
    */
-  toDocument(withNodes = true): KimoDocument {
+  toDocument(withNodes: boolean | "view" = true): KimoDocument {
     const doc: Record<string, unknown> = {}
     for (const [k, v] of Object.entries(this.base.header())) setOwn(doc, k, v)
     for (const [k, v] of this.header) {
@@ -458,6 +471,10 @@ export class Draft {
       doc.variables = vars
     }
     if (!withNodes) return doc as unknown as KimoDocument
+    if (withNodes === "view") {
+      doc.nodes = this.nodesView()
+      return doc as unknown as KimoDocument
+    }
     // Plain assignment is much faster than defineProperty; only "__proto__" needs the latter.
     const nodes: Record<string, unknown> = {}
     const put = (id: string, n: unknown) => {
@@ -468,6 +485,31 @@ export class Draft {
     for (const [id, n] of this.nodes) if (n !== null) put(id, n)
     doc.nodes = nodes
     return doc as unknown as KimoDocument
+  }
+
+  /**
+   * The candidate node table as a read-through record (committed state + overlay, nothing
+   * copied): for incremental validation, which looks nodes up by id. Enumerating it is
+   * O(document), as building the table is.
+   */
+  private nodesView(): Record<string, NodeData> {
+    const get = (k: string | symbol) => (typeof k === "string" ? this.get(k) : undefined)
+    return new Proxy({} as Record<string, NodeData>, {
+      get: (_t, k) => get(k),
+      has: (_t, k) => get(k) !== undefined,
+      ownKeys: () => {
+        const ids: string[] = []
+        for (const [id] of this.base.nodeEntries()) if (!this.nodes.has(id)) ids.push(id)
+        for (const [id, n] of this.nodes) if (n !== null) ids.push(id)
+        return ids
+      },
+      getOwnPropertyDescriptor: (_t, k) => {
+        const value = get(k)
+        return value === undefined
+          ? undefined
+          : { value, enumerable: true, configurable: true, writable: false }
+      },
+    })
   }
 
   private requireNode(id: string): NodeData {

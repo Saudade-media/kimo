@@ -193,6 +193,11 @@ export interface DocStore {
   readonly revision: Revision
   /** Non-null when edits are refused (`READ_ONLY`). */
   readonly readOnly: ReadOnlyState | null
+  /**
+   * Changes whenever the root list may have: a root added, removed, reordered, or moved to
+   * another page. Absent on a store that does not track it.
+   */
+  readonly rootsRev?: number
 
   // --- Reading ----------------------------------------------------------------------------
   /** Node data by id (frozen; do not mutate). */

@@ -74,20 +74,56 @@ function spacingSlots(axis: Axis, m: Rect, sibs: readonly Rect[]): Slot[] {
       if (free(p)) slots.push({ delta: p - g.p(m), gap: room / 2 })
     }
   }
-  // Extending a pair's gap.
-  for (let i = 0; i + 1 < row.length; i++) {
+  // Extending a pair's gap. b must be a's direct neighbour: no other box starts at or after
+  // a's end and ends at or before b's start. The row is sorted by position, so the boxes
+  // starting at or after a point are a suffix of it: the three that end first in each suffix
+  // answer that without a pass over the row per pair (a row of thousands froze the drag).
+  const n = row.length
+  const ends = row.map((r) => g.p(r) + g.s(r))
+  const first = new Int32Array(3 * (n + 1)).fill(-1)
+  for (let k = n - 1; k >= 0; k--) {
+    // row[k] joins the three of the suffix after it, kept sorted by end.
+    const src = 3 * (k + 1)
+    const dst = 3 * k
+    let t = 0
+    for (; t < 3; t++) {
+      const r = first[src + t] as number
+      if (r < 0 || (ends[r] as number) >= (ends[k] as number)) break
+      first[dst + t] = r
+    }
+    if (t < 3) {
+      first[dst + t] = k
+      for (let u = t + 1; u < 3; u++) first[dst + u] = first[src + u - 1] as number
+    }
+  }
+  for (let i = 0; i + 1 < n; i++) {
     const a = row[i] as Rect
-    for (let j = i + 1; j < row.length; j++) {
+    const endA = ends[i] as number
+    // First box starting at or after a's end.
+    let lo = 0
+    let hi = n
+    while (lo < hi) {
+      const mid = (lo + hi) >>> 1
+      if (g.p(row[mid] as Rect) < endA) lo = mid + 1
+      else hi = mid
+    }
+    for (let j = i + 1; j < n; j++) {
       const b = row[j] as Rect
-      const gap = g.p(b) - (g.p(a) + g.s(a))
+      const startB = g.p(b)
+      let others = 0
+      let between = false
+      for (let t = 0; t < 3; t++) {
+        const r = first[3 * lo + t] as number
+        if (r < 0 || (r !== i && (ends[r] as number) > startB)) break
+        if (r === i) continue
+        others++
+        if (r !== j) between = true
+      }
+      // Two boxes in between: one of them also sits between a and every later b.
+      if (others >= 2) break
+      const gap = startB - endA
       if (gap < 0 || !crossOverlap(axis, a, b)) continue
-      // b must be a's direct neighbour (nothing in between).
-      if (
-        row.some(
-          (r) => r !== a && r !== b && g.p(r) >= g.p(a) + g.s(a) && g.p(r) + g.s(r) <= g.p(b),
-        )
-      )
-        continue
+      if (between) continue
       const after = g.p(b) + g.s(b) + gap
       if (free(after)) slots.push({ delta: after - g.p(m), gap })
       const before = g.p(a) - gap - ms

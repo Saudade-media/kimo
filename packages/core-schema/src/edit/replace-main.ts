@@ -457,14 +457,19 @@ function variableNames(ctx: PlanContext): {
 /**
  * Broken overrides of local instances (of `componentId`'s family, or of every component):
  * stashed ones, live keys that don't resolve, and set bindings to missing variables.
+ * `instances`: the document's instance ids when the caller keeps them (saves the scan).
  */
-export function brokenOverrides(ctx: PlanContext, componentId?: string): BrokenOverride[] {
+export function brokenOverrides(
+  ctx: PlanContext,
+  componentId?: string,
+  instances?: Iterable<string>,
+): BrokenOverride[] {
   const nodes = nodeTable(ctx.doc)
   const scope = scopeOf(ctx)
   const vars = variableNames(ctx)
   const ids = componentId
     ? family(nodes, componentId)
-    : Object.keys(nodes)
+    : (instances ? [...instances] : Object.keys(nodes))
         .filter((id) => nodes[id]?.type === "instance")
         .sort(compareCodeUnits)
   const out: BrokenOverride[] = []

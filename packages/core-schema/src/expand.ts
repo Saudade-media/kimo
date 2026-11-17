@@ -229,8 +229,11 @@ export interface ExpandedView extends NodeLookup {
    *   parents. Editing a main component re-expands the instances of that component (and of
    *   components nesting it); every other expansion stays cached. Library and header changes
    *   still need the no-argument form.
+   * - `moved: false` (with `changed`): the caller knows that no changed node that existed
+   *   before and still exists changed its `parent` or `at`. The view then keeps what it knows
+   *   about every other node, instead of working it out again on the next read.
    */
-  invalidate(changed?: Iterable<string>): void
+  invalidate(changed?: Iterable<string>, moved?: boolean): void
   /**
    * Re-merges, in place, the cached view nodes emitted from real node `realId` (with the
    * overrides that apply to each) after a change of `realId` that does not shape expansion
@@ -1088,21 +1091,26 @@ export function createExpandedView(
     get instanceCount() {
       return count
     },
-    invalidate(changed) {
+    invalidate(changed, moved) {
       if (changed !== undefined) {
         const roots = new Set<string>()
         const touch = (id: string) => {
           for (const r of depIndex.get(id) ?? []) roots.add(r)
         }
+        const ids: string[] = []
         for (const id of changed) {
+          ids.push(id)
           touch(id)
           // A node inserted or moved under a parent whose child list an expansion read.
           const p = base.getNode(id)?.parent
           if (typeof p === "string") touch(p)
         }
         for (const r of roots) dropRoot(r)
-        // "Nothing to expand" answers are cheap; a changed node may now be owned or an instance.
-        settled = new Set()
+        // A "nothing to expand" answer holds while the node, its ancestors' `parent` and `at`,
+        // and every expansion stay as they are: then only the changed nodes are asked again.
+        // Otherwise all of them are (a changed node may now be owned or an instance).
+        if (moved === false && roots.size === 0) for (const id of ids) settled.delete(id)
+        else settled = new Set()
         return
       }
       root = null

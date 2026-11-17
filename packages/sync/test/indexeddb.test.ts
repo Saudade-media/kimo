@@ -272,4 +272,73 @@ describe("IndexedDbProvider", () => {
     // Written to the database too: there without the journal.
     expect((await reopen(name)).nodeIds()).toContain(id("unsaved", 0))
   })
+
+  test("an edit whose write fails again on close is kept in the journal", async () => {
+    const name = dbName()
+    const store = emptyStore()
+    const provider = new IndexedDbProvider(name)
+    await provider.attach(store)
+    let restore = failNextWrite()
+    try {
+      add(store, "unsaved", 1)
+    } finally {
+      restore()
+    }
+    restore = failNextWrite()
+    try {
+      await provider.detach()
+    } finally {
+      restore()
+    }
+    expect(journal.size).toBe(1)
+
+    const opened = await reopen(name)
+    expect(opened.nodeIds()).toContain(id("unsaved", 0))
+    expect(journal.size).toBe(0)
+  })
+
+  test("another tab's children of a frame are read after the frame", async () => {
+    const name = dbName()
+    const large = { largeBytes: 2048 }
+    const a = emptyStore()
+    const tabA = new IndexedDbProvider(name, large)
+    await tabA.attach(a)
+    const framed = a.apply(
+      {
+        op: "insert",
+        id: id("frame", 0),
+        parent: null,
+        node: { type: "frame", name: "frame", w: 100, h: 100 },
+      },
+      { origin: "user" },
+    )
+    if (!framed.ok) throw new Error(JSON.stringify(framed))
+    await tabA.flush()
+    // A second tab (another replica) fills the frame in one edit, stored after the frame's.
+    const b = new YjsDocStore()
+    const tabB = new IndexedDbProvider(name, large)
+    await tabB.attach(b)
+    const updates: Uint8Array[] = []
+    b.onUpdate((u) => updates.push(u))
+    const filled = b.apply(
+      Array.from({ length: 60 }, (_, i) => ({
+        op: "insert" as const,
+        id: id("child", i),
+        parent: id("frame", 0),
+        node: rect(id("child", i)),
+      })),
+      { origin: "user" },
+    )
+    if (!filled.ok) throw new Error(JSON.stringify(filled))
+    expect(updates.length).toBe(1)
+    expect((updates[0] as Uint8Array).byteLength).toBeGreaterThanOrEqual(large.largeBytes)
+    await Promise.all([tabA.detach(), tabB.detach()])
+
+    const opened = new YjsDocStore()
+    const provider = new IndexedDbProvider(name, large)
+    await provider.attach(opened)
+    await provider.detach()
+    expect(opened.toDocument().nodes[id("child", 0)]?.parent).toBe(id("frame", 0))
+    expect(opened.toDocument()).toEqual(b.toDocument())
+  })
 })

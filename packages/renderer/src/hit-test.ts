@@ -208,13 +208,15 @@ export class HitIndex {
 
   /** Visible world box after ancestor clips (null when fully clipped away). */
   clippedBox(id: string): Rect | null {
+    const subtrees = this.group().subtrees
     let root = id
-    for (let i = 0; i < 4096; i++) {
+    // Up to an indexed root: a layout of a subtree has roots that still have parents.
+    for (let i = 0; i < 4096 && !subtrees.has(root); i++) {
       const p = this.nodes.getNode(root)?.parent
       if (typeof p !== "string") break
       root = p
     }
-    const h = this.rootHits(root, this.group().subtrees.get(root))
+    const h = this.rootHits(root, subtrees.get(root))
     const e = h?.byId.get(id)
     return h && e ? this.clipped(h, e) : null
   }

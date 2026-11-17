@@ -868,7 +868,8 @@ export class CanvasKitRenderer implements Renderer {
     const nodes = this.scene?.nodes
     if (!nodes) return null
     let root = id
-    for (let i = 0; i < 4096; i++) {
+    // Up to a drawn root: a layout of a subtree has roots that still have parents.
+    for (let i = 0; i < 4096 && !this.roots.has(root); i++) {
       const p = nodes.getNode(root)?.parent
       if (typeof p !== "string") break
       root = p

@@ -53,7 +53,7 @@ export const PART_BYTES = 16 * 1024 * 1024
 /** Entries up to this size are always merged with the newer ones when compacting. */
 const SMALL_BYTES = 64 * 1024
 /** Updates from this size on are applied on their own instead of merged with the others. */
-const LARGE_BYTES = 4 * 1024 * 1024
+export const LARGE_BYTES = 4 * 1024 * 1024
 /** Unconfirmed updates above this size are not journaled (localStorage holds about 5 MB). */
 const JOURNAL_MAX_BYTES = 3 * 1024 * 1024
 
@@ -64,6 +64,8 @@ export interface IndexedDbOptions {
   trimDelayMs?: number
   /** Size above which an update is stored in parts (default {@link PART_BYTES}). */
   partBytes?: number
+  /** Size from which an update read is applied on its own (default {@link LARGE_BYTES}). */
+  largeBytes?: number
 }
 
 /** One piece of an update too large for a single value. */
@@ -79,6 +81,20 @@ interface Group {
   first: number
   parts: number
   bytes: number
+}
+
+/**
+ * Settles when `tx` commits, or rejects when it aborts. A request can succeed in a transaction
+ * that then fails to commit, so what a write changes is published only after this.
+ */
+function committed(tx: IDBTransaction): Promise<void> {
+  const p = new Promise<void>((resolve, reject) => {
+    tx.oncomplete = () => resolve()
+    tx.onabort = () => reject(tx.error ?? new Error("IndexedDB transaction aborted"))
+  })
+  // Handled: a run that stops early does not wait for its transaction.
+  p.catch(() => undefined)
+  return p
 }
 
 const done = <T>(r: IDBRequest<T>): Promise<T> =>
@@ -142,14 +158,31 @@ async function read(
   return out
 }
 
-/** Applies updates read from the database: large ones on their own, the rest merged. */
-function applyAll(store: DocStore, updates: Uint8Array[], origin: RemoteOrigin): void {
-  const small: Uint8Array[] = []
-  for (const u of updates) {
-    if (u.byteLength >= LARGE_BYTES) store.applyUpdate(u, origin)
-    else small.push(u)
+/**
+ * Applies updates read from the database in key order: large ones on their own, each run of
+ * smaller ones merged. Order matters: another tab's update can add children to a frame an
+ * earlier entry created, and a store that sees them first repairs them to the canvas.
+ */
+function applyAll(
+  store: DocStore,
+  updates: Uint8Array[],
+  origin: RemoteOrigin,
+  largeBytes: number,
+): void {
+  let small: Uint8Array[] = []
+  const applySmall = () => {
+    if (small.length > 0) store.applyUpdate(merge(small), origin)
+    small = []
   }
-  if (small.length > 0) store.applyUpdate(merge(small), origin)
+  for (const u of updates) {
+    if (u.byteLength < largeBytes) {
+      small.push(u)
+      continue
+    }
+    applySmall()
+    store.applyUpdate(u, origin)
+  }
+  applySmall()
 }
 
 /** Key ranges covering `groups` (sorted by key), neighbours joined. */
@@ -206,6 +239,7 @@ export class IndexedDbProvider extends BaseProvider {
   private readonly trimSize: number
   private readonly trimDelayMs: number
   private readonly partBytes: number
+  private readonly largeBytes: number
 
   /** @param name IndexedDB database name (one per document). */
   constructor(
@@ -216,6 +250,7 @@ export class IndexedDbProvider extends BaseProvider {
     this.trimSize = options.trimSize ?? TRIM_SIZE
     this.trimDelayMs = options.trimDelayMs ?? TRIM_DELAY_MS
     this.partBytes = options.partBytes ?? PART_BYTES
+    this.largeBytes = options.largeBytes ?? LARGE_BYTES
   }
 
   async attach(store: DocStore): Promise<void> {
@@ -267,20 +302,33 @@ export class IndexedDbProvider extends BaseProvider {
   private async open(store: DocStore): Promise<void> {
     const db = this.db
     if (!db) return
-    const os = db.transaction([UPDATES], "readwrite").objectStore(UPDATES)
+    const tx = db.transaction([UPDATES], "readwrite")
+    const commit = committed(tx)
+    const os = tx.objectStore(UPDATES)
     const stored = await read(os, null)
     const seed = store.encodeStateAsUpdate()
     const parts = partsOf(seed, this.partBytes)
     const last = (await done(put(os, seed, this.partBytes))) as number
+    let seeded = true
+    try {
+      await commit
+    } catch (e) {
+      // Read, but the store's own state was not stored: it waits with the edits (status error).
+      seeded = false
+      this.pending.push({ update: seed, sent: false })
+      this.setStatus("error", e instanceof Error ? e : new Error(String(e)))
+    }
     this.index.clear()
     for (const s of stored) this.index.set(s.group.first, s.group)
-    this.index.set(last - parts + 1, { first: last - parts + 1, parts, bytes: seed.byteLength })
+    if (seeded)
+      this.index.set(last - parts + 1, { first: last - parts + 1, parts, bytes: seed.byteLength })
     // A database left with many entries (an older version's, a closed tab's) is compacted soon.
     this.fresh = stored.length
     applyAll(
       store,
       stored.map((s) => s.update),
       this.origin,
+      this.largeBytes,
     )
   }
 
@@ -346,7 +394,9 @@ export class IndexedDbProvider extends BaseProvider {
     const db = this.db
     if (!store || !db) return
     // Queued behind the writes already sent: their entries are indexed before the reads below.
-    const os = db.transaction([UPDATES], "readwrite").objectStore(UPDATES)
+    const tx = db.transaction([UPDATES], "readwrite")
+    const commit = committed(tx)
+    const os = tx.objectStore(UPDATES)
     const keys = (await done(os.getAllKeys())) as number[]
     if (this.db !== db) return
     this.fresh = 0
@@ -366,6 +416,7 @@ export class IndexedDbProvider extends BaseProvider {
         store,
         unread.map((r) => r.update),
         this.origin,
+        this.largeBytes,
       )
       for (const r of unread) this.index.set(r.group.first, r.group)
     }
@@ -402,13 +453,14 @@ export class IndexedDbProvider extends BaseProvider {
     const parts = partsOf(update, this.partBytes)
     const last = (await done(put(os, update, this.partBytes))) as number
     const first = last - parts + 1
-    if (full) {
-      await done(os.delete(IDBKeyRange.upperBound(first, true)))
-      this.index.clear()
-    } else {
-      for (const range of ranges(picked)) await done(os.delete(range))
-      for (const g of picked) this.index.delete(g.first)
-    }
+    if (full) await done(os.delete(IDBKeyRange.upperBound(first, true)))
+    else for (const range of ranges(picked)) await done(os.delete(range))
+    // Indexed once committed: an aborted compaction leaves every entry, and its key can go to
+    // another tab's update.
+    await commit
+    if (this.db !== db) return
+    if (full) this.index.clear()
+    else for (const g of picked) this.index.delete(g.first)
     this.index.set(first, { first, parts, bytes: update.byteLength })
   }
 
@@ -452,6 +504,8 @@ export class IndexedDbProvider extends BaseProvider {
     this.offPageHide?.()
     this.offPageHide = null
     await this.flush()
+    // A write that failed again: the edits go to the journal, which the next attach replays.
+    if (this.pending.length > 0) this.writeJournal()
     this.pending = []
     this.close()
     this._store = null

@@ -78,10 +78,55 @@ export interface DraftOptions {
 
 type Leaf = Exclude<Op, { op: "batch" }>
 
+/** The draft's overlay map: tells the draft when it changes (see `Draft.kids`). */
+class Overlay extends Map<string, NodeData | null> {
+  constructor(private readonly changed: () => void) {
+    super()
+  }
+  override set(key: string, value: NodeData | null): this {
+    this.changed()
+    return super.set(key, value)
+  }
+  override delete(key: string): boolean {
+    this.changed()
+    return super.delete(key)
+  }
+  override clear(): void {
+    this.changed()
+    super.clear()
+  }
+}
+
 /** An overlay of pending changes over a {@link DraftBase}. */
 export class Draft {
   /** id → new node data, or null when deleted. */
-  readonly nodes = new Map<string, NodeData | null>()
+  readonly nodes: Map<string, NodeData | null> = new Overlay(() => {
+    this.kids = null
+  })
+  /**
+   * Overlay ids by parent, then by order, built when first read and dropped on any change:
+   * validating or scoping a large group reads children once per node, which a scan of the
+   * overlay per read made quadratic.
+   */
+  private kids: Map<unknown, { ids: string[]; byOrder: Map<unknown, string[]> | null }> | null =
+    null
+
+  private overlayKids(parent: string | null) {
+    if (!this.kids) {
+      const kids = new Map<unknown, { ids: string[]; byOrder: Map<unknown, string[]> | null }>()
+      for (const [id, n] of this.nodes) {
+        if (!n) continue
+        let k = kids.get(n.parent)
+        if (!k) {
+          k = { ids: [], byOrder: null }
+          kids.set(n.parent, k)
+        }
+        k.ids.push(id)
+      }
+      this.kids = kids
+    }
+    return this.kids.get(parent)
+  }
   readonly variables = new Map<string, unknown>()
   readonly themes = new Map<string, readonly string[] | null>()
   /** Reparenting moves performed (for cycle repair metadata). */
@@ -108,7 +153,8 @@ export class Draft {
   childIds(parent: string | null): string[] {
     const out: string[] = []
     for (const id of this.base.childIdsOf(parent)) if (!this.nodes.has(id)) out.push(id)
-    for (const [id, n] of this.nodes) if (n && n.parent === parent) out.push(id)
+    const k = this.overlayKids(parent)
+    if (k) out.push(...k.ids)
     return out
   }
 
@@ -118,8 +164,20 @@ export class Draft {
     if (!base) return null
     const out: string[] = []
     for (const id of base) if (!this.nodes.has(id)) out.push(id)
-    for (const [id, n] of this.nodes)
-      if (n && n.parent === parent && n.order === order) out.push(id)
+    const k = this.overlayKids(parent)
+    if (!k) return out
+    if (!k.byOrder) {
+      const byOrder = new Map<unknown, string[]>()
+      for (const id of k.ids) {
+        const o = this.nodes.get(id)?.order
+        const list = byOrder.get(o)
+        if (list) list.push(id)
+        else byOrder.set(o, [id])
+      }
+      k.byOrder = byOrder
+    }
+    const same = k.byOrder.get(order)
+    if (same) out.push(...same)
     return out
   }
 

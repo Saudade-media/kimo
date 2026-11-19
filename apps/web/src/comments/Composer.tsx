@@ -7,6 +7,7 @@ import { Button, Menu, MenuItem } from "@kimo/ui"
 import { type KeyboardEvent, type ReactNode, useEffect, useMemo, useRef, useState } from "react"
 import { t } from "../lib/i18n"
 import { Icon } from "../lib/icons"
+import { Float } from "./Float"
 import { EmojiPicker, type MentionCandidate, MentionPicker } from "./pickers"
 import { mentionToken } from "./text"
 
@@ -73,6 +74,8 @@ export function Composer(p: ComposerProps) {
   const [pop, setPop] = useState<"emoji" | "format" | null>(null)
   const [dismissed, setDismissed] = useState<number | null>(null)
   const field = useRef<HTMLTextAreaElement | null>(null)
+  const [box, setBox] = useState<HTMLDivElement | null>(null)
+  const [fieldBox, setFieldBox] = useState<HTMLDivElement | null>(null)
 
   useEffect(() => {
     if (!p.autoFocus) return
@@ -219,7 +222,7 @@ export function Composer(p: ComposerProps) {
   }
 
   const fieldEl = (
-    <div className="comment-field">
+    <div className="comment-field" ref={setFieldBox}>
       <Mirror text={text} picked={picked} />
       <textarea
         ref={field}
@@ -251,12 +254,14 @@ export function Composer(p: ComposerProps) {
         }}
       />
       {matches.length > 0 && (
-        <MentionPicker
-          items={matches}
-          active={Math.min(active, matches.length - 1)}
-          onPick={pick}
-          onHover={setActive}
-        />
+        <Float anchor={fieldBox} className="comment-float--mentions">
+          <MentionPicker
+            items={matches}
+            active={Math.min(active, matches.length - 1)}
+            onPick={pick}
+            onHover={setActive}
+          />
+        </Float>
       )}
     </div>
   )
@@ -307,7 +312,7 @@ export function Composer(p: ComposerProps) {
     )
 
   return (
-    <div className="comment-composer">
+    <div className="comment-composer" ref={setBox}>
       <div className="comment-composer__field">
         {fieldEl}
         {p.attachments}
@@ -339,7 +344,7 @@ export function Composer(p: ComposerProps) {
         {sendBtn}
       </div>
       {pop === "emoji" && (
-        <div className="comment-composer__pop">
+        <Float anchor={box} onDismiss={() => setPop(null)}>
           <EmojiPicker
             onPick={(e) => {
               const el = field.current
@@ -348,10 +353,10 @@ export function Composer(p: ComposerProps) {
               setPop(null)
             }}
           />
-        </div>
+        </Float>
       )}
       {pop === "format" && (
-        <div className="comment-composer__pop">
+        <Float anchor={box} onDismiss={() => setPop(null)}>
           <Menu
             className="comment-menu"
             label={t("comments.format")}
@@ -377,7 +382,7 @@ export function Composer(p: ComposerProps) {
               {t("comments.format.numbers")}
             </MenuItem>
           </Menu>
-        </div>
+        </Float>
       )}
     </div>
   )

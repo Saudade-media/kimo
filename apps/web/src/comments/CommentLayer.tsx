@@ -9,7 +9,6 @@ import type { LayoutResult } from "@kimo/layout"
 import { IconButton, Menu, MenuDivider, MenuItem } from "@kimo/ui"
 import {
   type ReactNode,
-  useEffect,
   useLayoutEffect,
   useMemo,
   useRef,
@@ -20,6 +19,7 @@ import type { UiStore } from "../canvas/contract"
 import { getLanguage, t, tn } from "../lib/i18n"
 import { Icon } from "../lib/icons"
 import { Composer } from "./Composer"
+import { Float } from "./Float"
 import { GuestName, guestNameBus } from "./guest"
 import { MessageText } from "./MessageText"
 import { anchorWorld, type ThreadRow } from "./model"
@@ -366,7 +366,7 @@ function Thread({
   actions: CommentActions
   onClose(): void
 }) {
-  const [menu, setMenu] = useState(false)
+  const [menu, setMenu] = useState<HTMLElement | null>(null)
   const [editing, setEditing] = useState<string | null>(null)
   const me = actions.me
   const writable = actions.readOnly === null && !!me
@@ -374,14 +374,6 @@ function Thread({
   const first = row.messages[0]?.id as string
   const canEditFirst = writable && actions.canModify(row.id, first)
   const canDelete = writable && (canEditFirst || actions.moderator)
-  useEffect(() => {
-    if (!menu) return
-    const close = (e: PointerEvent) => {
-      if (!(e.target as Element | null)?.closest?.(".comment-thread__menu")) setMenu(false)
-    }
-    window.addEventListener("pointerdown", close, true)
-    return () => window.removeEventListener("pointerdown", close, true)
-  }, [menu])
   return (
     <div className="comment-thread" role="dialog" aria-label={t("comments.title")}>
       <div className="comment-thread__header">
@@ -392,8 +384,11 @@ function Thread({
             label={t("comments.more")}
             icon={<Icon name="ellipsis" size={16} />}
             aria-haspopup="menu"
-            aria-expanded={menu}
-            onClick={() => setMenu((m) => !m)}
+            aria-expanded={!!menu}
+            onClick={(e) => {
+              const el = e.currentTarget
+              setMenu((m) => (m ? null : el))
+            }}
           />
           <IconButton
             tone="ghost"
@@ -410,15 +405,21 @@ function Thread({
             onClick={onClose}
           />
         </div>
-        {menu && (
+        <Float anchor={menu} align="end" offset={2} onDismiss={() => setMenu(null)}>
           <Menu
             className="comment-menu comment-thread__menu"
             label={t("comments.more")}
             autoFocus
-            onClose={() => setMenu(false)}
+            onClose={() => setMenu(null)}
           >
             {canEditFirst && (
-              <MenuItem icon={<Icon name="pencil" size={14} />} onSelect={() => setEditing(first)}>
+              <MenuItem
+                icon={<Icon name="pencil" size={14} />}
+                onSelect={() => {
+                  setMenu(null)
+                  setEditing(first)
+                }}
+              >
                 {t("comments.edit")}
               </MenuItem>
             )}
@@ -448,7 +449,7 @@ function Thread({
               </MenuItem>
             )}
           </Menu>
-        )}
+        </Float>
       </div>
       <div className="comment-thread__messages">
         {row.messages.map(({ id, message }) => (
@@ -495,8 +496,8 @@ function Message({
   actions: CommentActions
   writable: boolean
 }) {
-  const [emoji, setEmoji] = useState(false)
-  const [menu, setMenu] = useState(false)
+  const [emoji, setEmoji] = useState<HTMLElement | null>(null)
+  const [menu, setMenu] = useState<HTMLElement | null>(null)
   const me = actions.me?.id ?? null
   const own = writable && actions.canModify(thread, id)
   const reactions = Object.entries(message.reactions ?? {})
@@ -510,25 +511,30 @@ function Message({
           <span className="comment-message__time">{shortTime(message.at)}</span>
           {message.edited && <span className="comment-message__time">{t("comments.edited")}</span>}
           {own && !first && !editing && (
-            <span className="comment-message__more">
+            <span className={menu ? "comment-message__more is-open" : "comment-message__more"}>
               <IconButton
                 size="sm"
                 tone="ghost"
                 label={t("comments.more")}
                 icon={<Icon name="ellipsis" size={14} />}
-                onClick={() => setMenu((m) => !m)}
+                aria-haspopup="menu"
+                aria-expanded={!!menu}
+                onClick={(e) => {
+                  const el = e.currentTarget
+                  setMenu((m) => (m ? null : el))
+                }}
               />
-              {menu && (
+              <Float anchor={menu} align="end" offset={2} onDismiss={() => setMenu(null)}>
                 <Menu
                   className="comment-menu"
                   label={t("comments.more")}
                   autoFocus
-                  onClose={() => setMenu(false)}
+                  onClose={() => setMenu(null)}
                 >
                   <MenuItem
                     icon={<Icon name="pencil" size={14} />}
                     onSelect={() => {
-                      setMenu(false)
+                      setMenu(null)
                       setEditing(id)
                     }}
                   >
@@ -538,14 +544,14 @@ function Message({
                     className="comment-menu__danger"
                     icon={<Icon name="trash-2" size={14} />}
                     onSelect={() => {
-                      setMenu(false)
+                      setMenu(null)
                       actions.remove(thread, id)
                     }}
                   >
                     {t("comments.delete")}
                   </MenuItem>
                 </Menu>
-              )}
+              </Float>
             </span>
           )}
         </div>
@@ -597,20 +603,22 @@ function Message({
                   type="button"
                   className="comment-reaction-add"
                   aria-label={t("comments.addReaction")}
-                  onClick={() => setEmoji((x) => !x)}
+                  aria-expanded={!!emoji}
+                  onClick={(e) => {
+                    const el = e.currentTarget
+                    setEmoji((x) => (x ? null : el))
+                  }}
                 >
                   <Icon name="smile-plus" size={13} />
                 </button>
-                {emoji && (
-                  <div className="comment-reactions__picker">
-                    <EmojiPicker
-                      onPick={(e) => {
-                        actions.react(thread, id, e)
-                        setEmoji(false)
-                      }}
-                    />
-                  </div>
-                )}
+                <Float anchor={emoji} onDismiss={() => setEmoji(null)}>
+                  <EmojiPicker
+                    onPick={(e) => {
+                      actions.react(thread, id, e)
+                      setEmoji(null)
+                    }}
+                  />
+                </Float>
               </span>
             )}
           </div>

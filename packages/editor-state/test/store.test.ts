@@ -57,7 +57,7 @@ describe("import / export", () => {
   })
 
   test("newer formats are refused for editing", () => {
-    const newer = { ...createEmptyDocument(), format: "1.1.0" } as KimoDocument
+    const newer = { ...createEmptyDocument(), format: "1.2.0" } as KimoDocument
     expect(() => importDocument(newer)).toThrow(/FORMAT_NEWER/)
   })
 
@@ -386,4 +386,148 @@ test("documentText writes what serialize(toDocument()) writes, without the copy"
     expect(documentText(store, prepare)).toBe(serialize(prepare(store.toDocument())))
     expect(seen).toBe(store.nodeIds().length)
   }
+})
+
+describe("comments (docs/spec/comments.md)", () => {
+  const ana = { id: "dev:ana", name: "Ana", kind: "person" } as const
+  const bo = { id: "acct:bo", name: "Bo", kind: "person" } as const
+  const base = () => {
+    const s = new YjsDocStore()
+    s.loadDocument({
+      ...createEmptyDocument(),
+      nodes: { Frame00001: { type: "frame", parent: null, order: "a0", w: 100, h: 100 } },
+    } as KimoDocument)
+    return s
+  }
+
+  test("a thread makes the file 1.1, deleting it returns to 1.0, and undo never touches it", () => {
+    const s = base()
+    const { threadId } = s.comments.createThread(
+      {
+        anchor: { node: "Frame00001", x: 1, y: 2, fallback: { x: 1, y: 2 } },
+        message: { author: ana, text: "Hi" },
+      },
+      "user",
+    )
+    const doc = s.toDocument() as unknown as Record<string, unknown>
+    expect(doc.format).toBe("1.1.0")
+    expect(doc.features).toEqual(["doc/comments"])
+    expect(validate(doc).errors).toEqual([])
+    expect(s.undo("user").ok).toBe(false)
+    expect(s.comments.thread(threadId)).toBeDefined()
+    s.comments.deleteThread(threadId, ana.id, "user")
+    const after = s.toDocument() as unknown as Record<string, unknown>
+    expect(after.format).toBe("1.0.0")
+    expect(after.comments).toBeUndefined()
+    expect(after.features).toBeUndefined()
+  })
+
+  test("a file with comments round-trips byte for byte, and the design header stays 1.0", () => {
+    const s = base()
+    const { threadId } = s.comments.createThread(
+      { anchor: { x: 5, y: 5 }, message: { author: ana, text: "**Bold** @[Bo](acct:bo)" } },
+      "user",
+    )
+    s.comments.reply(threadId, { author: bo, text: "Reply" }, "user")
+    s.comments.toggleReaction(
+      threadId,
+      s.comments.thread(threadId)?.first as string,
+      "👍",
+      bo.id,
+      "user",
+    )
+    const text = serialize(s.toDocument())
+    const t = new YjsDocStore()
+    t.loadDocument(JSON.parse(text))
+    expect(serialize(t.toDocument())).toBe(text)
+    // A peer that only receives the design document never sees format 1.1.
+    const designOnly = new YjsDocStore()
+    designOnly.applyUpdate(t.encodeStateAsUpdate(), "remote:a")
+    expect((designOnly.toDocument() as unknown as Record<string, unknown>).format).toBe("1.0.0")
+  })
+
+  test("authors edit and delete their own messages only", () => {
+    const s = base()
+    const { threadId } = s.comments.createThread(
+      { anchor: { x: 0, y: 0 }, message: { author: ana, text: "Hi" } },
+      "user",
+    )
+    const reply = s.comments.reply(threadId, { author: bo, text: "Yo" }, "user")
+    expect(() => s.comments.editMessage(threadId, reply, "Changed", ana.id, "user")).toThrow(
+      /author/,
+    )
+    expect(() => s.comments.deleteMessage(threadId, reply, ana.id, "user")).toThrow(/author/)
+    expect(s.comments.deleteMessage(threadId, reply, ana.id, "user", { moderator: true })).toBe(
+      "message",
+    )
+  })
+
+  test("concurrent replies, edits and reactions converge", () => {
+    const a = base()
+    const { threadId, messageId } = a.comments.createThread(
+      { anchor: { x: 0, y: 0 }, message: { author: ana, text: "Hello world" } },
+      "user",
+    )
+    const b = new YjsDocStore()
+    b.comments.applyUpdate(a.comments.encodeStateAsUpdate(), "remote:a")
+    a.comments.reply(threadId, { author: ana, text: "From A" }, "user")
+    b.comments.reply(threadId, { author: bo, text: "From B" }, "user")
+    a.comments.editMessage(threadId, messageId, "Hello brave world", ana.id, "user")
+    a.comments.toggleReaction(threadId, messageId, "🎉", ana.id, "user")
+    b.comments.toggleReaction(threadId, messageId, "🎉", bo.id, "user")
+    a.comments.applyUpdate(
+      b.comments.encodeStateAsUpdate(a.comments.encodeStateVector()),
+      "remote:b",
+    )
+    b.comments.applyUpdate(
+      a.comments.encodeStateAsUpdate(b.comments.encodeStateVector()),
+      "remote:a",
+    )
+    expect(a.comments.toJSON()).toEqual(b.comments.toJSON())
+    const t = a.comments.thread(threadId)
+    expect(Object.keys(t?.messages ?? {}).length).toBe(3)
+    expect(t?.messages[messageId]?.reactions).toEqual({ "🎉": ["acct:bo", "dev:ana"] })
+  })
+
+  test("a reply to a thread deleted elsewhere is dropped (deletion wins)", () => {
+    const a = base()
+    const { threadId } = a.comments.createThread(
+      { anchor: { x: 0, y: 0 }, message: { author: ana, text: "Hi" } },
+      "user",
+    )
+    const b = new YjsDocStore()
+    b.comments.applyUpdate(a.comments.encodeStateAsUpdate(), "remote:a")
+    a.comments.deleteThread(threadId, ana.id, "user")
+    b.comments.reply(threadId, { author: bo, text: "Late" }, "user")
+    a.comments.applyUpdate(
+      b.comments.encodeStateAsUpdate(a.comments.encodeStateVector()),
+      "remote:b",
+    )
+    b.comments.applyUpdate(
+      a.comments.encodeStateAsUpdate(b.comments.encodeStateVector()),
+      "remote:a",
+    )
+    expect(a.comments.toJSON()).toBeUndefined()
+    expect(b.comments.toJSON()).toBeUndefined()
+  })
+
+  test("loading with mode add keeps the room's comments and adds what the file has more", () => {
+    const s = base()
+    const { threadId } = s.comments.createThread(
+      { anchor: { x: 0, y: 0 }, message: { author: ana, text: "Room" } },
+      "user",
+    )
+    const file = s.toDocument() as unknown as Record<string, unknown>
+    s.comments.deleteThread(threadId, ana.id, "user")
+    s.comments.createThread(
+      { anchor: { x: 1, y: 1 }, message: { author: bo, text: "New" } },
+      "user",
+    )
+    // An older client saved the file without comments: nothing is deleted.
+    const { comments: _c, ...stripped } = file
+    s.loadDocument(stripped as unknown as KimoDocument, { comments: "add" })
+    expect(s.comments.size).toBe(1)
+    s.loadDocument(file as unknown as KimoDocument, { comments: "add" })
+    expect(s.comments.size).toBe(2)
+  })
 })

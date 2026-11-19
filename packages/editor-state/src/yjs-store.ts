@@ -20,10 +20,14 @@
  * exactly canonical is held this way: other shapes and bindings stay plain values. Content written
  * by an older client (a plain value in the node map) becomes a Y.Text on its first edit.
  *
- * Only this file imports Yjs; consumers see plain JSON, opaque binary updates and opaque text
+ * Comments live in a second Y.Doc, {@link CommentStore} (`comment-store.ts`, the only other
+ * file that imports Yjs); they are projected into `toDocument()` as root `comments`.
+ *
+ * Only these files import Yjs; consumers see plain JSON, opaque binary updates and opaque text
  * positions.
  */
 import {
+  type Comments,
   compareCodeUnits,
   compareSiblings,
   DOCUMENT_LEVEL_CODES,
@@ -35,8 +39,10 @@ import {
   type ValidationIssue,
   type ValidationResult,
   validate,
+  withCommentsHeader,
 } from "@kimo/core-schema"
 import * as Y from "yjs"
+import { CommentStore } from "./comment-store"
 import { Draft, type DraftBase, OpFailure } from "./draft"
 import { randomToken } from "./ids"
 import { cloneJson, deepFreeze, setOwn } from "./json"
@@ -407,6 +413,7 @@ function nodeIdOf(pointer: string): string | undefined {
 
 /** {@link DocStore} implementation on a Yjs document. */
 export class YjsDocStore implements DocStore {
+  readonly comments: CommentStore
   private readonly ydoc: Y.Doc
   private readonly yHeader: Y.Map<unknown>
   private readonly yVars: Y.Map<unknown>
@@ -504,6 +511,18 @@ export class YjsDocStore implements DocStore {
       liveText: options.liveText ?? true,
     }
     this.ydoc = new Y.Doc()
+    this.comments = new CommentStore({ now: this.options.now })
+    this.comments.onChange((c) => {
+      const change: StoreChange = {
+        origin: c.origin,
+        cause: c.cause === "edit" ? "ops" : c.cause,
+        revision: this.revision,
+        nodes: new Set(),
+        header: false,
+        comments: true,
+      }
+      for (const l of [...this.changeListeners]) l(change)
+    })
     this.yHeader = this.ydoc.getMap("header")
     this.yVars = this.ydoc.getMap("variables")
     this.yThemes = this.ydoc.getMap("themes")
@@ -635,7 +654,9 @@ export class YjsDocStore implements DocStore {
   }
 
   toDocument(): KimoDocument {
-    const doc = cloneJson(new Draft(this.base(), this.draftOptions()).toDocument())
+    const doc = this.withComments(
+      cloneJson(new Draft(this.base(), this.draftOptions()).toDocument()),
+    )
     // Yjs map iteration order depends on how updates arrived (e.g. after an IndexedDB reload),
     // so data-keyed members are emitted in code-unit key order to keep the output deterministic.
     const record = doc as unknown as Record<string, unknown>
@@ -648,8 +669,8 @@ export class YjsDocStore implements DocStore {
   }
 
   toHeader(): Omit<KimoDocument, "nodes"> {
-    const doc = cloneJson(
-      new Draft(this.base(), this.draftOptions()).toDocument(false),
+    const doc = this.withComments(
+      cloneJson(new Draft(this.base(), this.draftOptions()).toDocument(false)),
     ) as unknown as Record<string, unknown>
     for (const key of ["variables", "themes"]) {
       const value = doc[key]
@@ -834,7 +855,10 @@ export class YjsDocStore implements DocStore {
       const r = validate(doc, this.options.validateOptions)
       if (!r.ok) throw new DocumentInvalidError(r.errors)
     }
-    const src = cloneJson(doc) as unknown as Record<string, unknown>
+    // Comments go to the comment store; the design header always holds the comment-free form,
+    // so peers that predate comments never see format 1.1 in a room.
+    const { comments, ...rest } = cloneJson(doc) as unknown as Record<string, unknown>
+    const src = withCommentsHeader(rest)
     const origin = options.origin ?? "file"
     this.transact(origin, "load", () => {
       // Header members.
@@ -870,6 +894,10 @@ export class YjsDocStore implements DocStore {
         if (typeof n !== "object" || n === null || Array.isArray(n)) continue
         this.writeNode(id, n as Record<string, unknown>)
       }
+    })
+    this.comments.load(comments as Comments | undefined, {
+      mode: options.comments ?? "replace",
+      origin,
     })
     if (options.newEpoch !== false) {
       this.epoch = randomToken(8)
@@ -1154,7 +1182,17 @@ export class YjsDocStore implements DocStore {
     this.updateListeners.clear()
     this.textListeners.clear()
     this.beforeListeners.clear()
+    this.comments.destroy()
     this.ydoc.destroy()
+  }
+
+  /** `doc` with the comment store's threads as root `comments`, header to match (spec §1). */
+  private withComments<T extends object>(doc: T): T {
+    const comments = this.comments.toJSON()
+    const d = doc as unknown as Record<string, unknown>
+    if (comments) d.comments = comments
+    else delete d.comments
+    return withCommentsHeader(doc)
   }
 
   // --- Internals ------------------------------------------------------------------------------

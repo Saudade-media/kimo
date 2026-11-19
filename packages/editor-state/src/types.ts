@@ -4,6 +4,7 @@
  * consumers use this interface, never Yjs types, so the CRDT can be swapped.
  */
 import type { KimoDocument, ValidateOptions, ValidationIssue } from "@kimo/core-schema"
+import type { CommentLoadMode, CommentStore } from "./comment-store"
 import type { TextDelta, TextEdit, TextRun } from "./live-text"
 import type { NodeData, NormalizedOp, Op } from "./ops"
 import type { LocalOrigin, Origin, RemoteOrigin } from "./origin"
@@ -115,6 +116,11 @@ export interface StoreChange {
   nodes: ReadonlySet<string>
   /** True when header members, variables or themes changed. */
   header: boolean
+  /**
+   * True for a change of comments only (`nodes` empty, `header` false). Comments are not part
+   * of the revision or the undo stacks, but they are part of the file.
+   */
+  comments?: boolean
 }
 
 /** One entry of the op log (teardown 9.3: forward + informational inverse). */
@@ -140,6 +146,8 @@ export interface LoadOptions {
   validate?: boolean
   /** Mint a new epoch and clear undo history. Default true. */
   newEpoch?: boolean
+  /** How the document's `comments` load into the comment store. Default "replace". */
+  comments?: CommentLoadMode
 }
 
 /** Options for {@link DocStore.editText}. */
@@ -191,6 +199,11 @@ export interface ReadOnlyState {
 export interface DocStore {
   /** Current revision. */
   readonly revision: Revision
+  /**
+   * The file's comments (docs/spec/comments.md), held in their own CRDT document. Absent on a
+   * store that has none (a proxy of another process's store).
+   */
+  readonly comments?: CommentStore
   /** Non-null when edits are refused (`READ_ONLY`). */
   readonly readOnly: ReadOnlyState | null
   /**

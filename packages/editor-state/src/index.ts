@@ -46,6 +46,15 @@ export {
   MAX_PUBLISHED_CLAIM_IDS,
   releaseClaims,
 } from "./claims"
+export {
+  type CommentChange,
+  CommentError,
+  type CommentErrorCode,
+  type CommentLoadMode,
+  CommentStore,
+  type CommentStoreOptions,
+  type NewMessage,
+} from "./comment-store"
 export { generateId, isNodeId } from "./ids"
 export {
   applyTextEdits,

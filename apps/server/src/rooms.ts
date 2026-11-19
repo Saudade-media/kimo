@@ -369,9 +369,15 @@ export class Relay {
    */
   subscribeComments(ws: Sock, sinceRaw: number): void {
     const room = this.rooms.get(ws.data.room)
-    if (!room) return this.closeSocket(ws, "ROOM_CLOSED")
+    if (!room) {
+      this.closeSocket(ws, "ROOM_CLOSED")
+      return
+    }
     const row = this.db.getRoom(room.id)
-    if (!row || row.closed_at !== null) return this.closeSocket(ws, "ROOM_CLOSED")
+    if (!row || row.closed_at !== null) {
+      this.closeSocket(ws, "ROOM_CLOSED")
+      return
+    }
     const snap = this.db.latestChannelSnapshot("comments", room.id)
     const since = sinceRaw > row.c_head ? 0 : sinceRaw
     let from = since + 1

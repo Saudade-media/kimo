@@ -57,6 +57,8 @@ const ALLOW: Allow[] = [
   // The legend explains the "—" glyph shown in empty variable cells.
   { file: /VariablesDialog\.tsx$/, text: /· — means no entry/, kind: "em-dash" },
   { file: /var-cell\/VarCell\.tsx$/, text: /^—$/, kind: "em-dash" },
+  // The comment emoji picker's set: reactions are emoji by design.
+  { file: /comments\/pickers\.tsx$/, text: /./, kind: "emoji" },
   // Arrows and © are typography, not emoji (Extended_Pictographic includes them).
   { file: /./, text: /./, kind: "emoji", match: /^[↔↕↗©]$/ },
   // Markdown table cells that hold the empty-value glyph, and release headings.

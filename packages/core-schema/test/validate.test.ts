@@ -3,7 +3,6 @@ import { type KimoDocument, type ValidateOptions, validate } from "../src/index"
 import { codes, doc, HEADER } from "./helpers"
 
 const C_AUTHOR = { id: "dev:abc123", name: "Ana", kind: "person" } as const
-const C_OTHER = { id: "acct:42", name: "Bo", kind: "person" } as const
 const cMsg = (at: string, text: string, extra: object = {}) => ({
   author: C_AUTHOR,
   at,

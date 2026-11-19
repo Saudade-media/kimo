@@ -153,7 +153,8 @@ export async function commentsHandler(
   }
 
   // Writes: a view-only room refuses them (spec §8), like a read-only file.
-  if (d.shared?.role === "view" || store.readOnly || comments.readOnly !== null)
+  // A comment link locks the design, not the comments: the comment store says which applies.
+  if (d.shared?.role === "view" || comments.readOnly !== null)
     return fail(
       {
         code: "READ_ONLY",

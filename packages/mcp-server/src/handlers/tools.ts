@@ -248,7 +248,7 @@ function docLine(x: {
 }): string {
   if (!x.shared) return `${x.name} (${x.doc.id})`
   const via = x.shared.relay ? ` via ${x.shared.relay}` : ""
-  return `${x.name} (${x.doc.id}, shared room${via}, ${x.shared.role === "view" ? "view only" : "can edit"})`
+  return `${x.name} (${x.doc.id}, shared room${via}, ${x.shared.role === "edit" ? "can edit" : x.shared.role === "comment" ? "can comment" : "view only"})`
 }
 
 function nameOf(d: HostDocument): string {
@@ -295,7 +295,7 @@ export function readOnlyError(d: HostDocument): ToolError {
     code: "READ_ONLY",
     message: `This document is read-only (${d.store.readOnly?.reason ?? "read-only"}).`,
     suggestion:
-      d.shared?.role === "view"
+      d.shared && d.shared.role !== "edit"
         ? VIEW_ROOM_SUGGESTION
         : "Export a copy with kimo_export target=kimo, or open a writable document.",
   }
@@ -1696,7 +1696,7 @@ export function createToolHandlerMap(
     if (!code && !(M5_EXPORT_TARGETS as readonly string[]).includes(target))
       return fail({ code: "UNSUPPORTED", message: `Unknown export target ${target}.` })
     // A viewer may export but not duplicate the file (board 41).
-    if (target === "kimo" && d.shared?.role === "view")
+    if (target === "kimo" && d.shared && d.shared.role !== "edit")
       return fail({
         code: "UNSUPPORTED",
         message: "A room joined with a view link can't be copied to a .kimo file.",

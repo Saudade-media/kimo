@@ -24,6 +24,8 @@ export interface RelayInfo {
   relayId: Uint8Array
   /** `external`: an owner policy module decides who may register (§14.12); owner ops answer `OWNER_EXTERNAL`. */
   owner: "unclaimed" | "claimed" | "external"
+  /** What the relay carries beyond kimo-mp/1 (`comments`); empty or absent on older relays. */
+  features?: string[]
 }
 
 /** A device of the relay's owner set, as `POST /owner` lists it (§6.1). */
@@ -266,6 +268,11 @@ export class RelayHttpClient {
       limits,
       relayId,
       owner: info.owner,
+      ...(Array.isArray(info.features)
+        ? {
+            features: info.features.filter((f): f is string => typeof f === "string").slice(0, 32),
+          }
+        : {}),
     }
   }
 

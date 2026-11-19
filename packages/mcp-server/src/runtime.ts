@@ -65,8 +65,8 @@ export const VIEW_ROOM_SUGGESTION =
 export interface SharedRoomInfo {
   /** Host of the relay the room syncs through (`relay.getkimo.design`), null when unknown. */
   relay: string | null
-  /** The link's role: `view` refuses edits (READ_ONLY). */
-  role: "edit" | "view"
+  /** The link's role: `view` refuses edits (READ_ONLY); `comment` refuses all but comments. */
+  role: "edit" | "view" | "comment"
 }
 
 /** One open document as the tool layer sees it. */

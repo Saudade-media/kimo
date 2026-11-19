@@ -499,12 +499,13 @@ export function createShareService(deps: ShareServiceDeps): ShareService {
 
   const client = (relayUrl: string) =>
     new RelayHttpClient({ relayUrl, ...(deps.fetch ? { fetch: deps.fetch } : {}) })
+  const deviceKeys =
+    deps.deviceKeys ??
+    (typeof indexedDB === "undefined"
+      ? createMemoryDeviceKeyStore()
+      : createIndexedDbDeviceKeyStore())
   const ownership = createOwnershipClient({
-    deviceKeys:
-      deps.deviceKeys ??
-      (typeof indexedDB === "undefined"
-        ? createMemoryDeviceKeyStore()
-        : createIndexedDbDeviceKeyStore()),
+    deviceKeys,
     deviceName: deps.deviceName ?? (() => "Kimo"),
     ...(deps.webOrigin !== undefined ? { webOrigin: deps.webOrigin } : {}),
     now,
@@ -565,6 +566,23 @@ export function createShareService(deps: ShareServiceDeps): ShareService {
     locked(`owned:${room}`, async () => fn(await requireOwned(room)))
 
   /** Mints and records a token (not persisted; callers save the room). */
+  const commentRelays = new Map<string, Promise<boolean>>()
+  /** Whether the relay carries comments (its `/version` says so), asked once per relay. */
+  function relayHasComments(relayUrl: string): Promise<boolean> {
+    let known = commentRelays.get(relayUrl)
+    if (!known) {
+      known = client(relayUrl)
+        .probe()
+        .then((info) => info.features?.includes("comments") === true)
+        .catch(() => {
+          commentRelays.delete(relayUrl)
+          return false
+        })
+      commentRelays.set(relayUrl, known)
+    }
+    return known
+  }
+
   async function mint(
     owned: OwnedRoom,
     options: MintLinkOptions & { self?: boolean },
@@ -574,9 +592,13 @@ export function createShareService(deps: ShareServiceDeps): ShareService {
     const exp = options.ttlSeconds === null ? 0 : iat + Math.max(1, Math.floor(options.ttlSeconds))
     const jti = randomBytes(16)
     const origin = options.origin ?? "user"
+    // View links may comment (docs/spec/comments.md §5) where the relay knows the comment role:
+    // an older relay refuses `comment` tokens outright, so it keeps plain view links.
+    const role =
+      options.role === "view" && (await relayHasComments(owned.relayUrl)) ? "comment" : options.role
     const token = await mintToken(owned.linkKeys.privateKey, {
       room,
-      role: options.role,
+      role,
       kid: owned.kid,
       iat,
       exp,
@@ -918,6 +940,25 @@ export function createShareService(deps: ShareServiceDeps): ShareService {
     throw error
   }
 
+  /**
+   * The keys that sign comment changes (docs/spec/comments.md §4.1): this install's device key,
+   * and on the owner's devices the room root key. Null when no key can be had: comments stay
+   * read-only then.
+   */
+  async function commentSigners(room: string, isOwner: boolean) {
+    const signer = async (pair: CryptoKeyPair) => ({
+      privateKey: pair.privateKey,
+      publicKey: await exportPublicKey(pair.publicKey),
+    })
+    try {
+      const device = await signer(await deviceKeys.get())
+      const owned = isOwner ? await registry.getOwned(room) : null
+      return { device, root: owned ? await signer(owned.rootKeys) : null }
+    } catch {
+      return null
+    }
+  }
+
   async function build(options: OpenOptions, entry: OpenEntry): Promise<SharedSession> {
     const { room } = options
     const binding = await roomBinding(options.relayUrl, options.roomKey)
@@ -940,6 +981,7 @@ export function createShareService(deps: ShareServiceDeps): ShareService {
       replicaHadState = store.encodeStateVector().length > 1
     }
     options.beforeNetwork?.(replicaHadState)
+    const comments = await commentSigners(room, options.isOwner)
     const provider = createNetworkProvider({
       relayUrl: options.relayUrl,
       room,
@@ -951,6 +993,7 @@ export function createShareService(deps: ShareServiceDeps): ShareService {
       ...(deps.backoff ? { backoff: deps.backoff } : {}),
       ...(deps.timing ? { timing: deps.timing } : {}),
       ...(deps.now ? { now: deps.now } : {}),
+      ...(comments ? { comments } : {}),
     })
     entry.provider = provider
     // The relay decides: an edit welcome (a view session upgraded) lifts the view lock.

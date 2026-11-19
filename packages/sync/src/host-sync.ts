@@ -14,7 +14,10 @@
  *
  * Messages are JSON with base64 payloads, so any string/JSON channel works.
  */
-import type { DocStore, Origin, RemoteOrigin } from "@kimo/editor-state"
+import type { CommentOp, CommentStore, DocStore, Origin, RemoteOrigin } from "@kimo/editor-state"
+
+type Comments = Parameters<CommentStore["load"]>[0]
+
 import { BaseProvider } from "./provider"
 
 /** One message on the window ↔ host channel. `doc` names the document (its path). */
@@ -29,6 +32,10 @@ export type HostSyncMessage =
   | { t: "bye"; doc: string; peer: string }
   /** Host → window: `doc` is not open in the host. */
   | { t: "missing"; doc: string; peer: string }
+  /** Replica → hub: one comment write (JSON of a `CommentOp`) with its origin. */
+  | { t: "comment-op"; doc: string; peer: string; op: string; origin: string }
+  /** Hub → replica: the whole comment state (JSON of `Comments`, "" for none). */
+  | { t: "comments"; doc: string; peer: string; data: string; origin: string }
 
 /** A bidirectional message channel. */
 export interface HostSyncTransport {
@@ -56,6 +63,15 @@ export function base64ToBytes(b64: string): Uint8Array {
 export function remoteOriginFor(origin: string): RemoteOrigin {
   if (origin.startsWith("remote:") || origin === "remote") return origin as RemoteOrigin
   return `remote:${origin}`
+}
+
+function parseJson<T>(text: string): T | undefined {
+  if (!text) return undefined
+  try {
+    return JSON.parse(text) as T
+  } catch {
+    return undefined
+  }
 }
 
 /** The original origin of a change applied by this channel (`remote:mcp:x.y` → `mcp:x.y`). */
@@ -165,6 +181,17 @@ export class WindowSyncProvider extends BaseProvider {
             }
           } else if (m.t === "update") {
             this.apply(base64ToBytes(m.update), remoteOriginFor(m.origin))
+          } else if (m.t === "comments") {
+            // The hub's comments are the truth: a replica's writes went there as ops.
+            this.applying = true
+            try {
+              store.comments?.load(parseJson<Comments>(m.data), {
+                mode: "replace",
+                origin: remoteOriginFor(m.origin),
+              })
+            } finally {
+              this.applying = false
+            }
           } else if (m.t === "bye" || m.t === "missing") {
             this.closedByHost = true
             this.setStatus(
@@ -193,6 +220,20 @@ export class WindowSyncProvider extends BaseProvider {
           })
         }),
       )
+      const comments = store.comments
+      if (comments)
+        this.offs.push(
+          comments.onCommit((op, origin) => {
+            if (this.applying) return
+            this.transport.send({
+              t: "comment-op",
+              doc: this.doc,
+              peer: this.peer,
+              op: JSON.stringify(op),
+              origin: originalOrigin(origin),
+            })
+          }),
+        )
       this.transport.send({
         t: "hello",
         doc: this.doc,
@@ -232,7 +273,7 @@ export class WindowSyncProvider extends BaseProvider {
 export class HostSyncHub {
   private readonly docs = new Map<
     string,
-    { store: DocStore; off: () => void; peers: Set<string> }
+    { store: DocStore; off: () => void; offComments: (() => void) | undefined; peers: Set<string> }
   >()
   private readonly offTransport: () => void
   /** Peer whose update the host store is applying right now (echo suppression). */
@@ -250,9 +291,15 @@ export class HostSyncHub {
   register(doc: string, store: DocStore): void {
     if (this.docs.get(doc)?.store === store) return
     this.unregister(doc)
+    const offComments = store.comments?.onChange((change) => {
+      const from = this.applyingFrom
+      for (const p of entry.peers)
+        if (p !== from) this.sendComments(doc, p, store, originalOrigin(change.origin))
+    })
     const entry = {
       store,
       peers: new Set<string>(),
+      offComments,
       off: store.onUpdate((update, origin) => {
         const from = this.applyingFrom
         const b64 = bytesToBase64(update)
@@ -275,6 +322,7 @@ export class HostSyncHub {
     const e = this.docs.get(doc)
     if (!e) return
     e.off()
+    e.offComments?.()
     for (const p of e.peers) this.transport.send({ t: "bye", doc, peer: p })
     this.docs.delete(doc)
     this.emitPeers(doc, 0)
@@ -288,6 +336,17 @@ export class HostSyncHub {
   onPeersChange(l: (doc: string, peers: number) => void): () => void {
     this.peerListeners.add(l)
     return () => this.peerListeners.delete(l)
+  }
+
+  private sendComments(doc: string, peer: string, store: DocStore, origin: string): void {
+    const data = store.comments?.toJSON()
+    this.transport.send({
+      t: "comments",
+      doc,
+      peer,
+      data: data ? JSON.stringify(data) : "",
+      origin,
+    })
   }
 
   private emitPeers(doc: string, n: number): void {
@@ -314,6 +373,7 @@ export class HostSyncHub {
         update: bytesToBase64(e.store.encodeStateAsUpdate(base64ToBytes(m.sv))),
         sv: bytesToBase64(e.store.encodeStateVector()),
       })
+      if (e.store.comments) this.sendComments(m.doc, m.peer, e.store, "host")
       this.emitPeers(m.doc, e.peers.size)
     } else if (m.t === "update") {
       const e = this.docs.get(m.doc)
@@ -321,6 +381,20 @@ export class HostSyncHub {
       this.applyingFrom = m.peer
       try {
         e.store.applyUpdate(base64ToBytes(m.update), remoteOriginFor(m.origin))
+      } finally {
+        this.applyingFrom = null
+      }
+    } else if (m.t === "comment-op") {
+      const e = this.docs.get(m.doc)
+      const comments = e?.store.comments
+      const op = parseJson<CommentOp>(m.op)
+      if (!e || !comments || !op || !e.peers.has(m.peer)) return
+      this.applyingFrom = m.peer
+      try {
+        comments.submit(op, remoteOriginFor(m.origin))
+      } catch {
+        // Refused here (read-only, not the author): the replica takes the hub's state back.
+        this.sendComments(m.doc, m.peer, e.store, "host")
       } finally {
         this.applyingFrom = null
       }

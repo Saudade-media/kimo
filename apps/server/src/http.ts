@@ -45,6 +45,8 @@ export interface VersionBody {
   relayId: string
   /** `external` under an external owner policy (§14.12). */
   owner: "unclaimed" | "claimed" | "external"
+  /** `comments`: the comment channel and `comment` tokens (docs/spec/comments.md §4.4). */
+  features: string[]
 }
 
 function versionBody(relay: Relay): VersionBody {
@@ -55,6 +57,7 @@ function versionBody(relay: Relay): VersionBody {
     limits: relay.limits,
     relayId: toBase64Url(relay.relayId),
     owner: relay.owner.status(),
+    features: ["comments"],
   }
 }
 

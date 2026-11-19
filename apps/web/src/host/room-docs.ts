@@ -48,9 +48,12 @@ export interface RoomAttach {
   ref: string
   /** The relay's host. */
   relay: string | null
-  role: "edit" | "view"
+  /** `comment`: a view link that may comment (docs/spec/comments.md §5). */
+  role: "edit" | "view" | "comment"
   /** Why the window's store refuses edits, null when it takes them. */
   readOnly: string | null
+  /** Why its comments refuse writes, null when they take them. */
+  comments: string | null
 }
 
 /** Why a room whose connection ended for good takes no edits (READ_ONLY). */
@@ -124,7 +127,15 @@ function attachOf(args: Record<string, unknown>): RoomAttach {
   const relay =
     typeof args.relay === "string" && /^[\w.:[\]-]{1,260}$/.test(args.relay) ? args.relay : null
   const readOnly = typeof args.readOnly === "string" ? args.readOnly.slice(0, 200) : null
-  return { ref, relay, role: args.role === "edit" ? "edit" : "view", readOnly }
+  const role = args.role === "edit" || args.role === "comment" ? args.role : "view"
+  // An older window sends no comment reason: its comments follow the store.
+  const comments =
+    typeof args.comments === "string"
+      ? args.comments.slice(0, 200)
+      : args.comments === null
+        ? null
+        : readOnly
+  return { ref, relay, role, readOnly, comments }
 }
 
 // --- Host --------------------------------------------------------------------------------------
@@ -257,8 +268,12 @@ export function createHostRooms(options: HostRoomsOptions): HostRooms {
   const applyInfo = (e: RoomEntry) => {
     const info = e.holders[0]?.info
     if (!info) return
-    const reason = info.readOnly ?? (info.role === "view" ? VIEW_ONLY_REASON : null)
+    const reason = info.readOnly ?? (info.role !== "edit" ? VIEW_ONLY_REASON : null)
     if ((e.store.readOnly?.reason ?? null) !== reason) e.store.setReadOnly(reason)
+    // After the store: its read-only flag also locks its comments.
+    const comments = info.comments ?? (info.role === "view" ? VIEW_ONLY_REASON : null)
+    if (e.store.comments && e.store.comments.readOnly !== comments)
+      e.store.comments.setReadOnly(comments)
   }
 
   /** (Re)syncs the replica with the first holder's store. */
@@ -509,13 +524,18 @@ export function serveRoomsToHost(client: HostClient, source: WindowRooms): Serve
     },
   })
 
-  const infoOf = (room: JoinedRoom, ended = false): RoomAttach => ({
-    ref: roomKeyOf(room.session.room),
-    relay: room.relayHost,
-    role: room.session.role,
-    // Edits to a room whose connection ended would never reach anyone.
-    readOnly: ended ? ENDED_REASON : (room.session.store.readOnly?.reason ?? null),
-  })
+  const infoOf = (room: JoinedRoom, ended = false): RoomAttach => {
+    const store = room.session.store
+    const comments = store.comments ? store.comments.readOnly : (store.readOnly?.reason ?? null)
+    return {
+      ref: roomKeyOf(room.session.room),
+      relay: room.relayHost,
+      role: room.session.role === "view" && comments === null ? "comment" : room.session.role,
+      // Edits to a room whose connection ended would never reach anyone.
+      readOnly: ended ? ENDED_REASON : (store.readOnly?.reason ?? null),
+      comments: ended ? ENDED_REASON : comments,
+    }
+  }
   /** Claims the window's store sees (its peers' and its own agents'), as records. */
   const claimsOf = (room: JoinedRoom): ClaimRecord[] =>
     claimsFor(room.session.store)

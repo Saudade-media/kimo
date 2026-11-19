@@ -104,4 +104,34 @@ describe("WindowSyncProvider + HostSyncHub", () => {
     ).rejects.toThrow("not open")
     hub.dispose()
   })
+
+  test("comments flow both ways, and a hub in a room signs a replica's writes as its own", async () => {
+    const { host, win } = setup()
+    const replica = createDocStore()
+    await new WindowSyncProvider({ transport: win, doc: "/a.kimo" }).attach(replica)
+    const user = { id: "local:ana", name: "Ana", kind: "person" as const }
+    const agent = { id: "agent:mcp:claude", name: "Claude", kind: "agent" as const }
+    const hc = host.comments
+    const rc = replica.comments
+    if (!hc || !rc) throw new Error("no comment stores")
+    const mine = rc.createThread(
+      { anchor: { x: 1, y: 1 }, message: { author: user, text: "Hi" } },
+      "user",
+    )
+    expect(hc.thread(mine.threadId)?.messages[mine.messageId]?.text).toBe("Hi")
+    hc.reply(mine.threadId, { author: agent, text: "On it" }, "mcp:claude.s1")
+    expect(Object.keys(rc.thread(mine.threadId)?.messages ?? {})).toHaveLength(2)
+    expect(rc.toJSON()).toEqual(hc.toJSON())
+
+    // The hub joins a room: what the replica writes becomes the hub's change to sign.
+    const signed: string[] = []
+    hc.onRecord((r) => signed.push(r.body.op))
+    hc.enterRoom({ key: "K".repeat(43), root: null, moderator: false })
+    rc.createThread(
+      { anchor: { x: 2, y: 2 }, message: { author: agent, text: "Agent note" } },
+      "mcp:claude.s1",
+    )
+    expect(signed).toEqual(["thread"])
+    expect(rc.toJSON()).toEqual(hc.toJSON())
+  })
 })

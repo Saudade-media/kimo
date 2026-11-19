@@ -114,6 +114,7 @@ function checkAttachments(list: CommentAttachment[] | undefined): void {
 export class CommentStore {
   private readonly listeners = new Set<(c: CommentChange) => void>()
   private readonly recordListeners = new Set<(r: CommentRecord, origin: Origin) => void>()
+  private readonly commitListeners = new Set<(op: CommentOp, origin: Origin) => void>()
   private readonly now: () => number
   private readonly hourlyLimit: number
   private readonly nodeIds: ((id: string) => boolean) | undefined
@@ -251,6 +252,7 @@ export class CommentStore {
       ...op,
     } as CommentRecordBody
     const key = room ? (options.asRoot && room.root ? room.root : room.key) : LOCAL_KEY
+    for (const l of [...this.commitListeners]) l(op, origin)
     if (!room) {
       const rec: CommentRecord = { body, key, pos: ++this.localPos }
       this.acked.push(rec)
@@ -540,6 +542,35 @@ export class CommentStore {
     this.pendingList = []
     this.view = null
     this.load(now, { mode: "replace", origin })
+  }
+
+  /** Reports every write as it is made, on a file and in a room (host-sync forwards them). */
+  onCommit(listener: (op: CommentOp, origin: Origin) => void): () => void {
+    this.commitListeners.add(listener)
+    return () => this.commitListeners.delete(listener)
+  }
+
+  /**
+   * Makes a write another replica of this document made (the document host's agents, through
+   * host-sync): checked against the rights here, then written as this device's own.
+   */
+  submit(op: CommentOp, origin: Origin): void {
+    this.assertWritable()
+    let asRoot = false
+    if (op.op === "import") {
+      if (!this.moderates(true))
+        throw new CommentError("NOT_AUTHOR", "Only a file owner can import comments")
+      asRoot = true
+    }
+    if (op.op === "edit" || op.op === "delete") {
+      const t = this.thread(op.thread)
+      if (!t) throw new CommentError("NOT_FOUND", `No thread "${op.thread}"`)
+      const message = op.op === "edit" ? op.message : (op.message ?? t.first)
+      const own = this._room ? this.state().ownerOf(op.thread, message) === this._room.key : true
+      if (!own && op.op === "delete" && this.moderates(true)) asRoot = true
+      else if (!own) throw new CommentError("NOT_AUTHOR", "Only the author can change this comment")
+    }
+    this.commit(op, origin, { asRoot })
   }
 
   /** Reports each local change to sign and send (rooms only). */

@@ -3,6 +3,7 @@
  * teardown 10.6 and the spec's "Validation" section.
  */
 import Type from "typebox"
+import { checkComments } from "../comments/validate"
 import { type Feature, isKnownFeature, KNOWN_FEATURES } from "../features"
 import { escapePointer, isObject } from "../json"
 import {
@@ -30,7 +31,13 @@ import {
   VARIABLE_NAME_PATTERN,
 } from "../schema/primitives"
 import { compareCodeUnits, getOrInit } from "../tree"
-import { formatStatus, SCHEMA_URL, SCHEMA_URL_PATTERN } from "../version"
+import {
+  formatStatus,
+  parseFormatVersion,
+  SCHEMA_URL,
+  SCHEMA_URL_PATTERN,
+  schemaUrlFor,
+} from "../version"
 import { IssueSink, type ValidationResult } from "./issues"
 import { checkConflicts } from "./merge"
 import { schemaIssues } from "./structural"
@@ -276,6 +283,16 @@ class Validation {
     this.variableAliases()
     this.assets()
     if (!this.scope) {
+      checkComments(
+        this.doc as unknown as Obj,
+        this.nodes,
+        this.assetFiles,
+        this.sink,
+        (path, what) => {
+          if (!this.features.has("doc/comments"))
+            this.sink.add("FEATURE_NOT_DECLARED", path, `${what} needs feature "doc/comments"`)
+        },
+      )
       checkConflicts(this.doc as unknown as Obj, this.sink, this.lints, (feature, path, what) => {
         if (!this.features.has(feature))
           this.sink.add("FEATURE_NOT_DECLARED", path, `${what} needs feature "${feature}"`)
@@ -305,11 +322,13 @@ class Validation {
       return
     }
     const url = raw.$schema
-    if (typeof url === "string" && url !== SCHEMA_URL && new RegExp(SCHEMA_URL_PATTERN).test(url)) {
+    const version = parseFormatVersion(raw.format)
+    const expected = version ? schemaUrlFor(version) : SCHEMA_URL
+    if (typeof url === "string" && url !== expected && new RegExp(SCHEMA_URL_PATTERN).test(url)) {
       this.sink.add(
         "SCHEMA_URL_MISMATCH",
         "/$schema",
-        `Expected "${SCHEMA_URL}" for format ${raw.format}`,
+        `Expected "${expected}" for format ${raw.format}`,
       )
     }
     schemaIssues(HeaderSchema, raw, "", this.sink)

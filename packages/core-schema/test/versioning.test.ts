@@ -16,7 +16,8 @@ describe("format version", () => {
   test("formatStatus compares major.minor only", () => {
     expect(formatStatus("1.0.9")).toBe("current")
     expect(formatStatus("0.1.0")).toBe("older")
-    expect(formatStatus("1.1.0")).toBe("newer")
+    expect(formatStatus("1.1.0")).toBe("current")
+    expect(formatStatus("1.2.0")).toBe("newer")
     expect(formatStatus("2.0.0")).toBe("newer")
     expect(formatStatus("1.0")).toBe("invalid")
     expect(formatStatus(1)).toBe("invalid")
@@ -94,7 +95,7 @@ describe("migrate", () => {
     const cur = { format: "1.0.3", nodes: {} }
     expect(migrate(cur).status).toBe("current")
     expect(migrate(cur).doc).toBe(cur)
-    expect(migrate({ format: "1.1.0", nodes: {} }).status).toBe("newer")
+    expect(migrate({ format: "1.2.0", nodes: {} }).status).toBe("newer")
     expect(migrate({ format: "x", nodes: {} }).status).toBe("invalid")
     expect(migrate(old).status).toBe("no-path")
   })

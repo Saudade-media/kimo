@@ -5,7 +5,7 @@ import { buildJsonSchema } from "../src/index"
 import { FIXTURES } from "./helpers"
 
 const file = JSON.parse(
-  readFileSync(join(FIXTURES, "..", "schema", "kimo-1.0.schema.json"), "utf8"),
+  readFileSync(join(FIXTURES, "..", "schema", "kimo-1.1.schema.json"), "utf8"),
 )
 
 describe("generated JSON Schema", () => {

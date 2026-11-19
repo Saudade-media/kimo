@@ -13,6 +13,7 @@ export {
   referencedAssets,
   usedFontFamilies,
 } from "./assets/gc"
+export * from "./comments/index"
 export {
   applySetEntry,
   argEffect,
@@ -175,6 +176,8 @@ export {
   WARNING_CODES,
 } from "./validate/index"
 export {
+  COMMENTS_FORMAT_VERSION,
+  COMMENTS_SCHEMA_URL,
   CURRENT_FORMAT,
   compareFormat,
   FORMAT_PATTERN,
@@ -183,7 +186,10 @@ export {
   type FormatVersion,
   formatLine,
   formatStatus,
+  isCurrentFormat,
   parseFormatVersion,
+  READER_FORMAT,
+  READER_FORMAT_VERSION,
   SCHEMA_ID,
   SCHEMA_URL,
   SCHEMA_URL_PATTERN,

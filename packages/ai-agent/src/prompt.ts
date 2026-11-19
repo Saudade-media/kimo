@@ -28,7 +28,9 @@ Before each tool call, write one short line (under 60 characters, plain text) sa
 
 ${REPLY_STYLE}
 
-If a tool returns an error, read its code and suggestion and fix the call. Never claim a change you did not make.`
+If a tool returns an error, read its code and suggestion and fix the call. Never claim a change you did not make.
+
+Comments (kimo_comments): read, reply and resolve when it helps the task. Start a thread only when the person asks you to comment, and never delete a person's comment.`
 }
 
 /** The base prompt for agents whose tool input does not stream (Codex, Gemini CLI). */

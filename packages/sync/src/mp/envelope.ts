@@ -9,7 +9,14 @@ import { MultiplayerError } from "./errors"
 import type { RoomKeys } from "./keys"
 
 export const ENVELOPE_VERSION = 1
-export const EnvelopeKind = { update: 1, snapshot: 2, awareness: 3, blob: 4 } as const
+export const EnvelopeKind = {
+  update: 1,
+  snapshot: 2,
+  awareness: 3,
+  blob: 4,
+  commentsUpdate: 5,
+  commentsSnapshot: 6,
+} as const
 export type EnvelopeKind = (typeof EnvelopeKind)[keyof typeof EnvelopeKind]
 
 export const IV_BYTES = 12
@@ -152,6 +159,55 @@ export async function openAwareness(
   )
 }
 
+/** Comment log entry (docs/spec/comments.md §4.2). */
+export function sealCommentsUpdate(
+  keys: RoomKeys,
+  plaintext: Uint8Array,
+  options?: SealOptions,
+): Promise<Uint8Array> {
+  return seal(
+    EnvelopeKind.commentsUpdate,
+    keys.doc,
+    aad(keys.room.id, "comments-update"),
+    plaintext,
+    options,
+  )
+}
+
+export function openCommentsUpdate(keys: RoomKeys, envelope: Uint8Array): Promise<Uint8Array> {
+  return open(EnvelopeKind.commentsUpdate, keys.doc, aad(keys.room.id, "comments-update"), envelope)
+}
+
+export async function sealCommentsSnapshot(
+  keys: RoomKeys,
+  upTo: number,
+  plaintext: Uint8Array,
+  options?: SealOptions,
+): Promise<Uint8Array> {
+  checkPosition("upTo", upTo)
+  return seal(
+    EnvelopeKind.commentsSnapshot,
+    keys.doc,
+    aad(keys.room.id, "comments-snapshot", upTo),
+    plaintext,
+    options,
+  )
+}
+
+export async function openCommentsSnapshot(
+  keys: RoomKeys,
+  upTo: number,
+  envelope: Uint8Array,
+): Promise<Uint8Array> {
+  checkPosition("upTo", upTo)
+  return open(
+    EnvelopeKind.commentsSnapshot,
+    keys.doc,
+    aad(keys.room.id, "comments-snapshot", upTo),
+    envelope,
+  )
+}
+
 /** Associated data of a blob envelope. */
 export function blobAad(keys: RoomKeys, blobId: string): Bytes {
   return aad(keys.room.id, "blob", blobId)
@@ -162,5 +218,7 @@ export function envelopeKind(envelope: Uint8Array): EnvelopeKind | null {
   if (!(envelope instanceof Uint8Array) || envelope.length < ENVELOPE_OVERHEAD) return null
   if (envelope[0] !== ENVELOPE_VERSION) return null
   const kind = envelope[1] as number
-  return kind >= EnvelopeKind.update && kind <= EnvelopeKind.blob ? (kind as EnvelopeKind) : null
+  return kind >= EnvelopeKind.update && kind <= EnvelopeKind.commentsSnapshot
+    ? (kind as EnvelopeKind)
+    : null
 }

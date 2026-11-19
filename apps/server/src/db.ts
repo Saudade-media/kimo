@@ -7,7 +7,8 @@ import { Database } from "bun:sqlite"
 import { mkdirSync } from "node:fs"
 import { join } from "node:path"
 
-export const SCHEMA_VERSION = 1
+/** 2: the comment log (docs/spec/comments.md §4.4). */
+export const SCHEMA_VERSION = 2
 
 export interface RoomRow {
   id: string
@@ -26,6 +27,38 @@ export interface RoomRow {
   quota_bytes: number | null
   /** The account an `external` owner policy gave the room (§14.12); null under `devices`. */
   account: string | null
+  /** The comment log (docs/spec/comments.md §4.4). */
+  c_head: number
+  c_base: number
+  c_log_bytes: number
+  c_snapshot_bytes: number
+}
+
+/** Bytes a room stores: both logs, both snapshots and blobs. */
+export function roomBytes(room: RoomRow): number {
+  return (
+    room.log_bytes +
+    room.snapshot_bytes +
+    room.blob_bytes +
+    room.c_log_bytes +
+    room.c_snapshot_bytes
+  )
+}
+
+/** Which log a call is about. */
+export type LogChannel = "design" | "comments"
+
+const LOG_TABLE: Record<LogChannel, string> = { design: "log", comments: "comment_log" }
+const SNAPSHOT_TABLE: Record<LogChannel, string> = {
+  design: "snapshots",
+  comments: "comment_snapshots",
+}
+const HEAD: Record<LogChannel, string> = { design: "head", comments: "c_head" }
+const BASE: Record<LogChannel, string> = { design: "base", comments: "c_base" }
+const LOG_BYTES: Record<LogChannel, string> = { design: "log_bytes", comments: "c_log_bytes" }
+const SNAPSHOT_BYTES: Record<LogChannel, string> = {
+  design: "snapshot_bytes",
+  comments: "c_snapshot_bytes",
 }
 
 export interface LogRow {
@@ -90,7 +123,11 @@ CREATE TABLE IF NOT EXISTS rooms (
   snapshot_bytes INTEGER NOT NULL DEFAULT 0,
   blob_bytes     INTEGER NOT NULL DEFAULT 0,
   quota_bytes    INTEGER,
-  account        TEXT
+  account        TEXT,
+  c_head           INTEGER NOT NULL DEFAULT 0,
+  c_base           INTEGER NOT NULL DEFAULT 0,
+  c_log_bytes      INTEGER NOT NULL DEFAULT 0,
+  c_snapshot_bytes INTEGER NOT NULL DEFAULT 0
 ) STRICT;
 
 CREATE INDEX IF NOT EXISTS rooms_account ON rooms(account) WHERE account IS NOT NULL;
@@ -106,6 +143,26 @@ CREATE TABLE IF NOT EXISTS log (
 ) STRICT, WITHOUT ROWID;
 
 CREATE TABLE IF NOT EXISTS snapshots (
+  room    TEXT NOT NULL REFERENCES rooms(id) ON DELETE CASCADE,
+  gen     INTEGER NOT NULL,
+  up_to   INTEGER NOT NULL,
+  carries INTEGER NOT NULL,
+  at      INTEGER NOT NULL,
+  env     BLOB NOT NULL,
+  PRIMARY KEY (room, gen)
+) STRICT, WITHOUT ROWID;
+
+CREATE TABLE IF NOT EXISTS comment_log (
+  room   TEXT NOT NULL REFERENCES rooms(id) ON DELETE CASCADE,
+  seq    INTEGER NOT NULL,
+  origin TEXT NOT NULL,
+  jti    BLOB NOT NULL,
+  at     INTEGER NOT NULL,
+  env    BLOB NOT NULL,
+  PRIMARY KEY (room, seq)
+) STRICT, WITHOUT ROWID;
+
+CREATE TABLE IF NOT EXISTS comment_snapshots (
   room    TEXT NOT NULL REFERENCES rooms(id) ON DELETE CASCADE,
   gen     INTEGER NOT NULL,
   up_to   INTEGER NOT NULL,
@@ -196,6 +253,11 @@ export class RelayDb {
       .all()
     if (rooms.length > 0 && !rooms.some((column) => column.name === "account"))
       this.sqlite.run("ALTER TABLE rooms ADD COLUMN account TEXT")
+    // Version 2 adds the comment log: its counters join `rooms`, its tables come from SCHEMA.
+    if (rooms.length > 0)
+      for (const column of ["c_head", "c_base", "c_log_bytes", "c_snapshot_bytes"])
+        if (!rooms.some((c) => c.name === column))
+          this.sqlite.run(`ALTER TABLE rooms ADD COLUMN ${column} INTEGER NOT NULL DEFAULT 0`)
     this.sqlite.run(SCHEMA)
     if (version < SCHEMA_VERSION) this.sqlite.run(`PRAGMA user_version = ${SCHEMA_VERSION}`)
   }
@@ -246,7 +308,7 @@ export class RelayDb {
       .query(
         `UPDATE rooms SET link_kid = ?, link_pub = ?, link_cert = ?, active_at = ?,
            closed_at = NULL, head = 0, base = 0, log_bytes = 0, snapshot_bytes = 0, blob_bytes = 0,
-           account = ?
+           c_head = 0, c_base = 0, c_log_bytes = 0, c_snapshot_bytes = 0, account = ?
          WHERE id = ?`,
       )
       .run(room.kid, room.linkPub, room.cert, room.at, room.account ?? null, room.id)
@@ -256,7 +318,8 @@ export class RelayDb {
   accountBytes(account: string): number {
     const row = this.sqlite
       .query<{ n: number }, [string]>(
-        `SELECT COALESCE(SUM(log_bytes + snapshot_bytes + blob_bytes), 0) AS n FROM rooms
+        `SELECT COALESCE(SUM(log_bytes + snapshot_bytes + blob_bytes + c_log_bytes +
+           c_snapshot_bytes), 0) AS n FROM rooms
          WHERE account = ? AND closed_at IS NULL`,
       )
       .get(account)
@@ -315,12 +378,20 @@ export class RelayDb {
    */
   closeRoom(id: string, at: number): void {
     this.tx(() => {
-      for (const table of ["log", "snapshots", "revocations", "blobs"])
+      for (const table of [
+        "log",
+        "snapshots",
+        "comment_log",
+        "comment_snapshots",
+        "revocations",
+        "blobs",
+      ])
         this.sqlite.query(`DELETE FROM ${table} WHERE room = ?`).run(id)
       this.sqlite
         .query(
           `UPDATE rooms SET closed_at = ?, head = 0, base = 0, log_bytes = 0,
-             snapshot_bytes = 0, blob_bytes = 0 WHERE id = ?`,
+             snapshot_bytes = 0, blob_bytes = 0, c_head = 0, c_base = 0, c_log_bytes = 0,
+             c_snapshot_bytes = 0 WHERE id = ?`,
         )
         .run(at, id)
     })
@@ -448,6 +519,138 @@ export class RelayDb {
         .run(room, room)
       return gen
     })
+  }
+
+  // Comment log (docs/spec/comments.md §4.4): the same rules on its own tables and counters ---
+
+  appendChannel(
+    channel: LogChannel,
+    room: string,
+    origin: string,
+    jti: Uint8Array,
+    at: number,
+    env: Uint8Array,
+  ): number {
+    if (channel === "design") return this.appendLog(room, origin, jti, at, env)
+    const head = HEAD[channel]
+    return this.tx(() => {
+      const row = this.sqlite
+        .query<{ head: number }, [number, number, string]>(
+          `UPDATE rooms SET ${head} = ${head} + 1, ${LOG_BYTES[channel]} = ${LOG_BYTES[channel]} + ?,
+             active_at = ? WHERE id = ? AND closed_at IS NULL RETURNING ${head} AS head`,
+        )
+        .get(env.length, at, room)
+      if (!row) throw new Error("room is not open")
+      this.sqlite
+        .query(
+          `INSERT INTO ${LOG_TABLE[channel]} (room, seq, origin, jti, at, env) VALUES (?, ?, ?, ?, ?, ?)`,
+        )
+        .run(room, row.head, origin, jti, at, env)
+      return row.head
+    })
+  }
+
+  iterateChannelFrom(channel: LogChannel, room: string, from: number): IterableIterator<LogRow> {
+    return this.sqlite
+      .query<LogRow, [string, number]>(
+        `SELECT seq, origin, env FROM ${LOG_TABLE[channel]} WHERE room = ? AND seq >= ? ORDER BY seq`,
+      )
+      .iterate(room, from)
+  }
+
+  channelBytesAfter(channel: LogChannel, room: string, upTo: number): number {
+    const row = this.sqlite
+      .query<{ n: number }, [string, number]>(
+        `SELECT COALESCE(SUM(LENGTH(env)), 0) AS n FROM ${LOG_TABLE[channel]} WHERE room = ? AND seq > ?`,
+      )
+      .get(room, upTo)
+    return row?.n ?? 0
+  }
+
+  latestChannelSnapshot(channel: LogChannel, room: string): SnapshotMeta | null {
+    return this.sqlite
+      .query<SnapshotMeta, [string]>(
+        `SELECT gen, up_to, carries, LENGTH(env) AS bytes FROM ${SNAPSHOT_TABLE[channel]}
+         WHERE room = ? ORDER BY gen DESC LIMIT 1`,
+      )
+      .get(room)
+  }
+
+  latestChannelSnapshotEnv(channel: LogChannel, room: string): SnapshotRow | null {
+    return this.sqlite
+      .query<SnapshotRow, [string]>(
+        `SELECT gen, up_to, carries, env FROM ${SNAPSHOT_TABLE[channel]} WHERE room = ?
+         ORDER BY gen DESC LIMIT 1`,
+      )
+      .get(room)
+  }
+
+  putChannelSnapshot(
+    channel: LogChannel,
+    room: string,
+    upTo: number,
+    at: number,
+    env: Uint8Array,
+  ): number {
+    const table = SNAPSHOT_TABLE[channel]
+    return this.tx(() => {
+      const prev = this.latestChannelSnapshot(channel, room)
+      const gen = (prev?.gen ?? 0) + 1
+      this.sqlite
+        .query(
+          `INSERT INTO ${table} (room, gen, up_to, carries, at, env) VALUES (?, ?, ?, 0, ?, ?)`,
+        )
+        .run(room, gen, upTo, at, env)
+      this.sqlite.query(`DELETE FROM ${table} WHERE room = ? AND gen < ?`).run(room, gen - 1)
+      this.sqlite
+        .query(
+          `UPDATE rooms SET ${SNAPSHOT_BYTES[channel]} =
+             (SELECT COALESCE(SUM(LENGTH(env)), 0) FROM ${table} WHERE room = ?) WHERE id = ?`,
+        )
+        .run(room, room)
+      return gen
+    })
+  }
+
+  /** Comment-log retention: drops covered entries older than `cutoff` (like {@link pruneLog}). */
+  pruneChannel(channel: LogChannel, room: string, upTo: number, cutoff: number): number {
+    if (channel === "design") return this.pruneLog(room, upTo, cutoff)
+    const table = LOG_TABLE[channel]
+    return this.tx(() => {
+      const edge = this.sqlite
+        .query<{ seq: number | null }, [string, number, number]>(
+          `SELECT MAX(seq) AS seq FROM ${table} WHERE room = ? AND seq <= ? AND at <= ?`,
+        )
+        .get(room, upTo, cutoff)
+      const last = edge?.seq ?? null
+      if (last === null) return 0
+      const freed = this.sqlite
+        .query<{ n: number }, [string, number]>(
+          `SELECT COALESCE(SUM(LENGTH(env)), 0) AS n FROM ${table} WHERE room = ? AND seq <= ?`,
+        )
+        .get(room, last)
+      const result = this.sqlite
+        .query(`DELETE FROM ${table} WHERE room = ? AND seq <= ?`)
+        .run(room, last)
+      this.sqlite
+        .query(
+          `UPDATE rooms SET ${BASE[channel]} = MAX(${BASE[channel]}, ?),
+             ${LOG_BYTES[channel]} = MAX(0, ${LOG_BYTES[channel]} - ?) WHERE id = ?`,
+        )
+        .run(last, freed?.n ?? 0, room)
+      return result.changes
+    })
+  }
+
+  /** Open rooms with a comment snapshot. */
+  roomsWithCommentSnapshots(): string[] {
+    return this.sqlite
+      .query<{ room: string }, []>(
+        `SELECT DISTINCT s.room AS room FROM comment_snapshots s
+         JOIN rooms r ON r.id = s.room WHERE r.closed_at IS NULL`,
+      )
+      .all()
+      .map((row) => row.room)
   }
 
   // Revocations and nonces -------------------------------------------------------------------

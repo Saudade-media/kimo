@@ -21,6 +21,7 @@ import type { Server } from "bun"
 import pkg from "../package.json" with { type: "json" }
 import { runAdmin } from "./admin"
 import { bearerToken, recheckToken, type VerifiedToken, verifyToken } from "./auth"
+import { roomBytes } from "./db"
 import { retryAfterSeconds } from "./rate-limit"
 import type { Relay, SocketData } from "./rooms"
 import { webResponse } from "./web"
@@ -191,7 +192,7 @@ async function authorize(
   relay: Relay,
   req: Request,
   roomId: string,
-  need: "view" | "edit",
+  need: "view" | "comment" | "edit",
 ): Promise<VerifiedToken> {
   const verified = await verifyToken(
     relay.db,
@@ -200,6 +201,8 @@ async function authorize(
     Math.floor(relay.now() / 1000),
   )
   if (need === "edit" && verified.token.role !== "edit") fail("VIEW_ONLY", "this link is view only")
+  if (need === "comment" && verified.token.role === "view")
+    fail("VIEW_ONLY", "this link is view only")
   return verified
 }
 
@@ -270,7 +273,7 @@ export function createFetchHandler(relay: Relay) {
       head: room.head,
       base: room.base,
       snapshot: snap ? { upTo: snap.up_to, gen: snap.gen, bytes: snap.bytes } : null,
-      usedBytes: room.blob_bytes + room.snapshot_bytes + room.log_bytes,
+      usedBytes: roomBytes(room),
       quotaBytes: relay.quotaFor(room),
       peers: relay.rooms.get(roomId)?.peers.size ?? 0,
     })
@@ -315,7 +318,8 @@ export function createFetchHandler(relay: Relay) {
   }
 
   async function blobPut(req: Request, roomId: string, id: string): Promise<Response> {
-    const verified = await authorize(relay, req, roomId, "edit")
+    // Comment tokens upload attachments (docs/spec/comments.md §4.4).
+    const verified = await authorize(relay, req, roomId, "comment")
     const { jtiHex } = verified
     if (!isBlobId(id)) fail("BAD_REQUEST", "invalid blob id")
     const wait = relay.blobLimiter.take(`${roomId}:${jtiHex}`, relay.now())
@@ -340,7 +344,7 @@ export function createFetchHandler(relay: Relay) {
     if (before && account !== null) await relay.owner.write({ ...before, account }, body.length)
     // The room may have been closed, or the link revoked or reset, while the body was uploading.
     const fresh = recheckToken(db, verified, Math.floor(relay.now() / 1000))
-    const after = fresh.blob_bytes + fresh.snapshot_bytes + fresh.log_bytes + body.length
+    const after = roomBytes(fresh) + body.length
     if (after > relay.quotaFor(fresh)) fail("QUOTA_EXCEEDED", "room storage quota exceeded")
     relay.checkAccountStorage(fresh, after)
     relay.blobs.put(roomId, id, body)
@@ -352,6 +356,44 @@ export function createFetchHandler(relay: Relay) {
       throw error
     }
     return json({}, 201)
+  }
+
+  /**
+   * The comment snapshot (docs/spec/comments.md §4.4): any role reads it, only edit tokens write
+   * it, because a snapshot could leave other people's changes out.
+   */
+  async function commentSnapshot(req: Request, url: URL, roomId: string): Promise<Response> {
+    if (req.method === "GET") {
+      await authorize(relay, req, roomId, "view")
+      const snap = db.latestChannelSnapshotEnv("comments", roomId)
+      if (!snap) fail("NOT_FOUND", "no snapshot")
+      return new Response(snap.env as Uint8Array<ArrayBuffer>, {
+        headers: {
+          "content-type": "application/octet-stream",
+          "kimo-up-to": String(snap.up_to),
+          "kimo-gen": String(snap.gen),
+        },
+      })
+    }
+    if (req.method !== "PUT") return methodNotAllowed("GET, PUT")
+    const verified = await authorize(relay, req, roomId, "edit")
+    const upToText = url.searchParams.get("upTo")
+    if (upToText === null || !/^\d{1,15}$/.test(upToText)) fail("BAD_REQUEST", "upTo is required")
+    const upTo = Number(upToText)
+    const env = await readBody(req, config.snapshotMaxBytes)
+    if (envelopeKind(env) !== EnvelopeKind.commentsSnapshot || env.length < ENVELOPE_OVERHEAD)
+      fail("BAD_REQUEST", "not a comments-snapshot envelope")
+    const room = recheckToken(db, verified, Math.floor(relay.now() / 1000))
+    if (upTo > room.c_head) fail("SNAPSHOT_AHEAD", "snapshot covers entries the room does not have")
+    const cur = db.latestChannelSnapshot("comments", roomId)
+    if (cur && upTo <= cur.up_to)
+      fail("SNAPSHOT_STALE", "snapshot does not advance the current one")
+    const after = roomBytes(room) - room.c_snapshot_bytes + (cur ? cur.bytes : 0) + env.length
+    if (after > relay.quotaFor(room)) fail("QUOTA_EXCEEDED", "room storage quota exceeded")
+    relay.checkAccountStorage(room, after)
+    const gen = db.putChannelSnapshot("comments", roomId, upTo, relay.now(), env)
+    relay.commentSnapshotAccepted(roomId, { upTo, gen, bytes: env.length })
+    return json({ gen, upTo }, 201)
   }
 
   async function blob(req: Request, roomId: string, id: string): Promise<Response> {
@@ -407,6 +449,8 @@ export function createFetchHandler(relay: Relay) {
       if (parts.length === 2) return roomInfo(req, roomId)
       if (parts.length === 3 && tail === "admin") return admin(req, server, roomId)
       if (parts.length === 3 && tail === "snapshot") return snapshot(req, url, roomId)
+      if (parts.length === 4 && tail === "comments" && parts[3] === "snapshot")
+        return commentSnapshot(req, url, roomId)
     }
     if (head === "blob" && roomId && tail && parts.length === 3) {
       if (!isRoomId(roomId)) fail("ROOM_NOT_FOUND", "unknown room")

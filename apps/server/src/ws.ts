@@ -16,6 +16,7 @@ import {
 } from "@kimo/sync/mp"
 import type { WebSocketHandler } from "bun"
 import { recheckToken, verifyToken } from "./auth"
+import { roomBytes } from "./db"
 import { TokenBucket } from "./rate-limit"
 import type { Relay, Sock, SocketData } from "./rooms"
 
@@ -45,6 +46,8 @@ export function initialSocketData(room: string, ip: string, now: number): Socket
     stage: "hello",
     peer: 0,
     role: "view",
+    tokenRole: "view",
+    commentSub: false,
     origin: "user",
     exp: 0,
     kid: 0,
@@ -110,7 +113,7 @@ export function websocketHandlers(relay: Relay): WebSocketHandler<SocketData> {
       } catch (error) {
         return relay.closeSocket(ws, codeOf(error))
       }
-      if (verified.token.role !== data.role || verified.token.origin !== data.origin)
+      if (verified.token.role !== data.tokenRole || verified.token.origin !== data.origin)
         return deny(ws, "BAD_MESSAGE", 0, "refresh must keep role and origin")
       data.exp = verified.token.exp
       data.kid = verified.token.kid
@@ -129,7 +132,7 @@ export function websocketHandlers(relay: Relay): WebSocketHandler<SocketData> {
     if (!room) return relay.closeSocket(ws, "ROOM_CLOSED")
     if (data.appendBucket && data.appendBucket.take(relay.now()) > 0)
       return relay.closeSocket(ws, "RATE_LIMITED")
-    if (data.role !== "edit") return deny(ws, "VIEW_ONLY", cid, "this link is view only")
+    if (data.tokenRole !== "edit") return deny(ws, "VIEW_ONLY", cid, "this link is view only")
     if (env.length > relay.config.entryMaxBytes)
       return deny(ws, "TOO_LARGE", cid, "entry too large")
     if (envelopeKind(env) !== EnvelopeKind.update)
@@ -137,13 +140,38 @@ export function websocketHandlers(relay: Relay): WebSocketHandler<SocketData> {
     const row = relay.db.getRoom(room.id)
     if (!row || row.closed_at !== null) return relay.closeSocket(ws, "ROOM_CLOSED")
     if (row.log_bytes > relay.config.logMaxBytes) return relay.closeSocket(ws, "LOG_FULL")
-    const after = row.blob_bytes + row.snapshot_bytes + row.log_bytes + env.length
+    const after = roomBytes(row) + env.length
     if (after > relay.quotaFor(row))
       return deny(ws, "QUOTA_EXCEEDED", cid, "room storage quota exceeded")
     if (relay.accountOver(row, after))
       return deny(ws, "ACCOUNT_QUOTA_EXCEEDED", cid, "account storage quota exceeded")
     const seq = relay.append(room, ws, env)
     relay.afterAppend(room, ws, cid, seq, env)
+  }
+
+  /** Comment log append (docs/spec/comments.md §4.4): comment and edit tokens. */
+  function onAppendComment(ws: Sock, cid: number, env: Uint8Array) {
+    const data = ws.data
+    const room = relay.rooms.get(data.room)
+    if (!room) return relay.closeSocket(ws, "ROOM_CLOSED")
+    if (data.appendBucket && data.appendBucket.take(relay.now()) > 0)
+      return relay.closeSocket(ws, "RATE_LIMITED")
+    if (data.tokenRole === "view") return deny(ws, "VIEW_ONLY", cid, "this link is view only")
+    if (env.length > relay.config.entryMaxBytes)
+      return deny(ws, "TOO_LARGE", cid, "entry too large")
+    if (envelopeKind(env) !== EnvelopeKind.commentsUpdate)
+      return deny(ws, "BAD_MESSAGE", cid, "not a comments-update envelope")
+    if (relay.commentLimiter.take(`${data.room}:${data.jti}`, relay.now()) > 0)
+      return deny(ws, "RATE_LIMITED", cid, "too many comments in the last hour")
+    const row = relay.db.getRoom(room.id)
+    if (!row || row.closed_at !== null) return relay.closeSocket(ws, "ROOM_CLOSED")
+    if (row.c_log_bytes > relay.config.logMaxBytes) return relay.closeSocket(ws, "LOG_FULL")
+    const after = roomBytes(row) + env.length
+    if (after > relay.quotaFor(row))
+      return deny(ws, "QUOTA_EXCEEDED", cid, "room storage quota exceeded")
+    if (relay.accountOver(row, after))
+      return deny(ws, "ACCOUNT_QUOTA_EXCEEDED", cid, "account storage quota exceeded")
+    relay.appendComment(room, ws, cid, env)
   }
 
   function onAwareness(ws: Sock, clock: number, env: Uint8Array) {
@@ -189,6 +217,11 @@ export function websocketHandlers(relay: Relay): WebSocketHandler<SocketData> {
         return
       case "ping":
         return relay.send(ws, { type: "pong", n: msg.n })
+      case "append-comment":
+        return onAppendComment(ws, msg.cid, msg.env)
+      case "comments-subscribe":
+        if (data.commentSub) return relay.closeSocket(ws, "BAD_MESSAGE")
+        return relay.subscribeComments(ws, msg.since)
     }
   }
 

@@ -17,12 +17,13 @@ import {
   type RelayLimits,
   type RelayMessage,
   type Role,
+  type TokenRole,
 } from "@kimo/sync/mp"
 import type { ServerWebSocket } from "bun"
 import type { VerifiedToken } from "./auth"
 import { type BlobStore, createBlobStore } from "./blobs"
 import type { RelayConfig } from "./config"
-import { type LogRow, RelayDb, type RoomRow } from "./db"
+import { type LogChannel, type LogRow, RelayDb, type RoomRow, roomBytes as storedBytes } from "./db"
 import { bootOwnership, bootRelayId } from "./owners"
 import {
   devicesPolicy,
@@ -40,6 +41,8 @@ const MINUTE = 60_000
 const HOUR = 60 * MINUTE
 const DAY = 24 * HOUR
 const ACTIVE_WRITE_MS = MINUTE
+/** Comment appends per token per hour (docs/spec/comments.md §4.4). */
+export const COMMENT_APPENDS_PER_HOUR = 600
 /** Blob upload bytes per room per 10 minutes (§14.8). */
 export const BLOB_WINDOW_BYTES = 200 * (1 << 20)
 
@@ -49,7 +52,12 @@ export interface SocketData {
   openedAt: number
   stage: "hello" | "verifying" | "ready"
   peer: number
+  /** The role reported on the wire: a comment token shows as `view` (comments.md §4.4). */
   role: Role
+  /** The token's own role. */
+  tokenRole: TokenRole
+  /** Sent `comments-subscribe`: receives the comment log. */
+  commentSub: boolean
   origin: MpOrigin
   /** Unix seconds; 0 = never. */
   exp: number
@@ -91,6 +99,8 @@ export interface LiveRoom {
   /** Envelope bytes of entries after the latest snapshot. */
   sinceBytes: number
   compact: CompactRequest | null
+  /** The comment log, as head, snapUpTo, sinceBytes and compact are for the design log. */
+  comments: { head: number; snapUpTo: number; sinceBytes: number; compact: CompactRequest | null }
 }
 
 export class Relay {
@@ -101,6 +111,11 @@ export class Relay {
   readonly adminLimiter: KeyedLimiter
   readonly blobLimiter: KeyedLimiter
   readonly blobBytesLimiter: KeyedLimiter
+  /** Comment appends per token `jti` (docs/spec/comments.md §4.4). */
+  readonly commentLimiter = new KeyedLimiter(
+    COMMENT_APPENDS_PER_HOUR,
+    COMMENT_APPENDS_PER_HOUR / HOUR,
+  )
   /** 16 random bytes made at first boot; owner commands and pairing tokens name it (§14.11). */
   readonly relayId: Uint8Array
   /** Who may register rooms and run owner commands (§14.12). */
@@ -172,7 +187,7 @@ export class Relay {
     if (room.account === null) return false
     const limit = this.db.accountLimit(room.account)
     if (limit === null) return false
-    const current = room.log_bytes + room.snapshot_bytes + room.blob_bytes
+    const current = storedBytes(room)
     return this.db.accountBytes(room.account) - current + roomBytes > limit
   }
 
@@ -202,6 +217,7 @@ export class Relay {
     const row = this.db.getRoom(id)
     if (!row || row.closed_at !== null) return null
     const snap = this.db.latestSnapshot(id)
+    const cSnap = this.db.latestChannelSnapshot("comments", id)
     const room: LiveRoom = {
       id,
       sockets: new Set(),
@@ -214,6 +230,12 @@ export class Relay {
       snapUpTo: snap?.up_to ?? 0,
       sinceBytes: this.db.logBytesAfter(id, snap?.up_to ?? 0),
       compact: null,
+      comments: {
+        head: row.c_head,
+        snapUpTo: cSnap?.up_to ?? 0,
+        sinceBytes: this.db.channelBytesAfter("comments", id, cSnap?.up_to ?? 0),
+        compact: null,
+      },
     }
     this.rooms.set(id, room)
     return room
@@ -234,6 +256,10 @@ export class Relay {
       if (room.compact?.peer === data.peer) {
         room.compact = null
         this.checkCompaction(room)
+      }
+      if (room.comments.compact?.peer === data.peer) {
+        room.comments.compact = null
+        this.checkCommentCompaction(room)
       }
     }
     if (room.sockets.size === 0) room.emptySince = this.now()
@@ -291,11 +317,14 @@ export class Relay {
     const from = needSnapshot && snap ? snap.up_to + 1 : since + 1
 
     data.peer = room.nextPeer++
-    data.role = token.role as Role
+    data.tokenRole = token.role
+    // 1.2.x decoders reject any role but view and edit (comments.md §4.4).
+    data.role = token.role === "edit" ? "edit" : "view"
     data.origin = token.origin
     data.exp = token.exp
     data.kid = token.kid
     data.jti = verified.jtiHex
+    const cSnap = this.db.latestChannelSnapshot("comments", room.id)
     const others: PeerInfo[] = []
     for (const [peer, other] of room.peers)
       others.push({ peer, role: other.data.role, origin: other.data.origin })
@@ -314,6 +343,11 @@ export class Relay {
       snapshot: snap ? { upTo: snap.up_to, gen: snap.gen, bytes: snap.bytes } : null,
       limits: { ...this.limits, roomQuotaBytes: this.quotaFor(row) },
       peers: others,
+      comments: {
+        head: row.c_head,
+        base: row.c_base,
+        snapshot: cSnap ? { upTo: cSnap.up_to, gen: cSnap.gen, bytes: cSnap.bytes } : null,
+      },
     })
     this.sendEntries(ws, this.db.iterateEntriesFrom(room.id, from))
     for (const [peer, state] of room.awareness)
@@ -329,14 +363,38 @@ export class Relay {
     this.touchActive(room)
   }
 
+  /**
+   * `comments-subscribe` (comments.md §4.4): a snapshot notice when `since` is below the comment
+   * log's base, then every entry after it, then live comment traffic. Synchronous, like admit.
+   */
+  subscribeComments(ws: Sock, sinceRaw: number): void {
+    const room = this.rooms.get(ws.data.room)
+    if (!room) return this.closeSocket(ws, "ROOM_CLOSED")
+    const row = this.db.getRoom(room.id)
+    if (!row || row.closed_at !== null) return this.closeSocket(ws, "ROOM_CLOSED")
+    const snap = this.db.latestChannelSnapshot("comments", room.id)
+    const since = sinceRaw > row.c_head ? 0 : sinceRaw
+    let from = since + 1
+    if (snap && (since === 0 || since < row.c_base)) {
+      this.send(ws, {
+        type: "comment-snapshot",
+        info: { upTo: snap.up_to, gen: snap.gen, bytes: snap.bytes },
+      })
+      from = snap.up_to + 1
+    }
+    this.sendEntries(ws, this.db.iterateChannelFrom("comments", room.id, from), "comments")
+    ws.data.commentSub = true
+    this.checkCommentCompaction(room)
+  }
+
   /** Pages stored entries into frames of at most 512 entries or 1 MiB of envelopes. */
-  private sendEntries(ws: Sock, rows: Iterable<LogRow>): void {
+  private sendEntries(ws: Sock, rows: Iterable<LogRow>, channel: LogChannel = "design"): void {
     let page: LogRow[] = []
     let bytes = 0
     const flush = () => {
       if (page.length === 0) return
       this.send(ws, {
-        type: "entries",
+        type: channel === "design" ? "entries" : "comment-entries",
         entries: page.map((row) => ({
           seq: row.seq,
           origin: row.origin as MpOrigin,
@@ -386,6 +444,68 @@ export class Relay {
     )
     this.touchActive(room)
     this.checkCompaction(room)
+  }
+
+  /** Stores one comment log entry, acks the sender and fans it out to subscribers. */
+  appendComment(room: LiveRoom, sender: Sock, cid: number, env: Uint8Array): number {
+    const data = sender.data
+    const seq = this.db.appendChannel(
+      "comments",
+      room.id,
+      data.origin,
+      fromHex(data.jti),
+      this.now(),
+      env,
+    )
+    room.comments.head = seq
+    room.comments.sinceBytes += env.length
+    this.send(sender, { type: "comment-ack", cid, seq })
+    const frame = encodeRelayMessage({
+      type: "comment-entries",
+      entries: [{ seq, origin: data.origin, env }],
+    })
+    for (const peer of room.peers.values())
+      if (peer !== sender && peer.data.commentSub) peer.send(frame)
+    this.touchActive(room)
+    this.checkCommentCompaction(room)
+    return seq
+  }
+
+  /** Only edit peers compact the comment log: a snapshot could leave changes out (§4.4). */
+  private pickCommentCompactor(room: LiveRoom, tried: ReadonlySet<number>): Sock | null {
+    let best: Sock | null = null
+    for (const ws of room.peers.values()) {
+      const d = ws.data
+      if (d.tokenRole !== "edit" || !d.commentSub || tried.has(d.peer)) continue
+      if (!best || d.peer < best.data.peer) best = ws
+    }
+    return best
+  }
+
+  checkCommentCompaction(room: LiveRoom): void {
+    const c = room.comments
+    if (c.compact) return
+    const entries = c.head - c.snapUpTo
+    if (entries < this.config.compactEntries && c.sinceBytes < this.config.compactBytes) return
+    if (entries <= 0) return
+    const target = this.pickCommentCompactor(room, new Set())
+    if (!target) return
+    c.compact = { upTo: c.head, at: this.now(), peer: target.data.peer, tried: new Set() }
+    this.send(target, { type: "comment-compact", upTo: c.head })
+  }
+
+  /** A comment snapshot was stored: tell subscribers and clear the request. */
+  commentSnapshotAccepted(
+    roomId: string,
+    info: { upTo: number; gen: number; bytes: number },
+  ): void {
+    const room = this.rooms.get(roomId)
+    if (!room) return
+    room.comments.snapUpTo = info.upTo
+    room.comments.sinceBytes = this.db.channelBytesAfter("comments", roomId, info.upTo)
+    room.comments.compact = null
+    const frame = encodeRelayMessage({ type: "comment-snapshot", info })
+    for (const peer of room.peers.values()) if (peer.data.commentSub) peer.send(frame)
   }
 
   // Compaction -------------------------------------------------------------------------------
@@ -452,6 +572,19 @@ export class Relay {
           room.compact = null
         }
       }
+      const cRequest = room.comments.compact
+      if (cRequest && now - cRequest.at >= COMPACT_RETRY_MS) {
+        cRequest.tried.add(cRequest.peer)
+        const next = this.pickCommentCompactor(room, cRequest.tried)
+        if (next) {
+          cRequest.peer = next.data.peer
+          cRequest.at = now
+          cRequest.upTo = room.comments.head
+          this.send(next, { type: "comment-compact", upTo: room.comments.head })
+        } else {
+          room.comments.compact = null
+        }
+      }
       if (
         room.sockets.size === 0 &&
         room.emptySince !== null &&
@@ -477,6 +610,7 @@ export class Relay {
       this.adminLimiter,
       this.blobLimiter,
       this.blobBytesLimiter,
+      this.commentLimiter,
     ])
       limiter.prune(now)
   }
@@ -487,6 +621,10 @@ export class Relay {
     for (const id of this.db.roomsWithSnapshots()) {
       const snap = this.db.latestSnapshot(id)
       if (snap) this.db.pruneLog(id, snap.up_to, cutoff)
+    }
+    for (const id of this.db.roomsWithCommentSnapshots()) {
+      const snap = this.db.latestChannelSnapshot("comments", id)
+      if (snap) this.db.pruneChannel("comments", id, snap.up_to, cutoff)
     }
   }
 

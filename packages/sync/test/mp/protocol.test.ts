@@ -33,6 +33,8 @@ const clientMessages: ClientMessage[] = [
   { type: "caught-up", seq: 42 },
   { type: "refresh", token: "abc" },
   { type: "ping", n: 0 },
+  { type: "append-comment", cid: 5, env },
+  { type: "comments-subscribe", since: 12 },
 ]
 
 const relayMessages: RelayMessage[] = [
@@ -89,6 +91,10 @@ const relayMessages: RelayMessage[] = [
   { type: "denied", code: "TOO_LARGE", cid: 0, message: "" },
   { type: "token", exp: 1_800_000_000 },
   { type: "pong", n: MAX },
+  { type: "comment-entries", entries: [{ seq: 3, origin: "user", env }] },
+  { type: "comment-snapshot", info: { upTo: 9, gen: 1, bytes: 400 } },
+  { type: "comment-compact", upTo: 20 },
+  { type: "comment-ack", cid: 5, seq: 21 },
 ]
 
 describe("client messages", () => {
@@ -234,6 +240,22 @@ describe("relay messages", () => {
       cid: 4,
       message: "FUTURE_CODE: later",
     })
+  })
+})
+
+describe("comment channel in welcome (docs/spec/comments.md §4.4)", () => {
+  test("the comment field trails welcome, so a 1.2.x decoder reads the same message", () => {
+    const plain = relayMessages[0] as Extract<RelayMessage, { type: "welcome" }>
+    const withComments = {
+      ...plain,
+      comments: { head: 7, base: 2, snapshot: { upTo: 2, gen: 1, bytes: 99 } },
+    }
+    const a = encodeRelayMessage(plain)
+    const b = encodeRelayMessage(withComments)
+    expect(Array.from(b.subarray(0, a.length))).toEqual(Array.from(a))
+    expect(decodeRelayMessage(b)).toEqual(withComments)
+    // A comment connection is never reported as anything but view or edit.
+    expect(() => encodeRelayMessage({ ...plain, role: "comment" as never })).toThrow()
   })
 })
 

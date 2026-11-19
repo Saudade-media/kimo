@@ -73,10 +73,6 @@ describe("token verification order", () => {
     await expectCode(await token(forged, "edit"), "AUTH_INVALID")
   })
 
-  test("6 role: comment is ROLE_UNSUPPORTED", async () => {
-    await expectCode(await token(owner, "comment"), "ROLE_UNSUPPORTED")
-  })
-
   test("7 exp: an expired token is TOKEN_EXPIRED", async () => {
     await expectCode(await token(owner, "edit", { exp: nowSec() - 5 }), "TOKEN_EXPIRED")
   })

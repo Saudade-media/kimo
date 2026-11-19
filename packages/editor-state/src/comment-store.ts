@@ -519,6 +519,19 @@ export class CommentStore {
     this.changed(origin, "load")
   }
 
+  /**
+   * Learns the room root key (a receiver finds it when a change's key derives the room id):
+   * changes it signed were folded as a stranger's, so the log folds again.
+   */
+  setRoomRoot(root: string, origin: Origin = "remote"): void {
+    const room = this._room
+    if (!room || room.root === root) return
+    room.root = root
+    this.refold()
+    this.view = null
+    this.changed(origin, "update")
+  }
+
   /** Back to a local file: the current state becomes its comments. */
   leaveRoom(origin: Origin = "file"): void {
     if (!this._room) return

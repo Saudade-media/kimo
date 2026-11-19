@@ -9,6 +9,7 @@
  */
 import type { DocStore, Origin, RemoteOrigin } from "@kimo/editor-state"
 import { KimoAwareness } from "./awareness"
+import { CommentChannel, type CommentSession } from "./comment-channel"
 import {
   asBytes,
   type ClientMessage,
@@ -30,6 +31,7 @@ import {
   type PeerInfo,
   PROTOCOL_VERSION,
   parseRoomId,
+  parseToken,
   RelayHttpClient,
   type RelayLimits,
   type RelayMessage,
@@ -58,6 +60,10 @@ import { MemoryRoomStateStore, type RoomStateStore } from "./room-state"
 const EMPTY_UPDATE_BYTES = 2
 /** `DocStore.readOnly` reason set for `view` links. */
 export const VIEW_ONLY_REASON = "multiplayer: view-only link"
+/** Comment store read-only reason when the relay has no comment channel (docs/spec/comments.md §4.4). */
+export const COMMENTS_UNSUPPORTED_REASON = "multiplayer: this relay does not carry comments"
+/** Comment store read-only reason when this app has no device key to sign comments with. */
+export const COMMENTS_NO_KEY_REASON = "multiplayer: no device key for comments"
 /** `@kimo/sync` version, sent in `hello` (kept equal to package.json by a test). */
 export const CLIENT_VERSION = "1.2.1"
 /** Client-side close code (liveness, protocol errors, resync). */
@@ -125,6 +131,8 @@ class Connection {
   readonly refreshing: string[] = []
   /** `welcome` showed an empty room (no entries, no snapshot): nothing to prove the key against. */
   emptyRoom = false
+  /** The comment channel's session on this connection, when the relay carries comments. */
+  comments: CommentSession | null = null
   /** Serial queue of incoming frames (decryption is async; order is preserved). */
   frames: Promise<void> = Promise.resolve()
   lastReceived = 0
@@ -174,6 +182,8 @@ export class RelayNetworkProvider extends BaseProvider implements NetworkProvide
 
   private keys: RoomKeys | null = null
   private conn: Connection | null = null
+  private readonly commentOptions: NetworkProviderOptions["comments"]
+  private channel: CommentChannel | null = null
   /** Highest contiguous `seq` applied by this provider instance (§15.1). */
   private since = 0
   private _role: Role | null = null
@@ -235,6 +245,7 @@ export class RelayNetworkProvider extends BaseProvider implements NetworkProvide
     this.remoteOrigin = `remote:mp:${options.room}`
     this.token = options.token
     this.roomKey = options.roomKey
+    this.commentOptions = options.comments
     this.stateStore = options.state ?? new MemoryRoomStateStore()
     const WS = options.WebSocket ?? globalThis.WebSocket
     if (!WS) throw new Error("No WebSocket implementation available")
@@ -332,6 +343,19 @@ export class RelayNetworkProvider extends BaseProvider implements NetworkProvide
       throw error
     }
     if (this._store !== store || this.stopped) return ready
+    const comments = store.comments
+    if (comments && this.commentOptions && this.keys)
+      this.channel = new CommentChannel({
+        room: this.room,
+        keys: this.keys,
+        http: this.http,
+        store: comments,
+        device: this.commentOptions.device,
+        root: this.commentOptions.root ?? null,
+        ...(this.commentOptions.replica ? { replica: this.commentOptions.replica } : {}),
+        origin: this.remoteOrigin,
+      })
+    else comments?.setReadOnly(COMMENTS_NO_KEY_REASON)
     this.applyAutoRepair()
     if (this.environment) this.offOnline = this.environment.onOnline(() => this.onOnline())
     this.open()
@@ -355,7 +379,13 @@ export class RelayNetworkProvider extends BaseProvider implements NetworkProvide
     this.offUpdate?.()
     this.offUpdate = null
     await this.flushCursor()
+    const channel = this.channel
+    this.channel = null
+    await channel?.dispose()
     this.releaseView(store)
+    const commentsLock = store.comments?.readOnly
+    if (commentsLock === COMMENTS_NO_KEY_REASON || commentsLock === COMMENTS_UNSUPPORTED_REASON)
+      store.comments?.setReadOnly(store.readOnly?.reason ?? null)
     const sw = repairSwitch(store)
     if (sw && this.savedAutoRepair !== null && sw.autoRepair !== this.savedAutoRepair)
       sw.setAutoRepair(this.savedAutoRepair)
@@ -518,6 +548,8 @@ export class RelayNetworkProvider extends BaseProvider implements NetworkProvide
     if (this.conn !== conn) return
     this.conn = null
     this.pendingCarries = null
+    if (conn.comments) this.channel?.stop()
+    conn.comments = null
     conn.dispose()
     if (this.stableTimer) clearTimeout(this.stableTimer)
     this.stableTimer = null
@@ -638,6 +670,18 @@ export class RelayNetworkProvider extends BaseProvider implements NetworkProvide
         return
       case "pong":
         return
+      case "comment-entries":
+        if (conn.comments) this.channel?.onEntries(conn.comments, message.entries)
+        return
+      case "comment-snapshot":
+        if (conn.comments) this.channel?.onSnapshot(conn.comments, message.info)
+        return
+      case "comment-compact":
+        if (conn.comments) this.channel?.onCompact(conn.comments, message.upTo)
+        return
+      case "comment-ack":
+        if (conn.comments) this.channel?.onAck(conn.comments, message.cid, message.seq)
+        return
     }
   }
 
@@ -684,6 +728,7 @@ export class RelayNetworkProvider extends BaseProvider implements NetworkProvide
       return
     }
     this.applyRole()
+    this.startComments(conn, message)
     this.elect()
     this.applyAutoRepair()
     // setToken() ran while this connection was handshaking: hello carried the older token.
@@ -696,6 +741,52 @@ export class RelayNetworkProvider extends BaseProvider implements NetworkProvide
       if (fetched) await this.applySnapshot(conn, fetched)
     }
     this.maybeCaughtUp(conn)
+  }
+
+  /** The role the token itself names: a `comment` token shows as `view` on the wire. */
+  private tokenRole(): string {
+    try {
+      return parseToken(this.token).role
+    } catch {
+      return this._role ?? "view"
+    }
+  }
+
+  /** Starts the comment channel on a welcomed connection (docs/spec/comments.md §4.4). */
+  private startComments(
+    conn: Connection,
+    message: Extract<RelayMessage, { type: "welcome" }>,
+  ): void {
+    const comments = this._store?.comments
+    if (!comments || !this.channel) return
+    if (!message.comments) {
+      comments.setReadOnly(COMMENTS_UNSUPPORTED_REASON)
+      return
+    }
+    if (comments.readOnly === COMMENTS_UNSUPPORTED_REASON)
+      comments.setReadOnly(this._store?.readOnly?.reason ?? null)
+    this.unlockComments()
+    conn.comments = {
+      send: (m) => this.send(conn, m),
+      cid: () => ++conn.nextCid,
+      token: () => conn.token,
+      alive: () => this.conn === conn,
+      edit: message.role === "edit",
+      maxEntryBytes: this.limits.maxEntryBytes,
+      maxSnapshotBytes: this.limits.maxSnapshotBytes,
+      info: message.comments,
+      resync: () => this.drop(conn, null),
+    }
+    this.channel.start(conn.comments)
+  }
+
+  /** A `comment` link reads the design and writes comments: only the design stays locked. */
+  private unlockComments(): void {
+    const store = this._store
+    const comments = store?.comments
+    if (!store || !comments || this.tokenRole() !== "comment") return
+    if (store.readOnly?.reason === VIEW_ONLY_REASON && comments.readOnly === VIEW_ONLY_REASON)
+      comments.setReadOnly(null)
   }
 
   private async applySnapshot(conn: Connection, snapshot: FetchedSnapshot): Promise<void> {
@@ -823,6 +914,10 @@ export class RelayNetworkProvider extends BaseProvider implements NetworkProvide
 
   private onDenied(conn: Connection, code: MpErrorCode, cid: number, message: string): void {
     this.emit({ type: "denied", code, message })
+    if (cid > 0 && this.channel?.onDenied(cid)) {
+      if (code === "VIEW_ONLY") this._store?.comments?.setReadOnly(VIEW_ONLY_REASON)
+      return
+    }
     if (cid === 0 && conn.refreshing.length > 0) {
       // The relay answers each refresh in order, with `token` or `denied`: this one was refused.
       conn.refreshing.shift()
@@ -1103,7 +1198,9 @@ export class RelayNetworkProvider extends BaseProvider implements NetworkProvide
       if (reason === null || reason === VIEW_ONLY_REASON) {
         if (reason === null) this.foreignReadOnly = null
         this.readOnlySet = true
-        return original(VIEW_ONLY_REASON)
+        original(VIEW_ONLY_REASON)
+        this.unlockComments()
+        return
       }
       this.foreignReadOnly = reason
       return original(reason)

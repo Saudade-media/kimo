@@ -375,6 +375,44 @@ export class RelayHttpClient {
     return { gen: body.gen, upTo: body.upTo }
   }
 
+  /** `GET /room/<room>/comments/snapshot` (docs/spec/comments.md §4.4); null when there is none. */
+  async getCommentSnapshot(room: string, token: string): Promise<FetchedSnapshot | null> {
+    return this.request<FetchedSnapshot | null>(
+      "GET",
+      `/room/${roomPath(room)}/comments/snapshot`,
+      { token },
+      async (response, kick) => {
+        const upTo = headerCount(response, "kimo-up-to")
+        const gen = headerCount(response, "kimo-gen")
+        if (upTo === null || gen === null) {
+          await response.body?.cancel().catch(() => {})
+          throw malformed("comment snapshot response")
+        }
+        const limit = this.limits.maxSnapshotBytes + ENVELOPE_OVERHEAD
+        return { upTo, gen, envelope: await readCapped(response, limit, "snapshot", kick) }
+      },
+      () => null,
+    )
+  }
+
+  /** `PUT /room/<room>/comments/snapshot?upTo=<n>`: edit tokens only. */
+  async putCommentSnapshot(
+    room: string,
+    token: string,
+    upTo: number,
+    envelope: Uint8Array,
+  ): Promise<{ gen: number; upTo: number }> {
+    if (!isCount(upTo)) throw new MultiplayerError("BAD_REQUEST", "upTo must be an integer >= 0")
+    const body = await this.request(
+      "PUT",
+      `/room/${roomPath(room)}/comments/snapshot?upTo=${upTo}`,
+      { token, headers: { "content-type": OCTETS }, body: envelope },
+      jsonObject("comment snapshot response"),
+    )
+    if (!isCount(body.gen) || !isCount(body.upTo)) throw malformed("comment snapshot response")
+    return { gen: body.gen, upTo: body.upTo }
+  }
+
   /** `PUT /blob/<room>/<id>`: `created` (201) or `exists` (200). */
   async putBlob(
     room: string,

@@ -1,7 +1,20 @@
 /** Signed comment changes (docs/spec/comments.md §4.1, §4.2). */
 import { describe, expect, test } from "bun:test"
-import type { CommentRecordBody } from "@kimo/editor-state"
-import { exportPublicKey, generateSigningKeyPair, toBase64Url } from "../../src/mp"
+import { type CommentRecordBody, CommentStore } from "@kimo/editor-state"
+import { CommentChannel, type CommentSession, type CommentSigner } from "../../src/comment-channel"
+import {
+  type ClientMessage,
+  deriveRoomId,
+  deriveRoomKeys,
+  exportPublicKey,
+  generateRoomKey,
+  generateSigningKeyPair,
+  type LogEntry,
+  RelayHttpClient,
+  type RoomKeys,
+  sealCommentsUpdate,
+  toBase64Url,
+} from "../../src/mp"
 import {
   decodeCommentBatch,
   decodeCommentSnapshot,
@@ -65,5 +78,118 @@ describe("signed comment changes", () => {
     const snap = decodeCommentSnapshot(encodeCommentSnapshot([{ pos: 513, signed }]))
     expect(snap).toEqual([{ pos: 513, signed }])
     expect(() => decodeCommentBatch(new Uint8Array([0]))).toThrow()
+  })
+})
+
+/** The relay's comment log in miniature: order, ack, fan out to subscribers. */
+class MiniRelay {
+  readonly log: LogEntry[] = []
+  private readonly subs = new Map<CommentSession, CommentChannel>()
+  append(from: CommentSession | null, env: Uint8Array): number {
+    const entry = { seq: this.log.length + 1, origin: "user" as const, env }
+    this.log.push(entry)
+    for (const [s, ch] of this.subs) if (s !== from) ch.onEntries(s, [entry])
+    return entry.seq
+  }
+  connect(channel: CommentChannel): CommentSession {
+    let next = 0
+    const session: CommentSession = {
+      send: (m: ClientMessage) => {
+        if (m.type === "comments-subscribe") {
+          this.subs.set(session, channel)
+          channel.onEntries(session, this.log.slice(m.since))
+        } else if (m.type === "append-comment")
+          channel.onAck(session, m.cid, this.append(session, m.env))
+      },
+      cid: () => ++next,
+      token: () => "t",
+      alive: () => true,
+      edit: true,
+      maxEntryBytes: 1024 * 1024,
+      maxSnapshotBytes: 1024 * 1024,
+      info: { head: this.log.length, base: 0, snapshot: null },
+      resync: () => {
+        throw new Error("unexpected gap")
+      },
+    }
+    channel.start(session)
+    return session
+  }
+}
+
+const settle = async () => {
+  for (let i = 0; i < 8; i++) await new Promise((r) => setTimeout(r, 5))
+}
+
+async function signer(pair?: CryptoKeyPair): Promise<CommentSigner> {
+  const p = pair ?? (await generateSigningKeyPair())
+  return { privateKey: p.privateKey, publicKey: await exportPublicKey(p.publicKey) }
+}
+
+describe("comment channel", () => {
+  test("two devices converge; a forged edit is dropped; the root key deletes any thread", async () => {
+    const rootPair = await generateSigningKeyPair()
+    const root = await signer(rootPair)
+    const roomId = await deriveRoomId(root.publicKey)
+    const keys: RoomKeys = await deriveRoomKeys(generateRoomKey(), roomId)
+    const http = new RelayHttpClient({ relayUrl: "https://relay.invalid" })
+    const relay = new MiniRelay()
+    const devA = await signer()
+    const devB = await signer()
+    const a = new CommentStore()
+    const b = new CommentStore()
+    const opts = { room: roomId.id, keys, http, origin: "remote:mp:test" as const }
+    const chA = new CommentChannel({ ...opts, store: a, device: devA, root })
+    const chB = new CommentChannel({ ...opts, store: b, device: devB })
+    relay.connect(chA)
+    relay.connect(chB)
+    await settle()
+    const ana = { id: `dev:${toBase64Url(devA.publicKey)}`, name: "Ana", kind: "person" as const }
+    const bo = { id: `dev:${toBase64Url(devB.publicKey)}`, name: "Bo", kind: "person" as const }
+    const t = a.createThread(
+      { anchor: { x: 1, y: 1 }, message: { author: ana, text: "Hi" } },
+      "user",
+    )
+    await settle()
+    expect(b.thread(t.threadId)?.messages[t.messageId]?.text).toBe("Hi")
+    b.reply(t.threadId, { author: bo, text: "Hey" }, "user")
+    const own = b.createThread(
+      { anchor: { x: 5, y: 5 }, message: { author: bo, text: "Mine" } },
+      "user",
+    )
+    await settle()
+    expect(Object.keys(a.thread(t.threadId)?.messages ?? {})).toHaveLength(2)
+    expect(a.threads()).toEqual(b.threads())
+
+    // A modified client signs an edit of Ana's message with Bo's key.
+    const forged = await signComment(
+      roomId.id,
+      {
+        v: 1,
+        id: "Forged0001",
+        n: 99,
+        base: b.position,
+        at: "2026-11-19T10:00:00.000Z",
+        op: "edit",
+        thread: t.threadId,
+        message: t.messageId,
+        text: "pwned",
+      },
+      devB.privateKey,
+      devB.publicKey,
+    )
+    relay.append(null, await sealCommentsUpdate(keys, encodeCommentBatch([forged])))
+    await settle()
+    expect(a.thread(t.threadId)?.messages[t.messageId]?.text).toBe("Hi")
+    expect(b.thread(t.threadId)?.messages[t.messageId]?.text).toBe("Hi")
+
+    // The owner's device deletes Bo's thread with the root key; Bo's device learns that key.
+    a.deleteThread(own.threadId, ana.id, "user", { moderator: true })
+    await settle()
+    expect(a.thread(own.threadId)).toBeUndefined()
+    expect(b.thread(own.threadId)).toBeUndefined()
+    expect(a.threads()).toEqual(b.threads())
+    await chA.dispose()
+    await chB.dispose()
   })
 })

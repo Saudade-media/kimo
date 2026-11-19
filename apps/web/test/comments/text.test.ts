@@ -5,7 +5,7 @@ import { parseMessage, safeHref } from "../../src/comments/text"
 describe("comment message text", () => {
   test("only http and https links become links; markup stays text", () => {
     const [b] = parseMessage(
-      '[a](javascript:alert(1)) [b](data:text/html,x) [c](https://kimo.dev/x) <img src=x onerror=1> @[Ana](dev:abc)',
+      "[a](javascript:alert(1)) [b](data:text/html,x) [c](https://kimo.dev/x) <img src=x onerror=1> @[Ana](dev:abc)",
     )
     const kinds = b?.inline.map((x) => x.kind)
     expect(kinds).toEqual(["text", "link", "text", "mention"])

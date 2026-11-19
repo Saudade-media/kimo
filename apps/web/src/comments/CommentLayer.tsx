@@ -7,7 +7,15 @@ import type { CommentAnchor, CommentAuthor, CommentMessage } from "@kimo/core-sc
 import { CommentError, type CommentStore } from "@kimo/editor-state"
 import type { LayoutResult } from "@kimo/layout"
 import { IconButton, Menu, MenuDivider, MenuItem } from "@kimo/ui"
-import { type ReactNode, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react"
+import {
+  type ReactNode,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react"
 import type { UiStore } from "../canvas/contract"
 import { getLanguage, t, tn } from "../lib/i18n"
 import { Icon } from "../lib/icons"
@@ -162,6 +170,12 @@ export function CommentLayer(p: CommentLayerProps) {
     })
   }
 
+  const [pinW, setPinW] = useState(PIN)
+  useLayoutEffect(() => {
+    const el = root.current?.querySelector<HTMLElement>(".comment-pin--selected")
+    const w = el ? el.offsetWidth : PIN
+    if (w !== pinW) setPinW(w)
+  })
   const focusPoint = (): { x: number; y: number } | null => {
     if (p.focus?.kind === "draft") {
       const a = p.focus.anchor
@@ -177,7 +191,8 @@ export function CommentLayer(p: CommentLayerProps) {
   const popStyle = (w: number) => {
     if (!at) return undefined
     const W = box?.clientWidth ?? 1e4
-    let left = at.x + PIN + GAP
+    // The pin with replies is wider than 32: place the popover from its measured width.
+    let left = at.x + (openId ? pinW : PIN) + GAP
     if (left + w > W - 8) left = Math.max(8, at.x - GAP - w)
     const top = Math.max(8, at.y - PIN)
     return { left, top }

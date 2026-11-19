@@ -1,32 +1,39 @@
 /**
- * `CommentStore`: canvas comments as their own Yjs document (docs/spec/comments.md §4), next to
- * the design document of a `YjsDocStore`. Comments never enter the design undo stacks or the
- * design revision, and in a room they sync on their own channel.
+ * `CommentStore`: canvas comments next to the design document of a `YjsDocStore`
+ * (docs/spec/comments.md). Comments never enter the design undo stacks or the design revision.
  *
- * Shape: `threads`: Y.Map<threadId, Y.Map> with `anchor` (whole value), `first` (opening message
- * id), `resolved` (whole value) and `messages`: Y.Map<messageId, Y.Map> holding `author`, `at`,
- * `edited`, `attachments` (whole values), `text` (Y.Text, so concurrent edits merge by character)
- * and `reactions`: Y.Map<"<emoji> <authorId>", true>, made with the message, so concurrent
- * reactions are distinct keys and all survive (set semantics). The plain projection is the
- * file's `comments` member.
+ * State is a fold of changes ({@link CommentFold}). On a local file every write is a trusted
+ * change applied at once, and authorship is checked by author id. In a room
+ * ({@link CommentStore.enterRoom}) every write becomes a change signed by this device's key: the
+ * sync layer signs and sends what {@link CommentStore.onRecord} reports, feeds the room's
+ * verified changes to {@link CommentStore.receive}, and the fold drops any change its key may
+ * not make (spec §4.3), so no client can rewrite another person's message.
  */
 import {
   COMMENT_ATTACHMENTS_MAX,
-  COMMENT_TEXT_MAX,
   type CommentAnchor,
   type CommentAttachment,
   type CommentAuthor,
-  type CommentMessage,
   type Comments,
   type CommentThread,
-  codePointLength,
   commentTime,
   ID_PATTERN,
   jsonEqual,
 } from "@kimo/core-schema"
-import * as Y from "yjs"
+import {
+  COMMENT_RECORD_VERSION,
+  CommentFold,
+  type CommentOp,
+  type CommentRecord,
+  type CommentRecordBody,
+  devKeyOf,
+  isCommentAnchor,
+  isCommentText,
+  isEmoji,
+  LOCAL_KEY,
+} from "./comment-records"
 import { generateId } from "./ids"
-import type { Origin, RemoteOrigin } from "./origin"
+import type { Origin } from "./origin"
 
 /** Why a comment write was refused. */
 export type CommentErrorCode = "NOT_FOUND" | "NOT_AUTHOR" | "INVALID" | "RATE_LIMITED" | "READ_ONLY"
@@ -41,7 +48,7 @@ export class CommentError extends Error {
   }
 }
 
-/** Emitted once per transaction that changed comments. */
+/** Emitted once per write, load or batch of received changes that changed comments. */
 export interface CommentChange {
   origin: Origin
   /** Threads whose data changed (added, updated or removed). */
@@ -53,7 +60,7 @@ export interface CommentChange {
 export type CommentLoadMode =
   /** The file is the truth: threads it lacks are deleted, changed ones rewritten. */
   | "replace"
-  /** Only threads and messages missing here are added (a room replica meets a file). */
+  /** Only threads and messages missing here are added. */
   | "add"
   /** The file's comments are ignored. */
   | "keep"
@@ -70,40 +77,32 @@ export interface NewMessage {
 
 export interface CommentStoreOptions {
   now?: () => number
-  /** New messages and replies per author per hour (spec §4). 0 = no limit. Default 100. */
+  /** New messages and replies per author per hour (spec §4.4). 0 = no limit. Default 100. */
   hourlyLimit?: number
+  /** Ids taken by design nodes (never used for comments). */
+  nodeIds?: (id: string) => boolean
+}
+
+/** A room this store syncs with (spec §4). */
+export interface CommentRoom {
+  /** This device's public key, base64url. */
+  key: string
+  /** The room root public key, base64url (owner changes). */
+  root: string | null
+  /** This client holds the root key: it may delete any thread and import a file's threads. */
+  moderator: boolean
 }
 
 const ID_RE = new RegExp(ID_PATTERN)
 const HOUR = 3_600_000
-const MAX_EMOJI_LENGTH = 32
-
-type YThread = Y.Map<unknown>
-type YMessage = Y.Map<unknown>
-
-/** Reaction key: emoji and author id never contain whitespace. */
-const reactionKey = (emoji: string, authorId: string) => `${emoji} ${authorId}`
-
-const plainJson = <T>(v: T): T => (v === undefined ? v : JSON.parse(JSON.stringify(v)))
 
 function checkText(text: string): void {
-  if (typeof text !== "string" || text.trim() === "")
-    throw new CommentError("INVALID", "A message needs text")
-  if (codePointLength(text) > COMMENT_TEXT_MAX)
-    throw new CommentError("INVALID", `A message is at most ${COMMENT_TEXT_MAX} characters`)
+  if (!isCommentText(text))
+    throw new CommentError("INVALID", "A message needs 1 to 5000 characters")
 }
 
 function checkAnchor(a: CommentAnchor): void {
-  const finite = (n: unknown): n is number => typeof n === "number" && Number.isFinite(n)
-  if (!a || !finite(a.x) || !finite(a.y)) throw new CommentError("INVALID", "Anchor needs x and y")
-  if ((a.w === undefined) !== (a.h === undefined))
-    throw new CommentError("INVALID", "An area needs both w and h")
-  if (a.w !== undefined && (!finite(a.w) || a.w <= 0 || !finite(a.h) || a.h <= 0))
-    throw new CommentError("INVALID", "An area needs a positive size")
-  if (a.node !== undefined && !ID_RE.test(a.node))
-    throw new CommentError("INVALID", "Bad anchor node")
-  if (a.page !== undefined && !ID_RE.test(a.page))
-    throw new CommentError("INVALID", "Bad anchor page")
+  if (!isCommentAnchor(a)) throw new CommentError("INVALID", "Bad anchor")
 }
 
 function checkAttachments(list: CommentAttachment[] | undefined): void {
@@ -112,74 +111,50 @@ function checkAttachments(list: CommentAttachment[] | undefined): void {
     throw new CommentError("INVALID", `1 to ${COMMENT_ATTACHMENTS_MAX} images per message`)
 }
 
-const isHighSurrogate = (code: number) => code >= 0xd800 && code <= 0xdbff
-
-/** Replaces the content of `yt` by `next` with the smallest middle edit. */
-function rewriteText(yt: Y.Text, next: string): void {
-  const prev = yt.toString()
-  if (prev === next) return
-  let start = 0
-  const max = Math.min(prev.length, next.length)
-  while (start < max && prev.charCodeAt(start) === next.charCodeAt(start)) start++
-  // Never split a surrogate pair.
-  if (start > 0 && isHighSurrogate(prev.charCodeAt(start - 1))) start--
-  let endPrev = prev.length
-  let endNext = next.length
-  while (
-    endPrev > start &&
-    endNext > start &&
-    prev.charCodeAt(endPrev - 1) === next.charCodeAt(endNext - 1)
-  ) {
-    endPrev--
-    endNext--
-  }
-  if (endPrev > start) yt.delete(start, endPrev - start)
-  if (endNext > start) yt.insert(start, next.slice(start, endNext))
-}
-
 export class CommentStore {
-  /** The comment document (sync providers only; consumers use the methods). */
-  readonly ydoc = new Y.Doc()
-  private readonly yThreads: Y.Map<YThread>
   private readonly listeners = new Set<(c: CommentChange) => void>()
-  private readonly updateListeners = new Set<(u: Uint8Array, origin: Origin) => void>()
+  private readonly recordListeners = new Set<(r: CommentRecord, origin: Origin) => void>()
   private readonly now: () => number
   private readonly hourlyLimit: number
+  private readonly nodeIds: ((id: string) => boolean) | undefined
   private readonly posted = new Map<string, number[]>()
-  private pending = new Set<string>()
-  private tx: { origin: Origin; cause: CommentChange["cause"] } | null = null
-  private cache: Comments | null = null
   private _readOnly: string | null = null
+  private _room: CommentRoom | null = null
+  /** Acknowledged changes, by position. */
+  private acked: CommentRecord[] = []
+  private confirmed: CommentFold
+  /** Local changes the room has not acknowledged, in the order written. */
+  private pendingList: CommentRecord[] = []
+  private view: CommentFold | null = null
+  private cache: Comments | null = null
+  private lastJson = new Map<string, string>()
+  private lastN = 0
+  private localPos = 0
+  /** The file's comments while in a room (imported by the owner when the room lacks them). */
+  private fileComments: Comments | undefined
 
   constructor(options: CommentStoreOptions = {}) {
     this.now = options.now ?? Date.now
     this.hourlyLimit = options.hourlyLimit ?? 100
-    this.yThreads = this.ydoc.getMap("threads")
-    this.yThreads.observeDeep((events) => {
-      for (const e of events) {
-        if (e.target === this.yThreads) {
-          for (const k of (e as Y.YMapEvent<unknown>).keysChanged) this.pending.add(k)
-        } else {
-          const id = e.path[0]
-          if (typeof id === "string") this.pending.add(id)
-        }
-      }
+    this.nodeIds = options.nodeIds
+    this.confirmed = this.newFold()
+  }
+
+  private newFold(): CommentFold {
+    return new CommentFold({
+      root: this._room?.root ?? null,
+      ...(this.nodeIds ? { nodeIds: this.nodeIds } : {}),
     })
-    this.ydoc.on("afterTransaction", (tr: Y.Transaction) => {
-      if (this.pending.size === 0) return
-      const threads = this.pending
-      this.pending = new Set()
-      this.cache = null
-      const origin: Origin =
-        this.tx?.origin ?? (typeof tr.origin === "string" ? (tr.origin as Origin) : "remote")
-      const change: CommentChange = { origin, threads, cause: this.tx?.cause ?? "update" }
-      for (const l of [...this.listeners]) l(change)
-    })
-    this.ydoc.on("update", (update: Uint8Array, origin: unknown) => {
-      if (this.updateListeners.size === 0) return
-      const o = this.tx?.origin ?? (typeof origin === "string" ? (origin as Origin) : "remote")
-      for (const l of [...this.updateListeners]) l(update, o)
-    })
+  }
+
+  private state(): CommentFold {
+    if (this.pendingList.length === 0) return this.confirmed
+    if (!this.view) {
+      const v = this.confirmed.copy()
+      for (const r of this.pendingList) v.apply(r)
+      this.view = v
+    }
+    return this.view
   }
 
   // --- Reading --------------------------------------------------------------------------------
@@ -191,14 +166,7 @@ export class CommentStore {
 
   /** Every thread as plain data (cached until the next change; do not mutate). */
   threads(): Comments {
-    if (!this.cache) {
-      const out: Comments = {}
-      for (const id of [...this.yThreads.keys()].sort()) {
-        const t = this.readThread(this.yThreads.get(id))
-        if (t) out[id] = t
-      }
-      this.cache = out
-    }
+    this.cache ??= this.state().project()
     return this.cache
   }
 
@@ -210,55 +178,21 @@ export class CommentStore {
   /** The file projection: undefined when there are no threads. */
   toJSON(): Comments | undefined {
     const t = this.threads()
-    return Object.keys(t).length > 0 ? plainJson(t) : undefined
+    return Object.keys(t).length > 0 ? JSON.parse(JSON.stringify(t)) : undefined
   }
 
-  private readThread(y: YThread | undefined): CommentThread | undefined {
-    if (!(y instanceof Y.Map)) return undefined
-    const first = y.get("first")
-    const anchor = y.get("anchor")
-    const ym = y.get("messages")
-    if (typeof first !== "string" || !anchor || !(ym instanceof Y.Map)) return undefined
-    const messages: Record<string, CommentMessage> = {}
-    for (const mid of [...ym.keys()].sort()) {
-      const m = this.readMessage(ym.get(mid) as YMessage | undefined)
-      if (m) messages[mid] = m
-    }
-    if (!Object.hasOwn(messages, first)) return undefined
-    const out: CommentThread = { anchor: plainJson(anchor) as CommentAnchor, first, messages }
-    const resolved = y.get("resolved")
-    if (resolved) out.resolved = plainJson(resolved) as CommentThread["resolved"]
-    return out
+  /** The room this store syncs with, or null on a local file. */
+  get room(): CommentRoom | null {
+    return this._room
   }
 
-  private readMessage(y: YMessage | undefined): CommentMessage | undefined {
-    if (!(y instanceof Y.Map)) return undefined
-    const author = y.get("author")
-    const at = y.get("at")
-    const yt = y.get("text")
-    const text = yt instanceof Y.Text ? yt.toString() : typeof yt === "string" ? yt : ""
-    if (!author || typeof at !== "string" || text === "") return undefined
-    const m: CommentMessage = { author: plainJson(author) as CommentAuthor, at, text }
-    const edited = y.get("edited")
-    if (typeof edited === "string") m.edited = edited
-    const attachments = y.get("attachments")
-    if (Array.isArray(attachments) && attachments.length > 0)
-      m.attachments = plainJson(attachments) as CommentAttachment[]
-    const yr = y.get("reactions")
-    if (yr instanceof Y.Map && yr.size > 0) {
-      const reactions: Record<string, string[]> = {}
-      for (const key of [...yr.keys()].sort()) {
-        const space = key.indexOf(" ")
-        if (space <= 0) continue
-        const emoji = key.slice(0, space)
-        const list = reactions[emoji] ?? []
-        list.push(key.slice(space + 1))
-        reactions[emoji] = list
-      }
-      for (const ids of Object.values(reactions)) ids.sort()
-      if (Object.keys(reactions).length > 0) m.reactions = reactions
-    }
-    return m
+  /** Whether `actor` (this device in a room) may edit or delete the message. */
+  canModify(threadId: string, messageId: string, actor: string): boolean {
+    const m = this.thread(threadId)?.messages[messageId]
+    if (!m) return false
+    const owner = this.state().ownerOf(threadId, messageId)
+    if (this._room && owner !== null) return owner === this._room.key
+    return m.author.id === actor
   }
 
   // --- Writing --------------------------------------------------------------------------------
@@ -272,20 +206,8 @@ export class CommentStore {
     this._readOnly = reason
   }
 
-  private write<T>(origin: Origin, fn: () => T, cause: CommentChange["cause"] = "edit"): T {
-    if (cause === "edit" && this._readOnly !== null)
-      throw new CommentError("READ_ONLY", this._readOnly)
-    const prev = this.tx
-    this.tx = { origin, cause }
-    try {
-      let out: T | undefined
-      this.ydoc.transact(() => {
-        out = fn()
-      }, origin)
-      return out as T
-    } finally {
-      this.tx = prev
-    }
+  private assertWritable(): void {
+    if (this._readOnly !== null) throw new CommentError("READ_ONLY", this._readOnly)
   }
 
   private budget(author: CommentAuthor): void {
@@ -298,37 +220,49 @@ export class CommentStore {
     this.posted.set(author.id, list)
   }
 
-  private yThread(id: string): YThread {
-    const t = this.yThreads.get(id)
-    if (!(t instanceof Y.Map) || !this.thread(id))
-      throw new CommentError("NOT_FOUND", `No thread "${id}"`)
-    return t
-  }
-
-  private yMessage(threadId: string, messageId: string): YMessage {
-    const ym = this.yThread(threadId).get("messages") as Y.Map<unknown>
-    const m = ym.get(messageId)
-    if (!(m instanceof Y.Map)) throw new CommentError("NOT_FOUND", `No message "${messageId}"`)
-    return m as YMessage
+  private checkAuthor(author: CommentAuthor): void {
+    const dev = devKeyOf(author.id)
+    if (this._room && dev !== null && dev !== this._room.key)
+      throw new CommentError("INVALID", "A dev: author must be this device")
   }
 
   private freshId(): string {
+    const s = this.state()
     for (;;) {
       const id = generateId()
-      if (!this.yThreads.has(id)) return id
+      if (!this.thread(id) && !s.tombs.has(id) && !(this.nodeIds?.(id) ?? false)) return id
     }
   }
 
-  private newMessage(m: NewMessage): YMessage {
-    checkText(m.text)
-    checkAttachments(m.attachments)
-    const y = new Y.Map<unknown>()
-    y.set("author", plainJson(m.author))
-    y.set("at", m.at ?? commentTime(new Date(this.now())))
-    y.set("text", new Y.Text(m.text))
-    if (m.attachments) y.set("attachments", plainJson(m.attachments))
-    y.set("reactions", new Y.Map<boolean>())
-    return y
+  private nextN(): number {
+    this.lastN = Math.max(this.now(), this.lastN + 1)
+    return this.lastN
+  }
+
+  /** Writes one change: applied at once on a local file, pending (and reported) in a room. */
+  private commit(op: CommentOp, origin: Origin, options: { asRoot?: boolean } = {}): void {
+    const room = this._room
+    const body = {
+      v: COMMENT_RECORD_VERSION,
+      id: generateId(),
+      n: this.nextN(),
+      base: room ? this.confirmed.maxPos : this.localPos,
+      at: commentTime(new Date(this.now())),
+      ...op,
+    } as CommentRecordBody
+    const key = room ? (options.asRoot && room.root ? room.root : room.key) : LOCAL_KEY
+    if (!room) {
+      const rec: CommentRecord = { body, key, pos: ++this.localPos }
+      this.acked.push(rec)
+      this.confirmed.apply(rec)
+      this.changed(origin, "edit")
+      return
+    }
+    const rec: CommentRecord = { body, key, pos: null }
+    this.pendingList.push(rec)
+    this.view = null
+    this.changed(origin, "edit")
+    for (const l of [...this.recordListeners]) l(rec, origin)
   }
 
   /** Starts a thread. Returns its id and the opening message's id. */
@@ -336,40 +270,69 @@ export class CommentStore {
     input: { anchor: CommentAnchor; message: NewMessage; id?: string },
     origin: Origin,
   ): { threadId: string; messageId: string } {
-    if (this._readOnly !== null) throw new CommentError("READ_ONLY", this._readOnly)
+    this.assertWritable()
     checkAnchor(input.anchor)
     const threadId = input.id ?? this.freshId()
     const messageId = input.message.id ?? this.freshId()
     if (!ID_RE.test(threadId) || !ID_RE.test(messageId) || threadId === messageId)
       throw new CommentError("INVALID", "Bad comment id")
-    if (this.yThreads.has(threadId)) throw new CommentError("INVALID", "Thread id is taken")
-    const msg = this.newMessage(input.message)
+    if (this.thread(threadId) || this.state().tombs.has(threadId))
+      throw new CommentError("INVALID", "Thread id is taken")
+    checkText(input.message.text)
+    checkAttachments(input.message.attachments)
+    this.checkAuthor(input.message.author)
     this.budget(input.message.author)
-    this.write(origin, () => {
-      const t = new Y.Map<unknown>()
-      t.set("anchor", plainJson(input.anchor))
-      t.set("first", messageId)
-      const messages = new Y.Map<unknown>()
-      messages.set(messageId, msg)
-      t.set("messages", messages)
-      this.yThreads.set(threadId, t)
-    })
+    this.commit(
+      {
+        op: "thread",
+        thread: threadId,
+        message: messageId,
+        anchor: input.anchor,
+        author: input.message.author,
+        text: input.message.text,
+        ...(input.message.attachments ? { attachments: input.message.attachments } : {}),
+      },
+      origin,
+    )
+    if (!this.thread(threadId)) throw new CommentError("INVALID", "Comment id is taken")
     return { threadId, messageId }
   }
 
   /** Adds a reply. Returns its id. */
   reply(threadId: string, message: NewMessage, origin: Origin): string {
-    if (this._readOnly !== null) throw new CommentError("READ_ONLY", this._readOnly)
-    const t = this.yThread(threadId)
+    this.assertWritable()
+    if (!this.thread(threadId)) throw new CommentError("NOT_FOUND", `No thread "${threadId}"`)
     const id = message.id ?? this.freshId()
     if (!ID_RE.test(id)) throw new CommentError("INVALID", "Bad comment id")
-    const msg = this.newMessage(message)
+    checkText(message.text)
+    checkAttachments(message.attachments)
+    this.checkAuthor(message.author)
     this.budget(message.author)
-    this.write(origin, () => (t.get("messages") as Y.Map<unknown>).set(id, msg))
+    this.commit(
+      {
+        op: "reply",
+        thread: threadId,
+        message: id,
+        author: message.author,
+        text: message.text,
+        ...(message.attachments ? { attachments: message.attachments } : {}),
+      },
+      origin,
+    )
+    if (!this.thread(threadId)?.messages[id])
+      throw new CommentError("INVALID", "Comment id is taken")
     return id
   }
 
-  /** Changes a message's text. Only its author may. */
+  private message(threadId: string, messageId: string) {
+    const t = this.thread(threadId)
+    if (!t) throw new CommentError("NOT_FOUND", `No thread "${threadId}"`)
+    const m = t.messages[messageId]
+    if (!m) throw new CommentError("NOT_FOUND", `No message "${messageId}"`)
+    return { thread: t, message: m }
+  }
+
+  /** Changes a message's text. Only its author may (in a room: the key that wrote it). */
   editMessage(
     threadId: string,
     messageId: string,
@@ -377,21 +340,17 @@ export class CommentStore {
     actor: string,
     origin: Origin,
   ): void {
-    const m = this.yMessage(threadId, messageId)
-    if ((m.get("author") as CommentAuthor | undefined)?.id !== actor)
+    this.assertWritable()
+    this.message(threadId, messageId)
+    if (!this.canModify(threadId, messageId, actor))
       throw new CommentError("NOT_AUTHOR", "Only the author can edit a message")
     checkText(text)
-    this.write(origin, () => {
-      const yt = m.get("text")
-      if (yt instanceof Y.Text) rewriteText(yt, text)
-      else m.set("text", new Y.Text(text))
-      m.set("edited", commentTime(new Date(this.now())))
-    })
+    this.commit({ op: "edit", thread: threadId, message: messageId, text }, origin)
   }
 
   /**
-   * Deletes a message: its author, or a moderator (file owner, workspace admin). Deleting the
-   * opening message deletes the thread.
+   * Deletes a message: its author, or a moderator (in a room: a holder of the root key).
+   * Deleting the opening message deletes the thread.
    */
   deleteMessage(
     threadId: string,
@@ -400,40 +359,52 @@ export class CommentStore {
     origin: Origin,
     options: { moderator?: boolean } = {},
   ): "message" | "thread" {
-    const t = this.yThread(threadId)
-    const m = this.yMessage(threadId, messageId)
-    if (!options.moderator && (m.get("author") as CommentAuthor | undefined)?.id !== actor)
+    this.assertWritable()
+    const { thread } = this.message(threadId, messageId)
+    const own = this.canModify(threadId, messageId, actor)
+    const asRoot = !own && this.moderates(options.moderator)
+    if (!own && !asRoot)
       throw new CommentError("NOT_AUTHOR", "Only the author can delete a message")
-    if (t.get("first") === messageId) {
-      this.write(origin, () => this.yThreads.delete(threadId))
-      return "thread"
-    }
-    this.write(origin, () => (t.get("messages") as Y.Map<unknown>).delete(messageId))
-    return "message"
+    const whole = thread.first === messageId
+    this.commit(
+      whole
+        ? { op: "delete", thread: threadId }
+        : { op: "delete", thread: threadId, message: messageId },
+      origin,
+      { asRoot },
+    )
+    return whole ? "thread" : "message"
   }
 
-  /** Deletes a whole thread (moderators, or the author of its every message). */
+  /** Whether this client may act as moderator (`moderator` asked, and a root key in rooms). */
+  private moderates(asked: boolean | undefined): boolean {
+    if (!asked) return false
+    return this._room ? this._room.moderator && this._room.root !== null : true
+  }
+
+  /** Deletes a whole thread (moderators, or the author of its first message). */
   deleteThread(
     threadId: string,
     actor: string,
     origin: Origin,
     options: { moderator?: boolean } = {},
   ): void {
+    this.assertWritable()
     const thread = this.thread(threadId)
     if (!thread) throw new CommentError("NOT_FOUND", `No thread "${threadId}"`)
-    const own = Object.values(thread.messages).every((m) => m.author.id === actor)
-    if (!options.moderator && !own)
+    const own = this.canModify(threadId, thread.first, actor)
+    const asRoot = !own && this.moderates(options.moderator)
+    if (!own && !asRoot)
       throw new CommentError("NOT_AUTHOR", "Only a file owner can delete other people's comments")
-    this.write(origin, () => this.yThreads.delete(threadId))
+    this.commit({ op: "delete", thread: threadId }, origin, { asRoot })
   }
 
   /** Resolves (with `by`) or unresolves (null) a thread. */
   setResolved(threadId: string, by: CommentAuthor | null, origin: Origin): void {
-    const t = this.yThread(threadId)
-    this.write(origin, () => {
-      if (by) t.set("resolved", { by: plainJson(by), at: commentTime(new Date(this.now())) })
-      else t.delete("resolved")
-    })
+    this.assertWritable()
+    if (!this.thread(threadId)) throw new CommentError("NOT_FOUND", `No thread "${threadId}"`)
+    if (by) this.checkAuthor(by)
+    this.commit({ op: "resolve", thread: threadId, by }, origin)
   }
 
   /** Toggles `authorId`'s `emoji` on a message. True when the reaction is now on. */
@@ -444,191 +415,244 @@ export class CommentStore {
     authorId: string,
     origin: Origin,
   ): boolean {
-    if (!emoji || /\s/.test(emoji) || [...emoji].length > MAX_EMOJI_LENGTH)
-      throw new CommentError("INVALID", "Bad emoji")
+    this.assertWritable()
+    if (!isEmoji(emoji)) throw new CommentError("INVALID", "Bad emoji")
     if (/\s/.test(authorId)) throw new CommentError("INVALID", "Bad author id")
-    const m = this.yMessage(threadId, messageId)
-    const key = reactionKey(emoji, authorId)
-    let on = false
-    this.write(origin, () => {
-      let yr = m.get("reactions")
-      if (!(yr instanceof Y.Map)) {
-        yr = new Y.Map<boolean>()
-        m.set("reactions", yr)
-      }
-      const reactions = yr as Y.Map<boolean>
-      if (reactions.has(key)) reactions.delete(key)
-      else {
-        reactions.set(key, true)
-        on = true
-      }
-    })
+    const { message } = this.message(threadId, messageId)
+    const dev = devKeyOf(authorId)
+    if (this._room && dev !== null && dev !== this._room.key)
+      throw new CommentError("INVALID", "A dev: author must be this device")
+    const on = !(message.reactions?.[emoji] ?? []).includes(authorId)
+    this.commit(
+      { op: "react", thread: threadId, message: messageId, emoji, author: authorId, on },
+      origin,
+    )
     return on
   }
 
   /** Moves a pin or area (re-anchored by the caller, spec §2). */
   setAnchor(threadId: string, anchor: CommentAnchor, origin: Origin): void {
+    this.assertWritable()
     checkAnchor(anchor)
-    const t = this.yThread(threadId)
-    this.write(origin, () => t.set("anchor", plainJson(anchor)))
+    if (!this.thread(threadId)) throw new CommentError("NOT_FOUND", `No thread "${threadId}"`)
+    this.commit({ op: "anchor", thread: threadId, anchor }, origin)
   }
 
   /**
-   * Writes page coordinates (`fallback`) and optionally a new `page` on anchored threads, in one
-   * transaction: before their node is deleted, or after it moved to another page.
+   * Writes page coordinates (`fallback`) and optionally a new `page` on anchored threads: before
+   * their node is deleted, or after it moved to another page.
    */
   updateAnchors(
     updates: ReadonlyMap<string, { fallback?: { x: number; y: number }; page?: string | null }>,
     origin: Origin,
   ): void {
     if (updates.size === 0 || this._readOnly !== null) return
-    this.write(origin, () => {
-      for (const [id, u] of updates) {
-        const t = this.yThreads.get(id)
-        if (!(t instanceof Y.Map)) continue
-        const anchor = { ...(t.get("anchor") as CommentAnchor) }
-        if (u.fallback) anchor.fallback = { x: u.fallback.x, y: u.fallback.y }
-        if (u.page === null) delete anchor.page
-        else if (u.page !== undefined) anchor.page = u.page
-        if (!jsonEqual(anchor, t.get("anchor"))) t.set("anchor", anchor)
-      }
-    })
+    for (const [id, u] of updates) {
+      const t = this.thread(id)
+      if (!t) continue
+      const anchor: CommentAnchor = { ...t.anchor }
+      if (u.fallback) anchor.fallback = { x: u.fallback.x, y: u.fallback.y }
+      if (u.page === null) delete anchor.page
+      else if (u.page !== undefined) anchor.page = u.page
+      if (!jsonEqual(anchor, t.anchor)) this.commit({ op: "anchor", thread: id, anchor }, origin)
+    }
   }
 
-  /** Loads the file's `comments` (see {@link CommentLoadMode}). */
+  /**
+   * Loads the file's `comments` (see {@link CommentLoadMode}). In a room the room is the truth:
+   * the file's threads are kept aside for {@link importMissing}.
+   */
   load(
     comments: Comments | undefined,
     options: { mode?: CommentLoadMode; origin?: Origin } = {},
   ): void {
     const mode = options.mode ?? "replace"
     if (mode === "keep") return
-    const src = comments ?? {}
-    this.write(
-      options.origin ?? "file",
-      () => {
-        if (mode === "replace")
-          for (const id of [...this.yThreads.keys()])
-            if (!Object.hasOwn(src, id)) this.yThreads.delete(id)
-        for (const [id, t] of Object.entries(src)) {
-          const cur = this.yThreads.get(id)
-          if (cur instanceof Y.Map) this.syncThread(cur, t, mode)
-          else this.yThreads.set(id, this.buildThread(t))
-        }
-      },
-      "load",
-    )
-  }
-
-  private buildThread(t: CommentThread): YThread {
-    const y = new Y.Map<unknown>()
-    y.set("anchor", plainJson(t.anchor))
-    y.set("first", t.first)
-    if (t.resolved) y.set("resolved", plainJson(t.resolved))
-    const ym = new Y.Map<unknown>()
-    for (const [mid, m] of Object.entries(t.messages)) ym.set(mid, this.buildMessage(m))
-    y.set("messages", ym)
-    return y
-  }
-
-  private buildMessage(m: CommentMessage): YMessage {
-    const y = new Y.Map<unknown>()
-    y.set("author", plainJson(m.author))
-    y.set("at", m.at)
-    if (m.edited !== undefined) y.set("edited", m.edited)
-    if (m.attachments) y.set("attachments", plainJson(m.attachments))
-    y.set("text", new Y.Text(m.text))
-    const yr = new Y.Map<boolean>()
-    for (const [e, ids] of Object.entries(m.reactions ?? {}))
-      for (const id of ids) yr.set(reactionKey(e, id), true)
-    y.set("reactions", yr)
-    return y
-  }
-
-  private syncThread(y: YThread, t: CommentThread, mode: CommentLoadMode): void {
-    let ym = y.get("messages")
-    if (!(ym instanceof Y.Map)) {
-      ym = new Y.Map<unknown>()
-      y.set("messages", ym)
-    }
-    const messages = ym as Y.Map<unknown>
-    if (mode === "add") {
-      for (const [mid, m] of Object.entries(t.messages))
-        if (!messages.has(mid)) messages.set(mid, this.buildMessage(m))
+    if (this._room) {
+      this.fileComments = comments
       return
     }
-    if (!jsonEqual(y.get("anchor"), t.anchor)) y.set("anchor", plainJson(t.anchor))
-    if (y.get("first") !== t.first) y.set("first", t.first)
-    if (t.resolved) {
-      if (!jsonEqual(y.get("resolved"), t.resolved)) y.set("resolved", plainJson(t.resolved))
-    } else if (y.has("resolved")) y.delete("resolved")
-    for (const mid of [...messages.keys()])
-      if (!Object.hasOwn(t.messages, mid)) messages.delete(mid)
-    for (const [mid, m] of Object.entries(t.messages)) {
-      const cur = messages.get(mid)
-      if (cur instanceof Y.Map) this.syncMessage(cur as YMessage, m)
-      else messages.set(mid, this.buildMessage(m))
+    if (mode === "replace") {
+      this.acked = []
+      this.confirmed = this.newFold()
+      this.localPos = 0
     }
+    for (const [id, t] of Object.entries(comments ?? {})) {
+      const rec: CommentRecord = {
+        body: {
+          v: COMMENT_RECORD_VERSION,
+          id: generateId(),
+          n: this.nextN(),
+          base: this.localPos,
+          at: commentTime(new Date(this.now())),
+          op: "import",
+          thread: id,
+          data: t,
+        },
+        key: LOCAL_KEY,
+        pos: ++this.localPos,
+      }
+      this.acked.push(rec)
+      this.confirmed.apply(rec)
+    }
+    this.changed(options.origin ?? "file", "load")
   }
 
-  private syncMessage(y: YMessage, m: CommentMessage): void {
-    const put = (k: string, v: unknown) => {
-      if (v === undefined) {
-        if (y.has(k)) y.delete(k)
-      } else if (!jsonEqual(y.get(k), v)) y.set(k, plainJson(v))
-    }
-    put("author", m.author)
-    put("at", m.at)
-    put("edited", m.edited)
-    put("attachments", m.attachments)
-    const yt = y.get("text")
-    if (yt instanceof Y.Text) rewriteText(yt, m.text)
-    else y.set("text", new Y.Text(m.text))
-    const want = new Set<string>()
-    for (const [e, ids] of Object.entries(m.reactions ?? {}))
-      for (const id of ids) want.add(reactionKey(e, id))
-    let yr = y.get("reactions")
-    if (!(yr instanceof Y.Map)) {
-      yr = new Y.Map<boolean>()
-      y.set("reactions", yr)
-    }
-    const reactions = yr as Y.Map<boolean>
-    for (const k of [...reactions.keys()]) if (!want.has(k)) reactions.delete(k)
-    for (const k of want) if (!reactions.has(k)) reactions.set(k, true)
+  // --- Rooms ----------------------------------------------------------------------------------
+
+  /**
+   * Switches to a room: from now on the state is the room's changes (`records`: this device's
+   * replica, verified), and every write is a change to sign. The file's comments are kept aside.
+   */
+  enterRoom(
+    room: CommentRoom,
+    records: readonly CommentRecord[] = [],
+    origin: Origin = "remote",
+  ): void {
+    this.fileComments = this.toJSON()
+    this._room = { ...room }
+    this.acked = []
+    this.pendingList = []
+    this.confirmed = this.newFold()
+    this.view = null
+    this.receive(records, origin)
+    this.changed(origin, "load")
   }
 
-  // --- Events and sync ------------------------------------------------------------------------
+  /** Back to a local file: the current state becomes its comments. */
+  leaveRoom(origin: Origin = "file"): void {
+    if (!this._room) return
+    const now = this.toJSON()
+    this._room = null
+    this.pendingList = []
+    this.view = null
+    this.load(now, { mode: "replace", origin })
+  }
+
+  /** Reports each local change to sign and send (rooms only). */
+  onRecord(listener: (record: CommentRecord, origin: Origin) => void): () => void {
+    this.recordListeners.add(listener)
+    return () => this.recordListeners.delete(listener)
+  }
+
+  /** Local changes not acknowledged yet, in the order written. */
+  pending(): readonly CommentRecord[] {
+    return this.pendingList
+  }
+
+  /** Highest acknowledged position (the `base` of the next change). */
+  get position(): number {
+    return this.confirmed.maxPos
+  }
+
+  /**
+   * Applies changes from the room (signatures already verified, `pos` set). Changes the fold
+   * may not make are dropped (spec §4.3).
+   */
+  receive(records: readonly CommentRecord[], origin: Origin = "remote"): void {
+    if (records.length === 0) return
+    let inOrder = true
+    let last = this.confirmed.maxPos
+    for (const r of records) {
+      if (r.pos === null) continue
+      if (r.pos <= last) inOrder = false
+      last = Math.max(last, r.pos)
+    }
+    const fresh = records.filter((r) => r.pos !== null && !this.confirmed.seen.has(r.body.id))
+    if (fresh.length === 0) return
+    this.acked.push(...fresh)
+    // A pending change that came back (re-sent before its ack) is acknowledged by it.
+    const ids = new Set(fresh.map((r) => r.body.id))
+    this.pendingList = this.pendingList.filter((p) => !ids.has(p.body.id))
+    if (inOrder) for (const r of fresh) this.confirmed.apply(r)
+    else this.refold()
+    this.view = null
+    this.changed(origin, "update")
+  }
+
+  /** The room acknowledged a local change at `pos`. */
+  acknowledge(changeId: string, pos: number): void {
+    const i = this.pendingList.findIndex((r) => r.body.id === changeId)
+    if (i < 0) return
+    const rec = { ...(this.pendingList[i] as CommentRecord), pos }
+    this.pendingList.splice(i, 1)
+    this.acked.push(rec)
+    if (pos > this.confirmed.maxPos) this.confirmed.apply(rec)
+    else this.refold()
+    this.view = null
+    this.changed("remote", "update")
+  }
+
+  private refold(): void {
+    this.acked.sort((a, b) => (a.pos as number) - (b.pos as number))
+    const seen = new Set<string>()
+    this.acked = this.acked.filter((r) => !seen.has(r.body.id) && seen.add(r.body.id))
+    this.confirmed = this.newFold()
+    for (const r of this.acked) this.confirmed.apply(r)
+  }
+
+  /** Acknowledged changes a comment snapshot keeps (spec §4.4 Compaction). */
+  kept(): CommentRecord[] {
+    return this.confirmed.kept()
+  }
+
+  /** Changes holding live state (re-append candidates, spec §4.4). */
+  live(): CommentRecord[] {
+    return this.state().live()
+  }
+
+  /** Drops acknowledged changes a snapshot no longer needs (after a compaction). */
+  compact(): void {
+    this.acked = this.confirmed.kept()
+  }
+
+  /**
+   * Owner device only: appends one `import` per file thread (or missing messages) the room
+   * lacks (spec §4.4 Authority). Returns how many changes it wrote.
+   */
+  importMissing(origin: Origin = "file"): number {
+    const room = this._room
+    const file = this.fileComments
+    if (!room?.moderator || !room.root || !file) return 0
+    const s = this.state()
+    let n = 0
+    for (const [id, t] of Object.entries(file)) {
+      if (s.tombs.has(id)) continue
+      const cur = this.thread(id)
+      if (cur && Object.keys(t.messages).every((m) => cur.messages[m] || s.tombs.has(m))) continue
+      this.commit({ op: "import", thread: id, data: t }, origin, { asRoot: true })
+      n++
+    }
+    this.fileComments = undefined
+    return n
+  }
+
+  // --- Events ---------------------------------------------------------------------------------
+
+  private changed(origin: Origin, cause: CommentChange["cause"]): void {
+    this.cache = null
+    const next = this.threads()
+    const threads = new Set<string>()
+    const json = new Map<string, string>()
+    for (const [id, t] of Object.entries(next)) {
+      const j = JSON.stringify(t)
+      json.set(id, j)
+      if (this.lastJson.get(id) !== j) threads.add(id)
+    }
+    for (const id of this.lastJson.keys()) if (!json.has(id)) threads.add(id)
+    this.lastJson = json
+    if (threads.size === 0) return
+    const change: CommentChange = { origin, threads, cause }
+    for (const l of [...this.listeners]) l(change)
+  }
 
   onChange(listener: (c: CommentChange) => void): () => void {
     this.listeners.add(listener)
     return () => this.listeners.delete(listener)
   }
 
-  onUpdate(listener: (update: Uint8Array, origin: Origin) => void): () => void {
-    this.updateListeners.add(listener)
-    return () => this.updateListeners.delete(listener)
-  }
-
-  encodeStateVector(): Uint8Array {
-    return Y.encodeStateVector(this.ydoc)
-  }
-
-  encodeStateAsUpdate(stateVector?: Uint8Array): Uint8Array {
-    return Y.encodeStateAsUpdate(this.ydoc, stateVector)
-  }
-
-  applyUpdate(update: Uint8Array, origin: RemoteOrigin = "remote"): void {
-    const prev = this.tx
-    this.tx = { origin, cause: "update" }
-    try {
-      Y.applyUpdate(this.ydoc, update, origin)
-    } finally {
-      this.tx = prev
-    }
-  }
-
   destroy(): void {
     this.listeners.clear()
-    this.updateListeners.clear()
-    this.ydoc.destroy()
+    this.recordListeners.clear()
   }
 }

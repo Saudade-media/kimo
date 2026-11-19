@@ -47,10 +47,23 @@ export {
   releaseClaims,
 } from "./claims"
 export {
+  COMMENT_ENTRY_SLOTS,
+  COMMENT_RECORD_MAX_BYTES,
+  COMMENT_RECORD_VERSION,
+  CommentFold,
+  type CommentOp,
+  type CommentRecord,
+  type CommentRecordBody,
+  devKeyOf,
+  LOCAL_KEY,
+  parseCommentRecordBody,
+} from "./comment-records"
+export {
   type CommentChange,
   CommentError,
   type CommentErrorCode,
   type CommentLoadMode,
+  type CommentRoom,
   CommentStore,
   type CommentStoreOptions,
   type NewMessage,

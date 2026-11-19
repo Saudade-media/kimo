@@ -2,6 +2,9 @@ import { describe, expect, test } from "bun:test"
 import { jsonEqual, type KimoDocument, serialize, validate } from "@kimo/core-schema"
 import {
   bindUiToDocument,
+  COMMENT_ENTRY_SLOTS,
+  type CommentRecord,
+  CommentStore,
   createDocStore,
   createEmptyDocument,
   createUiStore,
@@ -462,56 +465,191 @@ describe("comments (docs/spec/comments.md)", () => {
     )
   })
 
-  test("concurrent replies, edits and reactions converge", () => {
-    const a = base()
-    const { threadId, messageId } = a.comments.createThread(
-      { anchor: { x: 0, y: 0 }, message: { author: ana, text: "Hello world" } },
+  // A relay stand-in: orders appended changes into entries (spec §4.3 positions).
+  const relay = () => {
+    let seq = 0
+    const log: CommentRecord[] = []
+    const clients: CommentStore[] = []
+    const outbox = new Map<CommentStore, CommentRecord[]>()
+    const join = (key: string, opts: { root?: string; moderator?: boolean } = {}) => {
+      const c = new CommentStore()
+      c.enterRoom({ key, root: opts.root ?? "ROOT", moderator: opts.moderator ?? false }, log)
+      outbox.set(c, [])
+      c.onRecord((r) => outbox.get(c)?.push(r))
+      clients.push(c)
+      return c
+    }
+    /** Appends raw records (any key: a modified client) as one entry and fans it out. */
+    const append = (records: CommentRecord[], from?: CommentStore) => {
+      if (records.length === 0) return
+      seq++
+      const placed = records.map((r, i) => ({ ...r, pos: seq * COMMENT_ENTRY_SLOTS + i }))
+      log.push(...placed)
+      for (const c of clients) if (c !== from) c.receive(placed)
+      for (const p of placed) from?.acknowledge(p.body.id, p.pos)
+    }
+    const flush = (c: CommentStore) => {
+      const out = outbox.get(c) ?? []
+      outbox.set(c, [])
+      append(out, c)
+    }
+    return { join, append, flush, log }
+  }
+  const forged = (key: string, body: Record<string, unknown>, base = 0): CommentRecord => ({
+    key,
+    pos: null,
+    body: {
+      v: 1,
+      id: Math.random().toString(36).slice(2, 12),
+      n: 1,
+      base,
+      at: "2026-11-19T10:00:00.000Z",
+      ...body,
+    } as unknown as CommentRecord["body"],
+  })
+
+  test("concurrent replies, edits and reactions converge in a room", () => {
+    const r = relay()
+    const a = r.join("KA")
+    const b = r.join("KB")
+    const anaA = { id: "dev:KA", name: "Ana", kind: "person" } as const
+    const { threadId, messageId } = a.createThread(
+      { anchor: { x: 0, y: 0 }, message: { author: anaA, text: "Hello world" } },
       "user",
     )
-    const b = new YjsDocStore()
-    b.comments.applyUpdate(a.comments.encodeStateAsUpdate(), "remote:a")
-    a.comments.reply(threadId, { author: ana, text: "From A" }, "user")
-    b.comments.reply(threadId, { author: bo, text: "From B" }, "user")
-    a.comments.editMessage(threadId, messageId, "Hello brave world", ana.id, "user")
-    a.comments.toggleReaction(threadId, messageId, "🎉", ana.id, "user")
-    b.comments.toggleReaction(threadId, messageId, "🎉", bo.id, "user")
-    a.comments.applyUpdate(
-      b.comments.encodeStateAsUpdate(a.comments.encodeStateVector()),
-      "remote:b",
-    )
-    b.comments.applyUpdate(
-      a.comments.encodeStateAsUpdate(b.comments.encodeStateVector()),
-      "remote:a",
-    )
-    expect(a.comments.toJSON()).toEqual(b.comments.toJSON())
-    const t = a.comments.thread(threadId)
+    r.flush(a)
+    a.reply(threadId, { author: anaA, text: "From A" }, "user")
+    b.reply(threadId, { author: bo, text: "From B" }, "user")
+    a.editMessage(threadId, messageId, "Hello brave world", anaA.id, "user")
+    a.toggleReaction(threadId, messageId, "🎉", anaA.id, "user")
+    b.toggleReaction(threadId, messageId, "🎉", bo.id, "user")
+    a.setResolved(threadId, anaA, "user")
+    b.setResolved(threadId, null, "user")
+    r.flush(b)
+    r.flush(a)
+    expect(a.toJSON()).toEqual(b.toJSON())
+    const t = a.thread(threadId)
     expect(Object.keys(t?.messages ?? {}).length).toBe(3)
-    expect(t?.messages[messageId]?.reactions).toEqual({ "🎉": ["acct:bo", "dev:ana"] })
+    expect(t?.messages[messageId]?.text).toBe("Hello brave world")
+    expect(t?.messages[messageId]?.reactions).toEqual({ "🎉": ["acct:bo", "dev:KA"] })
+    // Concurrent resolve and unresolve: the first in the log stays (B's unresolve).
+    expect(t?.resolved).toBeUndefined()
   })
 
   test("a reply to a thread deleted elsewhere is dropped (deletion wins)", () => {
-    const a = base()
-    const { threadId } = a.comments.createThread(
-      { anchor: { x: 0, y: 0 }, message: { author: ana, text: "Hi" } },
+    const r = relay()
+    const a = r.join("KA")
+    const b = r.join("KB")
+    const { threadId } = a.createThread(
+      { anchor: { x: 0, y: 0 }, message: { author: { ...ana, id: "dev:KA" }, text: "Hi" } },
       "user",
     )
-    const b = new YjsDocStore()
-    b.comments.applyUpdate(a.comments.encodeStateAsUpdate(), "remote:a")
-    a.comments.deleteThread(threadId, ana.id, "user")
-    b.comments.reply(threadId, { author: bo, text: "Late" }, "user")
-    a.comments.applyUpdate(
-      b.comments.encodeStateAsUpdate(a.comments.encodeStateVector()),
-      "remote:b",
-    )
-    b.comments.applyUpdate(
-      a.comments.encodeStateAsUpdate(b.comments.encodeStateVector()),
-      "remote:a",
-    )
-    expect(a.comments.toJSON()).toBeUndefined()
-    expect(b.comments.toJSON()).toBeUndefined()
+    r.flush(a)
+    a.deleteThread(threadId, "dev:KA", "user")
+    b.reply(threadId, { author: bo, text: "Late" }, "user")
+    r.flush(a)
+    r.flush(b)
+    expect(a.toJSON()).toBeUndefined()
+    expect(b.toJSON()).toBeUndefined()
   })
 
-  test("loading with mode add keeps the room's comments and adds what the file has more", () => {
+  test("a modified client cannot edit or delete someone else's message (spec comments §4.1)", () => {
+    const r = relay()
+    const a = r.join("KA")
+    const b = r.join("KB")
+    const { threadId, messageId } = a.createThread(
+      { anchor: { x: 0, y: 0 }, message: { author: { ...ana, id: "dev:KA" }, text: "Mine" } },
+      "user",
+    )
+    r.flush(a)
+    // B's own API refuses; a modified B appends the changes anyway.
+    expect(() => b.editMessage(threadId, messageId, "Hacked", "dev:KA", "user")).toThrow(/author/)
+    r.append([
+      forged("KB", { op: "edit", thread: threadId, message: messageId, text: "Hacked" }),
+      forged("KB", { op: "delete", thread: threadId }),
+      forged("KB", { op: "delete", thread: threadId, message: messageId }),
+      // Posing as A: a dev: author must be its signing key.
+      forged("KB", {
+        op: "reply",
+        thread: threadId,
+        message: "Fake000001",
+        author: { id: "dev:KA", name: "Ana", kind: "person" },
+        text: "I agree",
+      }),
+      // An import needs the root key.
+      forged("KB", {
+        op: "import",
+        thread: "Thread0009",
+        data: {
+          anchor: { x: 0, y: 0 },
+          first: "Msg0000009",
+          messages: { Msg0000009: { author: ana, at: "2026-11-19T10:00:00.000Z", text: "x" } },
+        },
+      }),
+    ])
+    for (const c of [a, b]) {
+      expect(c.thread(threadId)?.messages[messageId]?.text).toBe("Mine")
+      expect(Object.keys(c.thread(threadId)?.messages ?? {})).toEqual([messageId])
+      expect(c.size).toBe(1)
+    }
+    // The room root key (the owner) may delete any thread.
+    r.append([forged("ROOT", { op: "delete", thread: threadId })])
+    expect(a.toJSON()).toBeUndefined()
+    expect(b.toJSON()).toBeUndefined()
+  })
+
+  test("replayed changes never bring back a deleted message or an old value", () => {
+    const r = relay()
+    const a = r.join("KA")
+    const anaA = { ...ana, id: "dev:KA" }
+    const { threadId } = a.createThread(
+      { anchor: { x: 0, y: 0 }, message: { author: anaA, text: "Keep" } },
+      "user",
+    )
+    const reply = a.reply(threadId, { author: anaA, text: "Gone" }, "user")
+    a.setResolved(threadId, anaA, "user")
+    r.flush(a)
+    const replyChange = r.log.find((c) => c.body.op === "reply") as CommentRecord
+    const resolveChange = r.log.find((c) => c.body.op === "resolve") as CommentRecord
+    a.deleteMessage(threadId, reply, anaA.id, "user")
+    a.setResolved(threadId, null, "user")
+    r.flush(a)
+    // Compaction keeps the tombstone and the latest resolve only.
+    const kept = a.kept()
+    expect(kept.some((c) => c.body.id === replyChange.body.id)).toBe(false)
+    expect(kept.some((c) => c.body.id === resolveChange.body.id)).toBe(false)
+    // A joiner from the compacted snapshot, then the old changes replayed by anyone.
+    const c = new CommentStore()
+    c.enterRoom({ key: "KC", root: "ROOT", moderator: false }, kept)
+    const top = Math.max(...kept.map((k) => k.pos as number))
+    const replayed = [replyChange, resolveChange].map((x, i) => ({
+      ...x,
+      pos: top + COMMENT_ENTRY_SLOTS + i,
+    }))
+    c.receive(replayed)
+    a.receive(replayed)
+    for (const s of [a, c]) {
+      expect(Object.keys(s.thread(threadId)?.messages ?? {}).length).toBe(1)
+      expect(s.thread(threadId)?.resolved).toBeUndefined()
+    }
+    expect(c.toJSON()).toEqual(a.toJSON())
+  })
+
+  test("a change claiming a base at or past its own position is dropped", () => {
+    const r = relay()
+    const a = r.join("KA")
+    const { threadId } = a.createThread(
+      { anchor: { x: 0, y: 0 }, message: { author: { ...ana, id: "dev:KA" }, text: "Hi" } },
+      "user",
+    )
+    a.setResolved(threadId, null, "user")
+    r.flush(a)
+    // B resolves with a forged huge base to win every later race: invalid.
+    r.append([forged("KB", { op: "resolve", thread: threadId, by: bo }, Number.MAX_SAFE_INTEGER)])
+    expect(a.thread(threadId)?.resolved).toBeUndefined()
+  })
+
+  test("loading with mode add keeps the comments held and adds the file's other threads", () => {
     const s = base()
     const { threadId } = s.comments.createThread(
       { anchor: { x: 0, y: 0 }, message: { author: ana, text: "Room" } },
@@ -527,7 +665,15 @@ describe("comments (docs/spec/comments.md)", () => {
     const { comments: _c, ...stripped } = file
     s.loadDocument(stripped as unknown as KimoDocument, { comments: "add" })
     expect(s.comments.size).toBe(1)
+    // A thread deleted here stays deleted; one only the file has is added.
     s.loadDocument(file as unknown as KimoDocument, { comments: "add" })
+    expect(s.comments.size).toBe(1)
+    const other = base()
+    other.comments.createThread(
+      { anchor: { x: 2, y: 2 }, message: { author: ana, text: "Elsewhere" } },
+      "user",
+    )
+    s.loadDocument(other.toDocument(), { comments: "add" })
     expect(s.comments.size).toBe(2)
   })
 })

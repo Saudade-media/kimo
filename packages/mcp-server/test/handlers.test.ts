@@ -419,7 +419,7 @@ describe("imports, assets, styles, output", () => {
       [2, "DesktopFrm1"],
     ])
     expectOk(await s.c.call("kimo_save", { docId }))
-    const saved = JSON.parse(await s.h.readFile(path))
+    const saved = JSON.parse((await s.h.readFile(path)) ?? "{}")
     expect(saved.format).toBe("1.1.0")
     expect(saved.features).toContain("doc/comments")
     expect(validate(saved).errors).toEqual([])
@@ -427,6 +427,25 @@ describe("imports, assets, styles, output", () => {
     expectFail(
       await s.c.call("kimo_comments", { docId, action: "delete", threadId }),
       "INVALID_INPUT",
+    )
+  })
+
+  test("comments: a read-only file refuses agent comments (spec comments §8)", async () => {
+    const s = setup({
+      "/w/newer.kimo": JSON.stringify({
+        $schema: "https://getkimo.design/schema/kimo-1.2.json",
+        format: "1.2.0",
+        nodes: {},
+      }),
+    })
+    const o = expectOk(
+      await s.c.call<{ doc: { id: string } }>("kimo_open", { path: "/w/newer.kimo" }),
+    )
+    const docId = o.data.doc.id
+    expectOk(await s.c.call("kimo_comments", { docId, action: "list" }))
+    expectFail(
+      await s.c.call("kimo_comments", { docId, action: "create", x: 0, y: 0, text: "Hi" }),
+      "READ_ONLY",
     )
   })
 

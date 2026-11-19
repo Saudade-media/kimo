@@ -23,8 +23,14 @@ const fail = (e: ToolError, d?: HostDocument): HandlerOutput => ({
 
 /** The calling agent as a comment author (spec §1: `agent:<origin>`). */
 export function agentAuthor(ctx: Pick<ToolContext, "origin" | "identity">): CommentAuthor {
-  // MCP clients keep one author across sessions; the built-in agent is its own origin.
-  const id = ctx.origin.startsWith("mcp:") ? `agent:mcp:${ctx.identity.client}` : ctx.origin
+  // One author per client across sessions: `mcp:<client>.<session>` and the built-in agent's
+  // `agent:kimo.<session>.<n>` both drop the session.
+  const o = ctx.origin
+  const id = o.startsWith("mcp:")
+    ? `agent:mcp:${ctx.identity.client}`
+    : o.startsWith("agent:kimo.")
+      ? "agent:kimo"
+      : o
   const name = (ctx.identity.label || ctx.identity.client || "Agent").slice(0, 64)
   return { id, name, kind: "agent" }
 }
@@ -92,9 +98,11 @@ export async function commentsHandler(
 
   if (action === "list") {
     const page = typeof input.page === "string" ? input.page : null
+    const firstPage = listPages(store.toHeader() as never)[0]?.id ?? null
     const threads = numbered
       .filter(({ thread }) => input.includeResolved === true || !thread.resolved)
-      .filter(({ thread }) => page === null || (thread.anchor.page ?? null) === page)
+      // A thread without a page is on the first page (spec §1).
+      .filter(({ thread }) => page === null || (thread.anchor.page ?? firstPage) === page)
       .filter(({ thread }) => {
         if (input.unreadOnly !== true) return true
         const list = threadMessages(thread)
@@ -145,7 +153,7 @@ export async function commentsHandler(
   }
 
   // Writes: a view-only room refuses them (spec §8), like a read-only file.
-  if (d.shared?.role === "view" || comments.readOnly !== null)
+  if (d.shared?.role === "view" || store.readOnly || comments.readOnly !== null)
     return fail(
       {
         code: "READ_ONLY",

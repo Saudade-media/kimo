@@ -918,6 +918,8 @@ export class YjsDocStore implements DocStore {
 
   setReadOnly(reason: string | null): void {
     this.ro = reason === null ? null : Object.freeze({ reason })
+    // A read-only file (newer format, lease held elsewhere) cannot save comments either.
+    this.comments.setReadOnly(reason)
   }
 
   repair(): TreeRepair[] {

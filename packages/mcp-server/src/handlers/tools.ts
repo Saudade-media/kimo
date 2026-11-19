@@ -1,5 +1,5 @@
 /**
- * The 20 tool handlers over a `DocumentHost` (ADR 0013 §2), one function per tool. Each one
+ * The 21 tool handlers over a `DocumentHost` (ADR 0013 §2), one function per tool. Each one
  * returns exactly one envelope; nothing throws past the dispatcher. Mutations are single
  * `DocStore.apply` op groups with the caller's origin (`ctx.origin`), so undo, attribution and
  * revisions work the same for every surface (MCP, M6 agent, CLI).
@@ -63,6 +63,7 @@ import type { ToolDef } from "../tools/define"
 import { CODE_EXPORT_TARGETS, M5_EXPORT_TARGETS } from "../tools/output"
 import { AGENT_MAX_NEW_LAYERS, STREAM_MAX_NEW_LAYERS } from "../tools/write"
 import { CHECK_MAX_LIST, type CheckProblem, checkDesign, formatProblems } from "./check"
+import { commentsHandler } from "./comments"
 import { compileWireOps, pointerTarget, touchedIds, wirePath } from "./compile"
 import type { CoreDocumentHost } from "./core-host"
 import { EXTENSION, imageSize, parseCssTokens, parseDtcg, sniffFont, sniffImage } from "./importers"
@@ -2081,6 +2082,7 @@ export function createToolHandlerMap(
     kimo_close: close,
     kimo_styles: styles,
     kimo_script: script,
+    kimo_comments: commentsHandler,
   }
   map[STREAM_ENGINE] = streams
   ;(map as { [SCRIPT_COMPILER]?: ScriptCompiler })[SCRIPT_COMPILER] = compileScript

@@ -112,12 +112,18 @@ export function parseCommentText(text: string): CommentBlock[] {
       flush()
       const item = parseInline(bullet[1] as string)
       if (open?.kind === "bullets") open.items.push(item)
-      else blocks.push((open = { kind: "bullets", items: [item] }))
+      else {
+        open = { kind: "bullets", items: [item] }
+        blocks.push(open)
+      }
     } else if (number) {
       flush()
       const item = parseInline(number[2] as string)
       if (open?.kind === "numbers") open.items.push(item)
-      else blocks.push((open = { kind: "numbers", start: Number(number[1]), items: [item] }))
+      else {
+        open = { kind: "numbers", start: Number(number[1]), items: [item] }
+        blocks.push(open)
+      }
     } else {
       open = null
       if (line === "") flush()

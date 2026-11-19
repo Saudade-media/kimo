@@ -75,7 +75,8 @@ describe("tool schemas", () => {
   })
 
   // Every model call re-sends the tool list, so its size is a standing cost. Details belong in
-  // the guides (kimo_read_docs). Raise the cap only with a reason.
+  // the guides (kimo_read_docs). Raise the cap only with a reason. 21,000 → 21,700: kimo_comments
+  // (about 1,050 characters, already trimmed to one-word field descriptions).
   test("context budget: the whole tools/list stays small", () => {
     const total = listTools({ host: "desktop" })
       .map((t) => toMcpDescriptor(t))
@@ -83,7 +84,7 @@ describe("tool schemas", () => {
         (a, d) => a + JSON.stringify({ n: d.name, d: d.description, i: d.inputSchema }).length,
         0,
       )
-    expect(total).toBeLessThan(21_000)
+    expect(total).toBeLessThan(21_700)
   })
 
   test("the advertised schema drops validation-only keywords; the server keeps them", () => {

@@ -4,6 +4,7 @@
  * module has no MCP SDK import, so it runs in the browser and in workers.
  */
 import { toJsonSchema } from "./schema"
+import { kimoComments } from "./tools/comments"
 import type { ToolAnnotations, ToolDef } from "./tools/define"
 import { outputSchemaOf } from "./tools/define"
 import { kimoExport, kimoRender } from "./tools/output"
@@ -49,6 +50,7 @@ export const TOOLS = [
   kimoClose,
   kimoStyles,
   kimoScript,
+  kimoComments,
 ] as const satisfies readonly ToolDef[]
 
 export type KimoTool = (typeof TOOLS)[number]

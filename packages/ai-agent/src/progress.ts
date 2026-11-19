@@ -142,6 +142,12 @@ export function stepLabel(call: ToolCallRequest, names: StepNames = {}): string 
       return str(i.path) ? `Reading the ${i.path} guide` : "Reading the guides"
     case "kimo_history":
       return i.action === "redo" ? "Redoing" : i.action === "undo" ? "Undoing" : "Reading history"
+    case "kimo_comments":
+      return i.action === "list" || i.action === "read"
+        ? "Reading comments"
+        : i.action === "create" || i.action === "reply"
+          ? "Commenting"
+          : "Updating a comment"
     default:
       return STATIC[call.name] ?? call.name.replace(/^kimo_/, "").replace(/_/g, " ")
   }

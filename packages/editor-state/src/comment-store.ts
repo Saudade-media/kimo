@@ -251,7 +251,9 @@ export class CommentStore {
         const space = key.indexOf(" ")
         if (space <= 0) continue
         const emoji = key.slice(0, space)
-        ;(reactions[emoji] ??= []).push(key.slice(space + 1))
+        const list = reactions[emoji] ?? []
+        list.push(key.slice(space + 1))
+        reactions[emoji] = list
       }
       for (const ids of Object.values(reactions)) ids.sort()
       if (Object.keys(reactions).length > 0) m.reactions = reactions

@@ -379,6 +379,57 @@ describe("imports, assets, styles, output", () => {
     expectFail(await s.c.call("kimo_import", { docId, kind: "svg", text: "<svg/>" }), "UNSUPPORTED")
   })
 
+  test("comments: an agent pins, replies, reacts and resolves; the file saves as 1.1", async () => {
+    const s = setup()
+    const { docId, path } = await newDoc(s, "web")
+    const c = expectOk(
+      await s.c.call<{ threadId: string; messageId: string }>("kimo_comments", {
+        docId,
+        action: "create",
+        node: "DesktopFrm1",
+        x: 10,
+        y: 20,
+        text: "Tighten the **hero** spacing",
+      }),
+    )
+    const { threadId, messageId } = c.data
+    expectOk(await s.c.call("kimo_comments", { docId, action: "reply", threadId, text: "Done" }))
+    const r = expectOk(
+      await s.c.call<{ reacted: boolean }>("kimo_comments", {
+        docId,
+        action: "react",
+        threadId,
+        messageId,
+        emoji: "👍",
+      }),
+    )
+    expect(r.data.reacted).toBe(true)
+    expectOk(await s.c.call("kimo_comments", { docId, action: "resolve", threadId }))
+    const open = expectOk(
+      await s.c.call<{ threads: unknown[] }>("kimo_comments", { docId, action: "list" }),
+    )
+    expect(open.data.threads).toEqual([])
+    const all = expectOk(
+      await s.c.call<{ threads: { messageCount: number; anchor: { node?: string } }[] }>(
+        "kimo_comments",
+        { docId, action: "list", includeResolved: true },
+      ),
+    )
+    expect(all.data.threads.map((t) => [t.messageCount, t.anchor.node])).toEqual([
+      [2, "DesktopFrm1"],
+    ])
+    expectOk(await s.c.call("kimo_save", { docId }))
+    const saved = JSON.parse(await s.h.readFile(path))
+    expect(saved.format).toBe("1.1.0")
+    expect(saved.features).toContain("doc/comments")
+    expect(validate(saved).errors).toEqual([])
+    // There is no edit or delete action.
+    expectFail(
+      await s.c.call("kimo_comments", { docId, action: "delete", threadId }),
+      "INVALID_INPUT",
+    )
+  })
+
   test("styles list / describe / apply", async () => {
     const s = setup()
     const { docId } = await newDoc(s)

@@ -31,7 +31,7 @@ Format 1.1 adds one optional root member. Everything else in the 1.0 spec is unc
 - A 1.0 reader opens a 1.1 file read-only (format §16.3). A 1.1 reader MUST preserve `comments`
   byte for byte when it does not render them (for example the CLI).
 - Ids follow the node id grammar (format §3). Thread and message ids MUST NOT collide with node
-  ids in the same file.
+  ids, nor with each other, in the same file (`COMMENT_ID_COLLISION`).
 
 **Thread**
 
@@ -60,7 +60,7 @@ because comment-only participants cannot write the design document. Asset garbag
 counts attachments as references.
 
 **Author**: `{id, name, kind}`. `id` is a stable author id: `acct:<account id>` on Kimo Cloud,
-`dev:<device key id>` for a signed-in-free device, `agent:<origin>` for agents (the `LocalOrigin`
+`dev:<device public key>` for a device without an account (base64url of its 32-byte Ed25519 key, ADR 0017), `agent:<origin>` for agents (the `LocalOrigin`
 grammar of `@kimo/editor-state`). `name` is the display name at posting time (1 to 64 code
 points). `kind` is `"person"` or `"agent"`.
 
@@ -83,13 +83,14 @@ from validation of the node tree and from every exporter.
 
 New validation codes: `COMMENT_ANCHOR_INVALID` (error: anchor fields missing or out of range),
 `COMMENT_EMPTY` (error: a thread with no messages, or whose `first` names no message),
+`COMMENT_ID_COLLISION` (error: a thread or message id used twice, or by a node),
 `COMMENT_ATTACHMENT_MISSING` (warning: an attachment's file is not in `assets/`). A thread whose anchor node does not exist is not an error (§2).
 
 ## 2. Anchors
 
 | Field | Required | Type | Meaning |
 |---|---|---|---|
-| `page` | yes | Id | Page of the pin. |
+| `page` | no | Id | Page of the pin. Absent: the first page (a file without `pages`). |
 | `node` | no | Id | Top-level frame, component or group the pin moves with. |
 | `x`, `y` | yes | number | With `node`: offset from the node's top-left corner. Without: page coordinates. |
 | `w`, `h` | no | number > 0 | Present together for an area comment: the region's size. |
@@ -111,8 +112,8 @@ New validation codes: `COMMENT_ANCHOR_INVALID` (error: anchor fields missing or 
 
 ## 3. Message text
 
-`text` is plain UTF-8 with this Markdown subset, chosen so it merges character by character in a
-`Y.Text` and renders the same in the app and in email:
+`text` is plain UTF-8 with this Markdown subset, chosen so it renders the same in the app and in
+email. Only the author edits a message, so an edit replaces the whole text:
 
 | Syntax | Meaning | Editor keys |
 |---|---|---|
@@ -128,9 +129,74 @@ A mention whose author id is unknown renders as its name without a link.
 
 ## 4. Room channel (`kimo-mp/1` minor addition)
 
-Comments are a second Yjs document per room (the **comment doc**): a `Y.Map` of threads, each a
-`Y.Map` whose `messages` hold `Y.Map`s with `text` as `Y.Text`. The local file's `comments`
-member is its plain-JSON projection, written on save like the design doc.
+In a room, comments are a log of signed **changes** (the comment log), next to the design log. A
+client's comment state is the fold of the changes it holds, in log order (4.3). The local file's
+`comments` member is that state's plain-JSON projection, written on save like the design doc.
+Local files have no changes and no signatures: the editor checks authorship by author id.
+
+### 4.1 Changes
+
+A change is canonical JSON (format §17 key order, no whitespace), UTF-8, at most 32 KiB:
+
+| Field | Type | Meaning |
+|---|---|---|
+| `v` | `1` | Change version. |
+| `id` | Id | Unique change id. |
+| `n` | uint | Per signing key, strictly increasing (ms clock, bumped on ties). |
+| `base` | uint | Highest comment position (4.3) the writer had applied. |
+| `at` | Time | When it was written. |
+| `op` | string | One of the operations below, with its fields. |
+
+| `op` | Fields | Who may |
+|---|---|---|
+| `thread` | `thread, message, anchor, author, text, attachments?` | Any key. |
+| `reply` | `thread, message, author, text, attachments?` | Any key. |
+| `edit` | `thread, message, text` | The message's owner key. |
+| `delete` | `thread, message?` | The message's owner key, or the root key. No `message`, or the first message: the thread (its first message's owner, or the root key). |
+| `resolve` | `thread, by` (Author or null) | Any key. |
+| `anchor` | `thread, anchor` | Any key. |
+| `react` | `thread, message, emoji, author, on` | Any key, for its own reaction. |
+| `import` | `thread, data` (a Thread, §1) | The root key only. |
+
+- **Signature.** Ed25519 by the writer's device key over `"kimo/v1/comment|<roomId>\0" || body`,
+  so a change signed for one room is invalid in every other. Receivers verify the bytes they
+  received, then parse them; they never re-serialize to check a signature.
+- **Root key.** A change whose key is the room root public key (`roomMatchesRootKey`) acts as
+  the owner. Owner devices and Kimo Cloud admin clients hold it.
+- **Owner key.** A message is owned by the key of the change that created it. In an `import`,
+  a message whose author is `dev:X` is owned by key X, any other by the root key.
+- **Authors.** In `thread`, `reply`, `resolve.by` and `react.author`, an author id `dev:X` MUST
+  equal the signing key (X = base64url key); otherwise the change is invalid. `acct:` and
+  `agent:` ids and display names are claims (the relay and Kimo Cloud do not attest them).
+
+### 4.2 Wire
+
+- **Envelope kind `5`** comments-update (AAD `kimo/v1|<roomId>|comments-update`), `doc` key.
+  Plaintext: `varUint count` (1 to 256), then per change `key[32] || sig[64] ||
+  varUint8Array body`.
+- **Envelope kind `6`** comments-snapshot (AAD `kimo/v1|<roomId>|comments-snapshot|<upTo>`).
+  Plaintext: `varUint count`, then per change `varUint position` followed by the change as in
+  kind 5. A snapshot keeps every change's original position.
+
+### 4.3 Fold
+
+The position of change `i` (from 0) in comment log entry `seq` is `seq * 256 + i`. Changes are
+applied in position order; a change already held (same `id`) is skipped, and so is an invalid
+one, without stopping the fold.
+
+- A change whose `base` is not below its own position is invalid.
+- `thread` and `reply` create a message whose id is new (never held, never deleted, not a node
+  id). `reply` needs a live thread.
+- `delete` leaves a **tombstone** for the thread or message id. Later changes for it are
+  skipped. A delete of an id not held is a tombstone too, so a compacted snapshot keeps it.
+- **Last writer, by log order.** `edit`, `resolve`, `anchor` and each reaction (message, emoji,
+  key) hold one value set by one change S. A change C replaces it when `C.base >= position(S)`
+  (C's writer had seen S), or when C and S have the same key and `C.n > S.n`. Otherwise C is
+  ignored: of two concurrent writes the first in the log stays, and a replayed old change never
+  wins.
+- Local changes not yet acknowledged apply after every received change, in the order written.
+
+### 4.4 Relay
 
 Additions to [multiplayer.md](multiplayer.md):
 
@@ -139,40 +205,43 @@ Additions to [multiplayer.md](multiplayer.md):
   `peer-joined` (`protocol.ts` throws otherwise). The relay MUST therefore report a role 3
   connection as `view` in every relay message. A client knows it may comment from the role in its
   own token. A 1.2.x client opening a role 3 link joins as a viewer and cannot comment.
-- **§9 envelopes.** Kind `5` comments-update (AAD `kimo/v1|<roomId>|comments-update`) and kind
-  `6` comments-snapshot (AAD `kimo/v1|<roomId>|comments-snapshot|<upTo>`), encrypted with the
-  `doc` key. The plaintext is a comment-doc update or state.
-- **§11.3 `welcome`.** A trailing `varUint features` bit set; bit 0 means "comment channel".
-  Client decoders already ignore trailing bytes after the known fields, so older clients are
-  unaffected.
+- **§11.3 `welcome`.** A trailing `varUint features`; bit 0 means "comment channel", followed
+  (bit 0 only) by `varUint commentHead`, `varUint commentBase` and the comment snapshot as
+  `flag`, then `upTo`, `gen`, `bytes`. Client decoders already ignore trailing bytes.
 - **§11.2 client to relay.** Type `7` `append-comment` (`varUint cid`, `varUint8Array env`):
-  allowed for roles comment and edit, `VIEW_ONLY` for view. Type `8` `comments-subscribe`
-  (`varUint since`): sent once, after a `welcome` with bit 0. `append` (design log) from a
-  comment token is `VIEW_ONLY`. Relays without the channel close on types 7 and 8
-  (`BAD_MESSAGE`), so clients MUST NOT send them unless bit 0 was set.
-- **§11.3 relay to client.** New types, sent only to connections that sent `comments-subscribe`:
-  `27` `comment-entries` (as `entries`), `28` `comment-snapshot` (as `snapshot`), `29`
-  `comment-compact` (as `compact`). Acks reuse `ack` with the shared `cid` space. Existing
-  types keep their layout.
-- **§14.** The relay stores a second log and snapshot per room with its own `seq`, compaction and
-  quota share. Room size and the owner sweep count both. The relay cannot tell a new message from
-  a reaction inside an encrypted update, so it limits comment appends to 600 an hour per token
-  `jti` (`RATE_LIMITED`); clients limit new messages and replies to 100 an hour per author.
-- **§12 HTTP.** `GET /room/<room>/comments/snapshot` (view, comment or edit) and
-  `PUT /room/<room>/comments/snapshot?upTo=<n>[&carries=1]` (comment or edit) work like the design
-  snapshot routes, with the comment log's `seq` and the same acceptance rule. `comment-compact`
-  goes to the lowest subscribed comment or edit peer that sent `caught-up`. A subscriber catches up
-  like on the design log (§15.4): `comments-subscribe` answers with `comment-snapshot` when its
-  `since` is below the comment log's `base`, the client downloads it, then entries follow.
+  roles comment and edit, `VIEW_ONLY` for view. Type `8` `comments-subscribe` (`varUint
+  since`): sent once, after a `welcome` with bit 0. `append` (design log) from a comment token
+  is `VIEW_ONLY`. Relays without the channel close on types 7 and 8 (`BAD_MESSAGE`), so
+  clients MUST NOT send them unless bit 0 was set.
+- **§11.3 relay to client.** Sent only to connections that sent `comments-subscribe`: `27`
+  `comment-entries` (as `entries`), `28` `comment-snapshot` (as `snapshot`), `29`
+  `comment-compact` (as `compact`). Acks of type 7 are type `30` `comment-ack` (`cid`, `seq`),
+  so the two logs' sequences never mix. Existing types keep their layout.
+- **§14.** The relay stores a second log and snapshot per room with its own `seq`. Room size and
+  the owner sweep count both. The relay cannot tell a message from a reaction inside an envelope,
+  so it limits comment appends to 600 an hour per token `jti` (`RATE_LIMITED`); clients limit
+  new messages and replies to 100 an hour per author.
+- **§12 HTTP.** `GET /room/<room>/comments/snapshot` (any role) and `PUT
+  /room/<room>/comments/snapshot?upTo=<n>` (edit only) work like the design snapshot routes,
+  with the comment log's `seq`. A comment token MUST NOT upload a snapshot, because a snapshot
+  could leave out other people's changes. `comment-compact` goes to the lowest subscribed edit
+  peer. `comments-subscribe` answers with `comment-snapshot` when `since` is below the comment
+  log's base; the client downloads it, then entries follow.
+- **Compaction.** A snapshot keeps every tombstone change, every creating change of a live
+  message, and each change that holds a current value (4.3). It drops the rest.
+- **Re-append.** After catch-up a client appends again, unchanged, the changes it holds that
+  created a live message or hold a current value and that the room lacks (a relay that lost
+  data, or an edit peer's bad snapshot). They are verified like any change, and duplicates are
+  skipped.
 - **§12 blobs.** `PUT /blob` accepts comment tokens too, so a reviewer can upload an attachment.
   Receivers find the blob from the attachment's own `sha256` (§1), exactly as for a manifest entry
   (§10, §16.4), and store it in their asset store under `file`.
-- **Authority.** In a room the comment doc is authoritative. A 1.2.x edit client never sees it, so a
-  file it saves has no `comments`; that never deletes anything, because a client with the channel
-  ignores the file's `comments` when it has a room replica, and without a replica adds only the
-  threads and messages the room lacks.
-- A client that meets a relay without bit 0 keeps the comment doc local only, MUST NOT mint role
-  3 links, and the Share popover says view links are read-only on this relay.
+- **Authority.** In a room the comment log is authoritative. A client with a room replica ignores
+  the file's `comments`. Without one, the owner device (root key) appends one `import` per
+  thread the room lacks; other clients ignore the file's threads until then. A 1.2.x edit
+  client never sees the log, so a file it saves has no `comments`, which never deletes anything.
+- A client that meets a relay without bit 0 keeps comments local only, MUST NOT mint role 3
+  links, and the Share popover says view links are read-only on this relay.
 
 **Links.** On a relay with bit 0, the Share popover mints view links with role 3 and labels them
 "Can view and comment". Existing role 1 links stay view-only until reset. Kimo Cloud mints role 3
@@ -184,15 +253,15 @@ view links for workspace files.
 |---|---|
 | Read comments | Anyone who can open the file |
 | Start a thread, reply, react | Roles comment and edit; anyone on a local file |
-| Resolve, unresolve | Roles comment and edit |
-| Edit a message | Its author only |
+| Resolve, unresolve, move a pin | Roles comment and edit |
+| Edit a message | Its author, on the device that wrote it |
 | Delete a message | Its author; deleting a thread's first message deletes the thread |
-| Delete any thread | Room owner devices (ADR 0017) and Kimo Cloud workspace owner and admins |
+| Delete any thread | Holders of the room root key: owner devices and Kimo Cloud workspace owners and admins |
 | Agents | Read, reply, resolve, unresolve, react; start a thread only when a person asked; never edit or delete another author's message |
 
-The relay enforces only the first three rows (by role). Clients and the MCP server enforce the
-rest; a client that receives a remote change breaking these rules still applies it (CRDT) but the
-editor SHOULD flag it in the thread ("Changed by another author") so tampering is visible.
+The relay enforces the first three rows by role. The signatures of §4.1 enforce the rest on every
+client: a change that breaks them is dropped. On a local file the editor and the MCP server check
+the author id.
 
 ## 6. Read state
 
@@ -251,7 +320,7 @@ Toast for a new thread or reply from someone else while the file is open. Deskto
 for a mention of you or a reply in a thread you wrote or replied to, only while Kimo is in the
 background, per the Settings › Notifications "Desktop alerts" choice.
 
-**Kimo Cloud email.** Kimo Cloud reads the comment doc of workspace rooms (it holds their keys,
+**Kimo Cloud email.** Kimo Cloud reads the comment log of workspace rooms (it holds their keys,
 ADR 0019) and, per file and recipient:
 
 1. Collects events: mentions of the recipient, replies in threads they wrote or replied to, and

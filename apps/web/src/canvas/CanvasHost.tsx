@@ -429,6 +429,8 @@ export function CanvasHost(props: CanvasHostProps & { ref?: Ref<CanvasHandle> })
         },
         onPixelGrid: setGridOn,
         onPlacementChange: (pl) => cb.current.onPlacementChange?.(pl),
+        onComment: (g) => cb.current.onComment?.(g),
+        onCommentDraft: (r) => cb.current.onCommentDraft?.(r),
         onIconPicker: (r) => cb.current.onIconPicker?.(r),
         confirmBoundText: (id, ref) =>
           cb.current.confirmBoundText?.(id, ref) ?? Promise.resolve(true),

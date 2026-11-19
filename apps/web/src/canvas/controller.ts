@@ -105,6 +105,7 @@ import type {
   CanvasError,
   CanvasHint,
   CanvasPointerInfo,
+  CommentGesture,
   ComponentDomOverlay,
   ComponentDropTarget,
   FitInsets,
@@ -190,6 +191,8 @@ const ZOOM_100_SHIFT = shortcut("zoom100").combos[1] as Combo
 
 /** Pointer travel (screen px) before a press becomes a drag. */
 const DRAG_THRESHOLD = 3
+/** Comment mode: a drag longer than this (screen px) places an area (docs/spec/comments.md §7). */
+const COMMENT_DRAG_PX = 4
 /** Default size of a shape created by a click (no drag). */
 const CLICK_SIZE = 100
 /** Hit slop (screen px) for thin shapes and text. */
@@ -319,6 +322,13 @@ export interface ControllerOptions {
   /** Pixel grid visibility/zoom changed (host shows the zoom badge). */
   onPixelGrid?: (visible: boolean) => void
   onPlacementChange?: (placement: ImagePlacement | null) => void
+  /**
+   * Comment mode (docs/spec/comments.md §7): a click ends as a world point, a drag past 4 px as
+   * a world rect (w and h set). `screen` is where the pointer was released, canvas px.
+   */
+  onComment?: (gesture: CommentGesture) => void
+  /** The area being dragged in comment mode (world), null when the drag ends. */
+  onCommentDraft?: (rect: Rect | null) => void
   onIconPicker?: (request: IconPickerRequest) => void
   /**
    * Board 27 §7 (uu8Qa): starting to edit a text whose content is bound to a string variable
@@ -427,6 +437,8 @@ interface Reloc {
 
 type Drag =
   | { kind: "pan"; last: Point }
+  /** Comment mode: a press that becomes a pin (click) or an area (drag past 4 px). */
+  | { kind: "comment"; start: Point; startWorld: Point; rect: Rect | null }
   | {
       kind: "press"
       start: Point
@@ -1844,6 +1856,7 @@ export class CanvasController {
     if (this.spaceHeld || tool === "hand") return "grab"
     if (isShapeTool(tool) || isLineTool(tool) || this.armed) return "crosshair"
     if (tool === "text") return "text"
+    if (tool === "comment") return "crosshair"
     if (tool === "path") return this.penCursor(!!this.pen?.closeHint)
     if (this.pathEdit) return "default"
     const h = p ? this.handleAt(p) : null
@@ -2093,6 +2106,11 @@ export class CanvasController {
       }
       return
     }
+    if (ui.tool === "comment") {
+      e.preventDefault()
+      this.drag = { kind: "comment", start: p, startWorld: this.toWorld(p), rect: null }
+      return
+    }
     if (ui.tool !== "select") return
 
     // Board 27 §5 (ICb89): a selected star's ratio / radius handles win over the resize handles.
@@ -2265,6 +2283,18 @@ export class CanvasController {
     // Board 27 §2 (c2o3u): drawing over an auto-layout frame picks a slot.
     if (d.kind === "draw" || d.kind === "line" || d.kind === "place") this.trackFlowInsert(p, e)
     switch (d.kind) {
+      case "comment": {
+        if (!d.rect && Math.hypot(p.x - d.start.x, p.y - d.start.y) <= COMMENT_DRAG_PX) return
+        const w = this.toWorld(p)
+        d.rect = {
+          x: Math.min(w.x, d.startWorld.x),
+          y: Math.min(w.y, d.startWorld.y),
+          w: Math.abs(w.x - d.startWorld.x),
+          h: Math.abs(w.y - d.startWorld.y),
+        }
+        this.opts.onCommentDraft?.(d.rect)
+        return
+      }
       case "press": {
         if (Math.hypot(p.x - d.start.x, p.y - d.start.y) < DRAG_THRESHOLD) return
         if (d.target === null || d.scope) {
@@ -2496,6 +2526,17 @@ export class CanvasController {
     this.drag = null
     this.clearGestureFeedback()
     switch (final.kind) {
+      case "comment": {
+        this.opts.onCommentDraft?.(null)
+        // A release outside the canvas (lost capture) places nothing.
+        if (!p) break
+        const r = final.rect
+        this.opts.onComment?.({
+          world: r && r.w > 0 && r.h > 0 ? r : final.startWorld,
+          screen: p,
+        })
+        break
+      }
       case "press":
         if (final.target && final.toggle) ui.toggleSelection(final.target)
         else if (final.target && final.collapse) ui.select([final.target])
@@ -2642,6 +2683,7 @@ export class CanvasController {
       this.marquee = null
       this.ui.getState().select(d.before)
     }
+    if (d.kind === "comment") this.opts.onCommentDraft?.(null)
     this.updateOverlay()
     this.updateCursor()
     return true

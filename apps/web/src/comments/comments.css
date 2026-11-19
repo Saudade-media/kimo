@@ -1,0 +1,915 @@
+/*
+ * Board 51 comments (desing.kimo, node lUA852Fydf). Values from the nodes:
+ * CommentPin aetHMa13QB, CommentArea VRw9p4hIBC, CommentComposer CX1IV5jYBT, MentionPicker
+ * lwcDHnnVQg, EmojiPicker Wsyu12vix8, GuestName I8oQvtxzKA, CommentThread i9mOfjI2qz,
+ * Right Card · Comments sJjNi9jp5r, CommentRow tuy9tDfulK, unread Badge jZBRlCYCER.
+ */
+
+.comment-layer {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  font-family: var(--kimo-font-sans);
+}
+
+.comment-layer > * {
+  pointer-events: auto;
+}
+
+/* CommentPin: 32 × 32, bg-app, stroke border 1, radius [16,16,16,2], shadow 0 2 8 shadow-strong.
+   The sharp bottom-left corner is the spot. */
+.comment-pin {
+  position: absolute;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  align-items: center;
+  width: 32px;
+  height: 32px;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--kimo-border);
+  border-radius: 16px 16px 16px 2px;
+  background: var(--kimo-bg-app);
+  box-shadow: 0 2px 8px 0 var(--kimo-shadow-strong);
+  color: var(--kimo-text-tertiary);
+  font: inherit;
+  cursor: pointer;
+}
+
+.comment-pin--selected {
+  border: 2px solid var(--kimo-selection);
+}
+
+/* CommentPin/Replies: hug width, h 32, gap 6, padding [0,10,0,3]. */
+.comment-pin--replies {
+  justify-content: flex-start;
+  width: auto;
+  gap: 6px;
+  padding: 0 10px 0 3px;
+}
+
+.comment-pin__count {
+  font-size: var(--kimo-text-sm);
+  font-weight: 600;
+  line-height: normal;
+  color: var(--kimo-text-primary);
+}
+
+/* CommentPin/Resolved: bg-muted, check 16 text-tertiary, no shadow. */
+.comment-pin--resolved {
+  background: var(--kimo-bg-muted);
+  box-shadow: none;
+}
+
+/* CommentPin/Group: text-primary fill, no stroke, padding [0,12], count text-sm/600 inverse. */
+.comment-pin--group {
+  width: auto;
+  padding: 0 12px;
+  border: none;
+  background: var(--kimo-text-primary);
+}
+
+.comment-pin--group .comment-pin__count {
+  color: var(--kimo-text-inverse);
+}
+
+/* CommentPin/Preview: w 264, row, gap 8, padding 3. */
+.comment-pin--preview {
+  z-index: 2;
+  justify-content: flex-start;
+  align-items: flex-start;
+  width: 264px;
+  height: auto;
+  min-height: 32px;
+  gap: 8px;
+  padding: 3px;
+  text-align: left;
+}
+
+.comment-pin__body {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 0;
+  min-width: 0;
+  gap: 2px;
+  padding: 4px 8px 6px 0;
+}
+
+.comment-pin__meta {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+}
+
+.comment-pin__name,
+.comment-message__name,
+.comment-row__name {
+  font-size: var(--kimo-text-sm);
+  font-weight: 600;
+  color: var(--kimo-text-primary);
+}
+
+.comment-pin__time,
+.comment-message__time,
+.comment-row__time {
+  font-size: var(--kimo-text-xs);
+  font-weight: 400;
+  color: var(--kimo-text-tertiary);
+}
+
+.comment-pin__preview {
+  font-size: var(--kimo-text-sm);
+  font-weight: 400;
+  line-height: 1.4;
+  color: var(--kimo-text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Unread dot: 10 × 10 selection, stroke bg-app 2, at (23, -1). */
+.comment-pin__dot {
+  position: absolute;
+  left: 23px;
+  top: -1px;
+  box-sizing: border-box;
+  width: 10px;
+  height: 10px;
+  border: 2px solid var(--kimo-bg-app);
+  border-radius: 50%;
+  background: var(--kimo-selection);
+}
+
+.comment-pin--selected .comment-pin__dot {
+  left: 22px;
+  top: -2px;
+}
+
+.comment-pin--mine {
+  cursor: default;
+}
+
+/* Avatars: 26 (pin), 24 (thread, list), 20 (mention rows); initials 10/600 or 9/600 on-accent. */
+.comment-avatar {
+  display: inline-flex;
+  flex: none;
+  justify-content: center;
+  align-items: center;
+  border-radius: var(--kimo-radius-pill);
+  color: var(--kimo-on-accent);
+  font-family: var(--kimo-font-sans);
+  font-weight: 600;
+  line-height: normal;
+}
+
+.comment-avatar--26 {
+  width: 26px;
+  height: 26px;
+  font-size: 10px;
+}
+
+.comment-avatar--24 {
+  width: 24px;
+  height: 24px;
+  font-size: 9px;
+}
+
+.comment-avatar--20 {
+  width: 20px;
+  height: 20px;
+  font-size: 9px;
+}
+
+/* Agent: linear gradient rotation 225 (agent → agent-2), sparkles on-accent. */
+.comment-avatar--agent {
+  background: linear-gradient(135deg, var(--kimo-agent) 0%, var(--kimo-agent-2) 100%);
+}
+
+/* CommentArea: stroke selection 1.5 dash [4,3]; Tint selection at 0.08. */
+.comment-area {
+  position: absolute;
+  box-sizing: border-box;
+  pointer-events: none;
+  background-image:
+    repeating-linear-gradient(90deg, var(--kimo-selection) 0 4px, transparent 4px 7px),
+    repeating-linear-gradient(90deg, var(--kimo-selection) 0 4px, transparent 4px 7px),
+    repeating-linear-gradient(0deg, var(--kimo-selection) 0 4px, transparent 4px 7px),
+    repeating-linear-gradient(0deg, var(--kimo-selection) 0 4px, transparent 4px 7px);
+  background-position:
+    left top,
+    left bottom,
+    left top,
+    right top;
+  background-size:
+    100% 1.5px,
+    100% 1.5px,
+    1.5px 100%,
+    1.5px 100%;
+  background-repeat: no-repeat;
+}
+
+.comment-area__tint {
+  position: absolute;
+  inset: 0;
+  background: var(--kimo-selection);
+  opacity: 0.08;
+}
+
+/* Popovers sit beside the pin, gap 6. */
+.comment-pop {
+  position: absolute;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.comment-popover,
+.comment-composer,
+.comment-thread {
+  box-sizing: border-box;
+  border-radius: var(--kimo-radius-lg);
+  background: var(--kimo-bg-overlay);
+  box-shadow:
+    inset 0 0 0 1px var(--kimo-border),
+    0 8px 24px 0 var(--kimo-shadow-strong);
+  font-family: var(--kimo-font-sans);
+}
+
+/* CommentComposer: w 300, column. */
+.comment-composer {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: 300px;
+}
+
+/* Field: gap 8, padding [12,12,4,12]; Text text-base / 1.45. */
+.comment-composer__field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 12px 4px 12px;
+}
+
+.comment-field {
+  position: relative;
+  display: grid;
+  font-size: var(--kimo-text-base);
+  line-height: 1.45;
+}
+
+.comment-field__mirror,
+.comment-field__input {
+  grid-area: 1 / 1;
+  box-sizing: border-box;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  border: none;
+  font: inherit;
+  letter-spacing: normal;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.comment-field__mirror {
+  color: var(--kimo-text-primary);
+  pointer-events: none;
+}
+
+.comment-field__input {
+  resize: none;
+  overflow: hidden;
+  background: transparent;
+  color: transparent;
+  caret-color: var(--kimo-text-primary);
+  outline: none;
+}
+
+.comment-field__input::placeholder {
+  color: var(--kimo-text-tertiary);
+}
+
+.comment-reply .comment-field,
+.comment-edit .comment-field {
+  font-size: var(--kimo-text-sm);
+}
+
+/* Toolbar: gap 2, padding [4,6,6,6], space-between; tools 28 × 28 radius-sm, icons 16. */
+.comment-composer__toolbar {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  gap: 2px;
+  padding: 4px 6px 6px 6px;
+}
+
+.comment-composer__tools {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 2px;
+}
+
+.comment-tool {
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  width: 28px;
+  height: 28px;
+  margin: 0;
+  padding: 0;
+  border: none;
+  border-radius: var(--kimo-radius-sm);
+  background: transparent;
+  color: var(--kimo-text-secondary);
+  cursor: pointer;
+}
+
+.comment-tool:hover {
+  background: var(--kimo-bg-hover);
+}
+
+/* Send: 28 pill; bg-muted / arrow-up text-tertiary empty, accent / on-accent with text. */
+.comment-send {
+  display: inline-flex;
+  flex: none;
+  justify-content: center;
+  align-items: center;
+  width: 28px;
+  height: 28px;
+  margin: 0;
+  padding: 0;
+  border: none;
+  border-radius: var(--kimo-radius-pill);
+  background: var(--kimo-bg-muted);
+  color: var(--kimo-text-tertiary);
+  cursor: default;
+}
+
+.comment-send.is-ready {
+  background: var(--kimo-accent);
+  color: var(--kimo-on-accent);
+  cursor: pointer;
+}
+
+.comment-composer__pop {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 2;
+}
+
+/* Thread menu w 200, filter menu w 220 (Menu is 232). */
+.comment-menu.kimo-menu {
+  width: 200px;
+}
+
+.comments-panel__menu.kimo-menu {
+  width: 220px;
+}
+
+.comment-menu__danger,
+.comment-menu__danger svg {
+  color: var(--kimo-danger);
+}
+
+.comment-menu__blank {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+}
+
+/* MentionPicker: w 240, column, gap 1, padding 4. Rows h 32, padding [0,8], gap 8, radius-sm. */
+.comment-mentions {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: -12px;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  width: 240px;
+  padding: 4px;
+}
+
+.comment-mentions__row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  height: 32px;
+  margin: 0;
+  padding: 0 8px;
+  border: none;
+  border-radius: var(--kimo-radius-sm);
+  background: transparent;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.comment-mentions__row.is-active {
+  background: var(--kimo-bg-hover);
+}
+
+.comment-mentions__name {
+  font-size: var(--kimo-text-sm);
+  font-weight: 500;
+  color: var(--kimo-text-primary);
+}
+
+.comment-mentions__sub {
+  font-size: var(--kimo-text-xs);
+  font-weight: 400;
+  color: var(--kimo-text-tertiary);
+}
+
+/* EmojiPicker: w 240, column, gap 8, padding 8; Search h 30; label text-xs/600 tertiary. */
+.comment-emoji {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 240px;
+  padding: 8px;
+}
+
+.comment-emoji .kimo-input {
+  height: 30px;
+}
+
+.comment-emoji__label {
+  font-size: var(--kimo-text-xs);
+  font-weight: 600;
+  color: var(--kimo-text-tertiary);
+}
+
+.comment-emoji__row {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+}
+
+.comment-emoji__item {
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: transparent;
+  font-family: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif;
+  font-size: 20px;
+  line-height: normal;
+  cursor: pointer;
+}
+
+/* GuestName: w 300, column, gap 10, padding 14. */
+.comment-guest {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 300px;
+  padding: 14px;
+}
+
+.comment-guest__title {
+  font-size: var(--kimo-text-base);
+  font-weight: 600;
+  color: var(--kimo-text-primary);
+}
+
+.comment-guest__body {
+  font-size: var(--kimo-text-sm);
+  line-height: 1.45;
+  color: var(--kimo-text-secondary);
+}
+
+.comment-guest__actions {
+  display: flex;
+  flex-direction: row;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+/* CommentThread: w 320, column. Header h 40, padding [0,6,0,12], space-between, bottom border. */
+.comment-thread {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: 320px;
+  max-height: min(560px, calc(100vh - 160px));
+}
+
+.comment-thread__header {
+  position: relative;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  flex: none;
+  height: 40px;
+  padding: 0 6px 0 12px;
+  border-bottom: 1px solid var(--kimo-border);
+}
+
+.comment-thread__title {
+  font-size: var(--kimo-text-sm);
+  font-weight: 600;
+  color: var(--kimo-text-primary);
+}
+
+.comment-thread__actions {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 2px;
+}
+
+.comment-thread__menu {
+  position: absolute;
+  top: 36px;
+  right: 6px;
+  z-index: 2;
+}
+
+/* Messages: column, gap 16, padding [12,12,14,12]. */
+.comment-thread__messages {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 12px 12px 14px 12px;
+  overflow-y: auto;
+}
+
+/* Message: row, gap 8; Body column gap 4; Meta row gap 6. */
+.comment-message {
+  display: flex;
+  flex-direction: row;
+  gap: 8px;
+}
+
+.comment-message__body {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 0;
+  min-width: 0;
+  gap: 4px;
+}
+
+.comment-message__meta {
+  position: relative;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+}
+
+.comment-message__more {
+  position: relative;
+  margin-left: auto;
+  opacity: 0;
+}
+
+.comment-message:hover .comment-message__more,
+.comment-message__more:focus-within {
+  opacity: 1;
+}
+
+.comment-message__more .kimo-menu {
+  position: absolute;
+  top: 26px;
+  right: 0;
+  z-index: 2;
+}
+
+.comment-message__text {
+  font-size: var(--kimo-text-sm);
+  font-weight: 400;
+  line-height: 1.45;
+  color: var(--kimo-text-primary);
+}
+
+.comment-text {
+  overflow-wrap: anywhere;
+}
+
+.comment-text a {
+  color: var(--kimo-selection);
+  text-decoration: underline;
+}
+
+.comment-text__item {
+  display: flex;
+  flex-direction: row;
+  gap: 6px;
+}
+
+.comment-mention {
+  color: var(--kimo-selection);
+}
+
+/* Reactions: row, gap 4, padding [2,0,0,0]. Chip padding [2,7], gap 4, pill. */
+.comment-reactions {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 0 0 0;
+}
+
+.comment-reactions--idle {
+  opacity: 0;
+}
+
+.comment-message:hover .comment-reactions--idle,
+.comment-reactions--idle:focus-within {
+  opacity: 1;
+}
+
+.comment-reaction {
+  display: inline-flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 4px;
+  margin: 0;
+  padding: 2px 7px;
+  border: none;
+  border-radius: var(--kimo-radius-pill);
+  background: transparent;
+  box-shadow: inset 0 0 0 1px var(--kimo-border);
+  font: inherit;
+  cursor: pointer;
+}
+
+.comment-reaction.is-mine {
+  background: var(--kimo-bg-hover);
+  box-shadow: inset 0 0 0 1px var(--kimo-selection);
+}
+
+.comment-reaction__emoji {
+  font-family: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif;
+  font-size: 12px;
+  line-height: normal;
+}
+
+.comment-reaction__count {
+  font-size: var(--kimo-text-xs);
+  font-weight: 500;
+  color: var(--kimo-text-secondary);
+}
+
+.comment-reaction.is-mine .comment-reaction__count {
+  color: var(--kimo-text-primary);
+}
+
+/* Add reaction: 24 × 22 pill, stroke border, smile-plus 13 text-tertiary. */
+.comment-reaction-add {
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  box-sizing: border-box;
+  width: 24px;
+  height: 22px;
+  margin: 0;
+  padding: 0;
+  border: none;
+  border-radius: var(--kimo-radius-pill);
+  background: transparent;
+  box-shadow: inset 0 0 0 1px var(--kimo-border);
+  color: var(--kimo-text-tertiary);
+  cursor: pointer;
+}
+
+.comment-reactions__add-wrap {
+  position: relative;
+  display: inline-flex;
+}
+
+.comment-reactions__picker {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 3;
+}
+
+/* Reply: row, gap 8, padding [8,8,8,12], space-between, top border. */
+.comment-reply {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  flex: none;
+  gap: 8px;
+  padding: 8px 8px 8px 12px;
+  border-top: 1px solid var(--kimo-border);
+}
+
+.comment-reply__body {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 0;
+  min-width: 0;
+  gap: 8px;
+}
+
+/* Edit field: column, gap 8, padding 8, bg-app, stroke selection 1.5, radius-md. */
+.comment-edit {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px;
+  border-radius: var(--kimo-radius-md);
+  background: var(--kimo-bg-app);
+  box-shadow: inset 0 0 0 1.5px var(--kimo-selection);
+}
+
+.comment-edit__actions {
+  display: flex;
+  flex-direction: row;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.comment-edit__btn.kimo-button {
+  height: 26px;
+}
+
+/* Unread badge on the Comment tool: h 16, padding [0,5], selection pill, stroke bg-app 2,
+   count 10/600 on-accent, at (20, 0) of the 36 × 36 tool. */
+.floating-toolbar__comment {
+  position: relative;
+  display: inline-flex;
+}
+
+.comment-badge {
+  position: absolute;
+  left: 20px;
+  top: 0;
+  box-sizing: border-box;
+  display: inline-flex;
+  flex-direction: row;
+  align-items: center;
+  height: 16px;
+  padding: 0 5px;
+  border: 2px solid var(--kimo-bg-app);
+  border-radius: var(--kimo-radius-pill);
+  background: var(--kimo-selection);
+  color: var(--kimo-on-accent);
+  font-family: var(--kimo-font-sans);
+  font-size: 10px;
+  font-weight: 600;
+  line-height: normal;
+  pointer-events: none;
+}
+
+/* Comments panel (Right Card · Comments): Panel Head padding [8,6,4,12], space-between. */
+.comments-panel {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  flex: 1 1 auto;
+}
+
+.comments-panel__head {
+  position: relative;
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 6px 4px 12px;
+}
+
+.comments-panel__title {
+  font-size: var(--kimo-text-base);
+  font-weight: 600;
+  color: var(--kimo-text-primary);
+}
+
+.comments-panel__actions {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 2px;
+}
+
+.comments-panel__menu {
+  position: absolute;
+  top: 36px;
+  right: 6px;
+  z-index: 4;
+}
+
+/* Search: padding [4,8,8,8]; input h 30. */
+.comments-panel__search {
+  display: flex;
+  flex-direction: row;
+  padding: 4px 8px 8px 8px;
+}
+
+.comments-panel__search .kimo-input {
+  height: 30px;
+}
+
+/* List: column, top border. */
+.comments-panel__list {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid var(--kimo-border);
+  overflow-y: auto;
+}
+
+.comments-panel__empty {
+  display: flex;
+  justify-content: center;
+  padding: 24px 10px;
+}
+
+.comment-row-item {
+  display: flex;
+}
+
+/* CommentRow: row, gap 8, padding [12,12,12,6], bottom border. */
+.comment-row {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: row;
+  flex: none;
+  gap: 8px;
+  width: 100%;
+  margin: 0;
+  padding: 12px 12px 12px 6px;
+  border: none;
+  border-bottom: 1px solid var(--kimo-border);
+  background: transparent;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.comment-row:hover,
+.comment-row.is-open {
+  background: var(--kimo-bg-hover);
+}
+
+/* Dot slot: 8 × 24, centered; Unread 6 × 6 selection. */
+.comment-row__dot {
+  display: flex;
+  flex: none;
+  justify-content: center;
+  align-items: center;
+  width: 8px;
+  height: 24px;
+}
+
+.comment-row__unread {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--kimo-selection);
+}
+
+.comment-row__body {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 0;
+  min-width: 0;
+  gap: 3px;
+}
+
+.comment-row__meta {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.comment-row__text {
+  font-size: var(--kimo-text-sm);
+  font-weight: 400;
+  line-height: 1.45;
+  color: var(--kimo-text-secondary);
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.comment-row__foot {
+  font-size: var(--kimo-text-xs);
+  font-weight: 400;
+  color: var(--kimo-text-tertiary);
+}
+
+.comment-row__foot--warning {
+  color: var(--kimo-warning);
+}

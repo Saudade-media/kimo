@@ -16,6 +16,7 @@ import { type CSSProperties, useLayoutEffect, useRef, useState } from "react"
 import { activeToolId, CANVAS_TOOLS, type CanvasToolId, type UiStore } from "../canvas/contract"
 import { HintPill } from "../canvas/hints"
 import { slotToolId, useCanvasToolState } from "../canvas/tool-state"
+import { UnreadBadge } from "../comments/CommentLayer"
 import { useUi } from "../lib/hooks"
 import { t } from "../lib/i18n"
 import { Icon } from "../lib/icons"
@@ -33,6 +34,7 @@ export function FloatingToolbar({
   onActivate,
   onAsk,
   viewOnly = false,
+  badges,
 }: {
   ui: UiStore
   onActivate(id: CanvasToolId): void
@@ -40,6 +42,8 @@ export function FloatingToolbar({
   onAsk?: () => void
   /** Board 41 section 9 (X2wngo): only Select is live; the rest sits at 35 %. */
   viewOnly?: boolean
+  /** Board 51 §6 A: counts on tool buttons (the Comment tool's unread threads). */
+  badges?: Partial<Record<CanvasToolId, number>>
 }) {
   const tool = useUi(ui, (s) => s.tool)
   const { placement, penHint, shape, pathEdit } = useCanvasToolState(ui)
@@ -94,7 +98,8 @@ export function FloatingToolbar({
           }
           // M3: one-shot actions (Component, ⌥⌘K) are enabled even while the tool spec is not.
           const enabled = spec.enabled || spec.action !== undefined
-          return (
+          const badge = badges?.[spec.id] ?? 0
+          const button = (
             <Tooltip
               key={spec.id}
               side="top"
@@ -126,6 +131,14 @@ export function FloatingToolbar({
                 onClick={() => onActivate(spec.id)}
               />
             </Tooltip>
+          )
+          // Board 51: the Comment tool stays live for View links (it never edits layers).
+          if (spec.id !== "comment") return button
+          return (
+            <span key={spec.id} className="floating-toolbar__comment">
+              {button}
+              <UnreadBadge count={badge} />
+            </span>
           )
         })}
         <span className="floating-toolbar__divider" aria-hidden="true" />

@@ -22,6 +22,9 @@ import type { FileMenuActions } from "./FileMenu"
 export const VIEW_ONLY_SHORTCUTS: ReadonlySet<string> = new Set([
   "tool.move",
   "tool.hand",
+  // Comments (docs/spec/comments.md §5): View links read and, where the relay allows, comment.
+  "tool.comment",
+  "view.comments",
   "openFile",
   "newFile",
   "exportDialog",
@@ -72,9 +75,9 @@ export function viewerKeyBlocked(e: KeyLike): boolean {
   return bound
 }
 
-/** Tools a viewer can use: Select, and Hand (it only pans). */
+/** Tools a viewer can use: Select, Hand (it only pans) and Comment (it never edits layers). */
 export function viewerToolAllowed(tool: string): boolean {
-  return tool === "select" || tool === "hand"
+  return tool === "select" || tool === "hand" || tool === "comment"
 }
 
 /** The File menu a viewer sees: no Save, no Save as… (nothing duplicates the file). */

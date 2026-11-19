@@ -40,6 +40,13 @@ export type UiStore = ReturnType<typeof createUiStore>
 
 // --- Tools (board 03 "Floating Toolbar", left to right) -----------------------------------
 
+/** A finished comment-mode press: a world point (click) or a world rect (drag, w and h set). */
+export interface CommentGesture {
+  world: { x: number; y: number; w?: number; h?: number }
+  /** Where the pointer was released, canvas px. */
+  screen: { x: number; y: number }
+}
+
 /** Toolbar tool ids, in toolbar order. */
 const CANVAS_TOOL_IDS = [
   "move",
@@ -54,6 +61,7 @@ const CANVAS_TOOL_IDS = [
   "pen",
   "image",
   "component",
+  "comment",
   "note",
   "prompt",
 ] as const
@@ -193,6 +201,15 @@ export const CANVAS_TOOLS: readonly CanvasToolSpec[] = [
     tool: null,
     // M3: a one-shot action (the shell runs Create component on the selection).
     action: "createComponent",
+    enabled: true,
+  },
+  // Board 51 §1: the Comment tool after Component (C; docs/spec/comments.md §7).
+  {
+    id: "comment",
+    label: "ui.tool.comment",
+    icon: "message-circle",
+    shortcut: "C",
+    tool: "comment",
     enabled: true,
   },
   // M6 (board 22 cf2sC `FTOjQ` "Insert hint": Tool · Note `AJpaL`, Tool · Prompt `eSlHx`):
@@ -539,6 +556,10 @@ export interface CanvasHostProps {
   icons?: IconProvider
   /** An armed placement changed (toolbar shows Image active while armed). */
   onPlacementChange?: (placement: ImagePlacement | null) => void
+  /** Comment mode: a click (world point) or a drag (world rect) finished on the canvas. */
+  onComment?: (gesture: CommentGesture) => void
+  /** Comment mode: the area being dragged (world), null when the drag ends. */
+  onCommentDraft?: (rect: Rect | null) => void
   /**
    * Canvas hints for the shell's DOM overlays (Tooltip/Hint u0dQ1 above the toolbar, the
    * path-edit mode pill, the ⌥ "Measuring" Tooltip, the zoom badge at > 400%); null hides.

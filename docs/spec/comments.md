@@ -26,6 +26,8 @@ Format 1.1 adds one optional root member. Everything else in the 1.0 spec is unc
 - A writer MUST write `format: "1.1.0"` and list `doc/comments` in `features` when `comments` is
   present, and SHOULD keep writing `1.0.x` when it is absent, so comment-free files stay
   editable in 1.0 readers.
+- A 1.1 reader treats 1.0 files as current: 1.1 only adds a member, so there is no migration and
+  no upgrade consent.
 - A 1.0 reader opens a 1.1 file read-only (format §16.3). A 1.1 reader MUST preserve `comments`
   byte for byte when it does not render them (for example the CLI).
 - Ids follow the node id grammar (format §3). Thread and message ids MUST NOT collide with node
@@ -36,7 +38,8 @@ Format 1.1 adds one optional root member. Everything else in the 1.0 spec is unc
 | Field | Required | Type | Meaning |
 |---|---|---|---|
 | `anchor` | yes | Anchor | Where the pin is (§2). |
-| `messages` | yes | record Id → Message (non-empty) | The first message by `at` (ties by id) opens the thread. |
+| `first` | yes | Id | The opening message. Set once and never changed. |
+| `messages` | yes | record Id → Message (non-empty) | The thread's messages, shown by `at`, ties by id. |
 | `resolved` | no | `{by: Author, at: Time}` | Present while resolved. Unresolving removes it. |
 
 **Message**
@@ -47,8 +50,14 @@ Format 1.1 adds one optional root member. Everything else in the 1.0 spec is unc
 | `at` | yes | Time | When it was posted. |
 | `text` | yes | string, 1 to 5,000 code points | Message text (§3). |
 | `edited` | no | Time | Last edit. |
-| `attachments` | no | string[] (1 to 5) | Asset file names (format §12): PNG, JPEG or GIF. |
+| `attachments` | no | Attachment[] (1 to 5) | Images attached to the message. |
 | `reactions` | no | record Emoji → AuthorId[] (unique, non-empty) | Who reacted with which emoji. |
+
+**Attachment**: `{file, mime, sha256, width?, height?}`. `file` is a content-addressed asset file
+name under `assets/` (format §12), `mime` is `image/png`, `image/jpeg` or `image/gif`, `sha256` is
+the full lowercase hex digest. The entry lives in the message, not in the root `assets` manifest,
+because comment-only participants cannot write the design document. Asset garbage collection
+counts attachments as references.
 
 **Author**: `{id, name, kind}`. `id` is a stable author id: `acct:<account id>` on Kimo Cloud,
 `dev:<device key id>` for a signed-in-free device, `agent:<origin>` for agents (the `LocalOrigin`
@@ -73,8 +82,8 @@ from validation of the node tree and from every exporter.
 - Comments never produce stored conflicts.
 
 New validation codes: `COMMENT_ANCHOR_INVALID` (error: anchor fields missing or out of range),
-`COMMENT_EMPTY` (error: a thread with no messages), `COMMENT_ATTACHMENT_MISSING` (warning: an
-attachment names no asset). A thread whose anchor node does not exist is not an error (§2).
+`COMMENT_EMPTY` (error: a thread with no messages, or whose `first` names no message),
+`COMMENT_ATTACHMENT_MISSING` (warning: an attachment's file is not in `assets/`). A thread whose anchor node does not exist is not an error (§2).
 
 ## 2. Anchors
 
@@ -84,17 +93,19 @@ attachment names no asset). A thread whose anchor node does not exist is not an 
 | `node` | no | Id | Top-level frame, component or group the pin moves with. |
 | `x`, `y` | yes | number | With `node`: offset from the node's top-left corner. Without: page coordinates. |
 | `w`, `h` | no | number > 0 | Present together for an area comment: the region's size. |
-| `fallback` | no | `{x, y}` | Page coordinates written when `node` is deleted. |
+| `fallback` | with `node` | `{x, y}` | Page coordinates of the pin, used when `node` is gone. |
 
 - On placing a pin or area, the editor MUST set `node` when the point (or the area's top-left
   corner) lies inside a top-level frame, component or group of the current page, and otherwise
   omit it. Nested layers never anchor.
-- Moving the node moves the pin; no comment write is needed.
-- Deleting a node that anchors threads MUST, in the same user action, write `fallback` on each of
-  them (on the comment channel, so it is not atomic with the deletion; §4). `node` is kept, so
-  undoing the delete reattaches the pin.
+- An anchored thread MUST get `fallback` when it is created and whenever its pin is dragged, so a
+  thread created while another person deletes its node still has a sensible position.
+- Moving the node moves the pin; no comment write is needed, so `fallback` can lag behind.
+- Deleting a node that anchors threads MUST, in the same user action, refresh `fallback` on each
+  of them (on the comment channel, so it is not atomic with the deletion; §4). `node` is kept,
+  so undoing the delete reattaches the pin.
 - A thread whose `node` is missing is **detached**: it renders at `fallback` (or at the page
-  origin if there is none) and the list marks it "Detached".
+  origin for files written without one) and the list marks it "Detached".
 - Cut and paste, duplicate, and copy to another file create new node ids and leave comments where
   they were. Move to page keeps the node id; the editor MUST update `page` on its threads.
 
@@ -147,6 +158,19 @@ Additions to [multiplayer.md](multiplayer.md):
   quota share. Room size and the owner sweep count both. The relay cannot tell a new message from
   a reaction inside an encrypted update, so it limits comment appends to 600 an hour per token
   `jti` (`RATE_LIMITED`); clients limit new messages and replies to 100 an hour per author.
+- **§12 HTTP.** `GET /room/<room>/comments/snapshot` (view, comment or edit) and
+  `PUT /room/<room>/comments/snapshot?upTo=<n>[&carries=1]` (comment or edit) work like the design
+  snapshot routes, with the comment log's `seq` and the same acceptance rule. `comment-compact`
+  goes to the lowest subscribed comment or edit peer that sent `caught-up`. A subscriber catches up
+  like on the design log (§15.4): `comments-subscribe` answers with `comment-snapshot` when its
+  `since` is below the comment log's `base`, the client downloads it, then entries follow.
+- **§12 blobs.** `PUT /blob` accepts comment tokens too, so a reviewer can upload an attachment.
+  Receivers find the blob from the attachment's own `sha256` (§1), exactly as for a manifest entry
+  (§10, §16.4), and store it in their asset store under `file`.
+- **Authority.** In a room the comment doc is authoritative. A 1.2.x edit client never sees it, so a
+  file it saves has no `comments`; that never deletes anything, because a client with the channel
+  ignores the file's `comments` when it has a room replica, and without a replica adds only the
+  threads and messages the room lacks.
 - A client that meets a relay without bit 0 keeps the comment doc local only, MUST NOT mint role
   3 links, and the Share popover says view links are read-only on this relay.
 
@@ -173,8 +197,8 @@ editor SHOULD flag it in the thread ("Changed by another author") so tampering i
 ## 6. Read state
 
 Per person and device, outside the file: `localStorage` key `kimo.comments.read.<fileKey>`, a map
-of thread id to the `at` of the newest message seen. A thread is unread when it has a message
-newer than that value from someone else. Opening a thread marks it read; "Mark as unread" removes
+of thread id to the ids of the messages seen. A thread is unread when it has a message from
+someone else that is not in its list, so clock skew and late updates never hide a message. Opening a thread marks it read; "Mark as unread" removes
 its entry; "Mark all as read" sets every thread. `fileKey` is the room id for shared files and the
 file's path hash for local ones.
 

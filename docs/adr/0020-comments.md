@@ -90,7 +90,8 @@ design log, so the relay can let `comment` tokens write comments and nothing els
    threads; Settings offers All comments and Off. Only workspace members get email. Self-hosted
    relays send none.
 10. **Attachments** are file assets (format §12), synced as room blobs (multiplayer §10), at most
-    5 per message, PNG, JPEG or GIF. Deleting the message drops the reference; the bytes go at the
+    5 per message, PNG, JPEG or GIF. Each message lists its own attachment entries with their
+    digest, since a comment-only participant cannot write the root asset manifest. Deleting the message drops the reference; the bytes go at the
     next owner-triggered asset sweep.
 
 ## Consequences

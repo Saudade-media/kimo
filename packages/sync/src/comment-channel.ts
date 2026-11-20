@@ -46,6 +46,13 @@ export interface CommentSigner {
   publicKey: Uint8Array
 }
 
+/** SHA-256 of an entry envelope, base64url. */
+async function envHash(env: Uint8Array): Promise<string> {
+  return toBase64Url(
+    new Uint8Array(await crypto.subtle.digest("SHA-256", env as Uint8Array<ArrayBuffer>)),
+  )
+}
+
 /** A signed change and its parsed record. */
 type Held = { signed: SignedComment; record: CommentRecord }
 
@@ -53,6 +60,8 @@ type Held = { signed: SignedComment; record: CommentRecord }
 export interface CommentReplica {
   /** Highest comment log seq applied. */
   since: number
+  /** SHA-256 (base64url) of that entry's envelope, to tell a replaced log (spec §4.4 Reset). */
+  tip?: string
   /** Acknowledged changes still needed, with their positions. */
   changes: { pos: number; signed: SignedComment }[]
   /** Signed local changes not acknowledged yet (sent again next session). */
@@ -128,7 +137,11 @@ export class CommentChannel {
   private since = 0
   private caughtUp = false
   /** Change ids in flight on the current session, by cid. */
-  private inflight = new Map<number, string[]>()
+  private inflight = new Map<number, { ids: string[]; env: Uint8Array }>()
+  /** SHA-256 of the entry at `since` (null: unknown, after a snapshot). */
+  private tip: string | null = null
+  /** On reconnect: the tip the relay's entry at `since` must match (spec §4.4 Reset). */
+  private checking: string | null = null
   private readonly sent = new Set<string>()
   private chain: Promise<void> = Promise.resolve()
   private flushTimer: ReturnType<typeof setTimeout> | null = null
@@ -168,6 +181,7 @@ export class CommentChannel {
           if (rec) this.unsent.set(rec.body.id, { signed: s, record: rec })
         }
         this.since = replica.since
+        this.tip = replica.tip ?? null
       }
       if (this.disposed) return
       const own = this.options.root ? toBase64Url(this.options.root.publicKey) : null
@@ -191,27 +205,42 @@ export class CommentChannel {
     this.serial(async () => {
       await this.enter()
       if (this.session !== session || !session.alive()) return
-      if (session.info.head < this.since) {
-        // The relay lost entries this device saw: start over. What this device holds goes back
-        // once what it needs is there again (spec §4.4 Re-append).
-        const live = new Set(this.store.live().map((r) => r.body.id))
-        const held: Held[] = []
-        for (const [id, s] of this.signed) {
-          if (!live.has(id)) continue
-          const rec = await verifyComment(this.options.room, s, null)
-          if (rec) held.push({ signed: s, record: rec })
-        }
-        this.since = 0
-        this.signed.clear()
-        // The owner device remembers who held each thread, to win back ids a guest takes.
-        if (this.options.root) this.store.beginRecovery()
-        this.store.enterRoom(this.store.room ?? this.roomFallback(), [], this.options.origin)
-        this.resetHeld = held
-        this.release()
+      if (session.info.head < this.since) await this.resetLog()
+      else if (this.tip && this.since > 0 && this.since > session.info.base) {
+        // As many entries as this device saw: the one it saw last must still be there, so a
+        // relay that lost entries cannot be hidden by padding its log (spec §4.4 Reset).
+        this.checking = this.tip
+        session.send({ type: "comments-subscribe", since: this.since - 1 })
+        return
       }
       session.send({ type: "comments-subscribe", since: this.since })
       this.maybeCaughtUp(session)
     })
+  }
+
+  /**
+   * The relay lost entries this device saw: start over. What this device holds goes back once
+   * what it needs is there again (spec §4.4 Re-append).
+   */
+  private async resetLog(): Promise<void> {
+    {
+      const live = new Set(this.store.live().map((r) => r.body.id))
+      const held: Held[] = []
+      for (const [id, s] of this.signed) {
+        if (!live.has(id)) continue
+        const rec = await verifyComment(this.options.room, s, null)
+        if (rec) held.push({ signed: s, record: rec })
+      }
+      this.since = 0
+      this.signed.clear()
+      // The owner device remembers who held each thread, to win back ids a guest takes.
+      if (this.options.root) this.store.beginRecovery()
+      this.store.enterRoom(this.store.room ?? this.roomFallback(), [], this.options.origin)
+      this.resetHeld = held
+      this.tip = null
+      this.checking = null
+      this.release()
+    }
   }
 
   private roomFallback() {
@@ -243,6 +272,16 @@ export class CommentChannel {
       const records: CommentRecord[] = []
       for (const entry of entries) {
         if (this.session !== session) return
+        if (this.checking !== null) {
+          if (entry.seq < this.since) continue
+          const same = entry.seq === this.since && (await envHash(entry.env)) === this.checking
+          this.checking = null
+          if (same) continue
+          // Another entry where this device saw its last one: the log was replaced.
+          await this.resetLog()
+          session.resync()
+          return
+        }
         if (entry.seq <= this.since) continue
         if (entry.seq !== this.since + 1) {
           session.resync()
@@ -250,6 +289,7 @@ export class CommentChannel {
         }
         records.push(...(await this.openEntry(entry.seq, entry.env)))
         this.since = entry.seq
+        this.tip = await envHash(entry.env)
       }
       this.receive(records)
       this.maybeCaughtUp(session)
@@ -259,6 +299,8 @@ export class CommentChannel {
   onSnapshot(session: CommentSession, info: SnapshotInfo): void {
     this.serial(async () => {
       if (this.session !== session) return
+      // Compacted past the entry this device saw last: it cannot be checked any more.
+      this.checking = null
       if (this.since >= info.upTo) {
         // Someone compacted what this device holds: drop what the snapshot no longer needs.
         this.store.compact()
@@ -282,15 +324,19 @@ export class CommentChannel {
         // An edit peer's fold applied these (spec §4.3): a delete in it is final.
         if (rec) records.push({ ...rec, compacted: true })
       }
-      this.since = Math.max(this.since, fetched.upTo)
+      if (fetched.upTo > this.since) {
+        this.since = fetched.upTo
+        this.tip = null
+      }
       this.receive(records)
       this.maybeCaughtUp(session)
     })
   }
 
   onAck(session: CommentSession, cid: number, seq: number): boolean {
-    const ids = this.inflight.get(cid)
-    if (!ids || this.session !== session) return false
+    const flight = this.inflight.get(cid)
+    if (!flight || this.session !== session) return false
+    const ids = flight.ids
     this.inflight.delete(cid)
     this.serial(async () => {
       if (seq !== this.since + 1) {
@@ -299,6 +345,7 @@ export class CommentChannel {
         return
       }
       this.since = seq
+      this.tip = await envHash(flight.env)
       ids.forEach((id, i) => {
         const pos = seq * COMMENT_ENTRY_SLOTS + i
         const orphan = this.unsent.get(id)
@@ -316,10 +363,10 @@ export class CommentChannel {
 
   /** A denial of one of this channel's appends: the changes go back to waiting. */
   onDenied(cid: number): boolean {
-    const ids = this.inflight.get(cid)
-    if (!ids) return false
+    const flight = this.inflight.get(cid)
+    if (!flight) return false
     this.inflight.delete(cid)
-    for (const id of ids) this.sent.delete(id)
+    for (const id of flight.ids) this.sent.delete(id)
     return true
   }
 
@@ -512,7 +559,7 @@ export class CommentChannel {
       const env = await sealCommentsUpdate(this.options.keys, encodeCommentBatch(batch))
       if (this.session !== session) return
       const cid = session.cid()
-      this.inflight.set(cid, batchIds)
+      this.inflight.set(cid, { ids: batchIds, env })
       for (const id of batchIds) this.sent.add(id)
       session.send({ type: "append-comment", cid, env })
     }
@@ -543,7 +590,12 @@ export class CommentChannel {
       if (s) unsent.push(s)
     }
     try {
-      await replica.save(this.options.room, { since: this.since, changes, unsent })
+      await replica.save(this.options.room, {
+        since: this.since,
+        ...(this.tip ? { tip: this.tip } : {}),
+        changes,
+        unsent,
+      })
     } catch {
       // Without a replica the next session catches up from the relay; nothing is lost there.
     }

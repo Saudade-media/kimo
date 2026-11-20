@@ -132,7 +132,10 @@ export class CommentStore {
   private _readOnly: string | null = null
   private _room: CommentRoom | null = null
   /** Owner device after a relay reset: thread owners and content from before it. */
-  private recovering: { owners: Map<string, string | null>; threads: Comments } | null = null
+  private recovering: {
+    owners: Map<string, Map<string, string | null>>
+    threads: Comments
+  } | null = null
   /** Acknowledged changes, by position. */
   private acked: CommentRecord[] = []
   private confirmed: CommentFold
@@ -687,42 +690,75 @@ export class CommentStore {
   }
 
   /**
-   * Owner device, before a relay reset is folded away: records who owned each thread, so a
-   * guest that takes one of these ids in the empty log can be told apart (spec §4.4 Recovery).
+   * Owner device, before a relay reset is folded away: records who owned each thread and each
+   * of its messages, so a guest that takes one of these ids in the empty log can be told apart
+   * (spec §4.4 Recovery).
    */
   beginRecovery(): void {
     const room = this._room
     if (!room?.moderator || !room.root) return
     const c = this.confirmed
-    const owners = new Map<string, string | null>()
-    for (const [id, t] of c.threads) owners.set(id, c.ownerOf(id, t.first) ?? null)
+    const owners = new Map<string, Map<string, string | null>>()
+    for (const [id, t] of c.threads) {
+      const mine = new Map<string, string | null>()
+      for (const mid of t.messages.keys()) mine.set(mid, c.ownerOf(id, mid) ?? null)
+      if (t.messages.has(t.first)) owners.set(id, mine)
+    }
     this.recovering = { owners, threads: c.project() }
   }
 
   /**
-   * Owner device after a reset: a recorded thread id now held or deleted by a key that is
-   * neither its owner's nor the root key was taken by someone else. Its old content comes back
-   * as a root `import` under fresh ids (and the taker's thread is deleted). Returns the ids moved.
+   * Owner device after a reset: a recorded thread whose id, or one of whose message ids, is now
+   * held or deleted by a key that is neither the recorded owner's nor the root key was taken by
+   * someone else. The taker's thread or message is deleted with the root key, and the old
+   * content comes back as a root `import` under fresh ids. Returns the thread ids moved.
    */
   recover(origin: Origin): string[] {
     const room = this._room
     const rec = this.recovering
-    if (!room?.moderator || !room.root || !rec) return []
+    if (!room?.moderator || !room.root) return []
+    if (!rec) return []
     const c = this.confirmed
     const busy = new Set(this.pendingList.map((p) => p.body.thread))
-    const legit = (k: string | null | undefined, was: string | null) => k === room.root || k === was
+    const legit = (k: string | null | undefined, was: string | null | undefined) =>
+      k === room.root || k === was
     const moved: string[] = []
-    for (const [id, was] of [...rec.owners]) {
+    for (const [id, owners] of [...rec.owners]) {
       if (busy.has(id)) continue
-      const t = c.threads.get(id)
-      let taken: boolean
-      if (t) taken = !legit(c.ownerOf(id, t.first), was)
-      else if (c.isTomb(id)) taken = !legit(c.tombKey(id), was)
-      else continue
-      rec.owners.delete(id)
       const data = rec.threads[id]
-      if (!taken || !data) continue
-      if (t) this.commit({ op: "delete", thread: id }, origin, { asRoot: true })
+      const first = data?.first ?? ""
+      // Root deletes that undo what took an id: the taker's message (or its thread) elsewhere.
+      const undo = new Map<string, CommentOp>()
+      let taken = false
+      const t = c.threads.get(id)
+      if (t) taken = !legit(c.ownerOf(id, t.first), owners.get(first))
+      else if (c.isTomb(id)) taken = !legit(c.tombKey(id), owners.get(first))
+      let settled = !!t || c.isTomb(id)
+      for (const [mid, was] of owners) {
+        const at = c.messageAt(mid)
+        if (!at) {
+          if (!c.isTomb(mid)) settled = false
+          else if (!legit(c.tombKey(mid), was)) taken = true
+          continue
+        }
+        if (legit(at.owner, was)) continue
+        taken = true
+        if (at.thread === id) continue
+        const u: CommentOp = at.first
+          ? { op: "delete", thread: at.thread }
+          : { op: "delete", thread: at.thread, message: mid }
+        undo.set(at.first ? at.thread : `${at.thread}:${mid}`, u)
+      }
+      if (!taken) {
+        // Watched until every recorded id is back or deleted by its owner.
+        if (settled) rec.owners.delete(id)
+        continue
+      }
+      rec.owners.delete(id)
+      if (!data) continue
+      // The recorded thread itself goes too when it is held: its content comes back in full.
+      if (t) undo.set(id, { op: "delete", thread: id })
+      for (const u of undo.values()) this.commit(u, origin, { asRoot: true })
       const fresh = rehomed(data, () => this.freshId())
       this.commit({ op: "import", thread: this.freshId(), data: fresh }, origin, { asRoot: true })
       moved.push(id)

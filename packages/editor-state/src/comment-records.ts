@@ -413,6 +413,15 @@ export class CommentFold {
     return this.tombs.has(id)
   }
 
+  /** The thread holding message `id` and the message's owner key, or undefined. */
+  messageAt(id: string): { thread: string; first: boolean; owner: string | null } | undefined {
+    for (const [tid, t] of this.threads) {
+      const m = t.messages.get(id)
+      if (m) return { thread: tid, first: t.first === id, owner: m.owner }
+    }
+    return undefined
+  }
+
   /** The key whose delete tombstoned `id`. */
   tombKey(id: string): string | undefined {
     return this.tombBy.get(id)

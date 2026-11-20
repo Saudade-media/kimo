@@ -114,7 +114,9 @@ class MiniRelay {
       maxSnapshotBytes: 1024 * 1024,
       info: { head: this.log.length, base: 0, snapshot: null },
       resync: () => {
-        throw new Error("unexpected gap")
+        // A real client reconnects: here the channel starts again on a new session.
+        this.subs.delete(session)
+        queueMicrotask(() => this.connect(channel))
       },
     }
     channel.start(session)
@@ -328,6 +330,70 @@ describe("comment channel", () => {
       expect(texts).not.toContain("Gone")
     }
     for (const ch of [chA, chG, chB]) await ch.dispose()
+  })
+
+  test("after a relay loses its log, neither a taken message id nor a padded log hides it", async () => {
+    const root = await signer()
+    const roomId = await deriveRoomId(root.publicKey)
+    const keys = await deriveRoomKeys(generateRoomKey(), roomId)
+    const http = new RelayHttpClient({ relayUrl: "https://relay.invalid" })
+    const opts = { room: roomId.id, keys, http, origin: "remote:mp:test" as const }
+    const [dev, troll] = [await signer(), await signer()]
+    const a = new CommentStore()
+    const chA = new CommentChannel({ ...opts, store: a, device: dev, root })
+    const old = new MiniRelay()
+    old.connect(chA)
+    await settle()
+    const person = (k: CommentSigner, name: string) =>
+      ({ id: `dev:${toBase64Url(k.publicKey)}`, name, kind: "person" }) as const
+    const ana = person(dev, "Ana")
+    const at = { x: 0, y: 0 }
+    const launch = a.createThread({ anchor: at, message: { author: ana, text: "Launch" } }, "user")
+    await settle()
+    a.reply(launch.threadId, { author: ana, text: "Details" }, "user")
+    await settle()
+    // A plain reconnect to the same relay finds its last entry and sends nothing again.
+    const before = old.log.length
+    chA.stop()
+    old.connect(chA)
+    await settle()
+    expect(old.log.length).toBe(before)
+    // The relay comes back empty. A troll takes the opening message id in a thread of its own,
+    // then pads the log past the owner's last position.
+    const fresh = new MiniRelay()
+    const author = person(troll, "Troll")
+    let n = 0
+    const forge = async (op: Record<string, unknown>) => {
+      n++
+      const id = `Troll${String(n).padStart(5, "0")}`
+      const s = await signComment(
+        roomId.id,
+        { v: 1, id, n, base: 0, at: "2026-11-20T10:00:00.000Z", ...op } as CommentRecordBody,
+        troll.privateKey,
+        troll.publicKey,
+      )
+      fresh.append(null, await sealCommentsUpdate(keys, encodeCommentBatch([s])))
+    }
+    const thread = (thread: string, message: string, text: string) =>
+      forge({ op: "thread", thread, message, anchor: at, author, text })
+    await thread("TrollThr01", launch.messageId, "spam")
+    for (let i = 0; i < before + 2; i++)
+      await thread(`TrollPad${i}`.padEnd(10, "0"), `PadMsg${i}`.padEnd(10, "0"), "pad")
+    chA.stop()
+    fresh.connect(chA)
+    await settle()
+    const b = new CommentStore()
+    const chB = new CommentChannel({ ...opts, store: b, device: await signer() })
+    fresh.connect(chB)
+    await settle()
+    for (const s of [a, b]) {
+      const texts = Object.values(s.threads()).map((t) => t.messages[t.first]?.text)
+      expect(texts).toContain("Launch")
+      expect(texts).not.toContain("spam")
+    }
+    expect(b.threads()).toEqual(a.threads())
+    await chA.dispose()
+    await chB.dispose()
   })
 
   test("a device folding its saved replica knows the room root key before it enters", async () => {

@@ -34,6 +34,7 @@
  * unconfirmed ones are written synchronously to a localStorage journal, which the next `attach`
  * replays into the database and then removes.
  */
+import type { Comments } from "@kimo/core-schema"
 import type { DocStore, Origin, RemoteOrigin } from "@kimo/editor-state"
 import * as Y from "yjs"
 import { BaseProvider } from "./provider"
@@ -45,6 +46,8 @@ export function hasIndexedDb(): boolean {
 
 const UPDATES = "updates"
 const CUSTOM = "custom"
+/** Key in `custom` of the file's comments (docs/spec/comments.md §1). */
+const COMMENTS_KEY = "comments"
 /** Appends after which the database is compacted. */
 export const TRIM_SIZE = 500
 const TRIM_DELAY_MS = 1000
@@ -236,6 +239,7 @@ export class IndexedDbProvider extends BaseProvider {
   /** Write transactions that have not settled yet. */
   private readonly writes = new Set<Promise<void>>()
   private offPageHide: (() => void) | null = null
+  private offComments: (() => void) | null = null
   private readonly trimSize: number
   private readonly trimDelayMs: number
   private readonly partBytes: number
@@ -287,6 +291,13 @@ export class IndexedDbProvider extends BaseProvider {
       // Kept when the write failed: the next attach replays it again.
       if (this.pending.length === 0) clearJournal(this.name)
     }
+    // The file's comments (their own CRDT, not in the updates): database → store, then each
+    // change → database.
+    await this.openComments(store)
+    this.offComments =
+      store.comments?.onChange((c) => {
+        if (c.origin !== this.origin) this.sendComments()
+      }) ?? null
     // Store → database.
     this.off = store.onUpdate((update: Uint8Array, origin: Origin) => {
       if (origin === this.origin) return
@@ -330,6 +341,41 @@ export class IndexedDbProvider extends BaseProvider {
       this.origin,
       this.largeBytes,
     )
+  }
+
+  /** The comments saved last (the file's `comments`), loaded into the store. */
+  private async openComments(store: DocStore): Promise<void> {
+    const db = this.db
+    if (!db || !store.comments) return
+    const tx = db.transaction([CUSTOM], "readonly")
+    const saved = (await done(tx.objectStore(CUSTOM).get(COMMENTS_KEY))) as unknown
+    if (saved && typeof saved === "object" && !Array.isArray(saved))
+      store.comments.load(saved as Comments, { mode: "replace", origin: this.origin })
+  }
+
+  /** Writes the store's comments as they are now (one value, replaced on every change). */
+  private sendComments(): void {
+    const db = this.db
+    const comments = this._store?.comments?.toJSON()
+    if (!db) return
+    const write = new Promise<void>((resolve) => {
+      const fail = (e: unknown) => {
+        this.setStatus("error", e instanceof Error ? e : new Error(String(e ?? "write failed")))
+        resolve()
+      }
+      try {
+        const tx = db.transaction([CUSTOM], "readwrite")
+        const os = tx.objectStore(CUSTOM)
+        if (comments) os.put(comments, COMMENTS_KEY)
+        else os.delete(COMMENTS_KEY)
+        tx.oncomplete = () => resolve()
+        tx.onabort = () => fail(tx.error)
+      } catch (e) {
+        fail(e)
+      }
+    })
+    this.writes.add(write)
+    void write.then(() => this.writes.delete(write))
   }
 
   private append(update: Uint8Array): void {
@@ -501,6 +547,8 @@ export class IndexedDbProvider extends BaseProvider {
   async detach(): Promise<void> {
     this.off?.()
     this.off = null
+    this.offComments?.()
+    this.offComments = null
     this.offPageHide?.()
     this.offPageHide = null
     await this.flush()

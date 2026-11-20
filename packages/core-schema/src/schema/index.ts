@@ -1,3 +1,4 @@
+export * from "./comments"
 export * from "./document"
 export * from "./graphics"
 export * from "./merge"

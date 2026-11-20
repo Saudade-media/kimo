@@ -726,3 +726,136 @@ describe("stored conflicts: finishing", () => {
     expect(finishMerge(d, { force: true }).features).toEqual(["layout/wrap"])
   })
 })
+
+describe("comments merge (spec comments §1)", () => {
+  const author = { id: "dev:abc123", name: "Ana", kind: "person" } as const
+  const other = { id: "acct:42", name: "Bo", kind: "person" } as const
+  const msg = (at: string, text: string, extra: object = {}) => ({ author, at, text, ...extra })
+  const base = () =>
+    doc(
+      { Frame00001: { type: "frame", parent: null, order: "a0", w: 100, h: 100 } },
+      {
+        $schema: "https://getkimo.design/schema/kimo-1.1.json",
+        format: "1.1.0",
+        features: ["doc/comments"],
+        comments: {
+          Thread0001: {
+            anchor: { x: 1, y: 2 },
+            first: "Msg0000001",
+            messages: {
+              Msg0000001: msg("2026-11-10T09:00:00.000Z", "Hi"),
+              Msg0000002: msg("2026-11-10T09:01:00.000Z", "Reply", {
+                reactions: { "👍": ["dev:abc123"] },
+              }),
+            },
+          },
+        },
+      },
+    )
+  const merged = (o: (d: Loose) => void, t: (d: Loose) => void) => {
+    const x = three(base(), o, t)
+    const a = mergeDocuments(x).doc as Loose
+    const b = mergeDocuments({ base: x.base, ours: x.theirs, theirs: x.ours }).doc as Loose
+    // Same result whichever side is ours.
+    expect(serialize(a)).toBe(serialize(b))
+    expect(errorsOf(a)).toEqual([])
+    return a
+  }
+  const T = (d: Loose) => d.comments.Thread0001
+
+  test("replies from both sides union", () => {
+    const d = merged(
+      (o) => {
+        T(o).messages.Msg0000003 = msg("2026-11-10T09:02:00.000Z", "Ours")
+      },
+      (t) => {
+        T(t).messages.Msg0000004 = { ...msg("2026-11-10T09:03:00.000Z", "Theirs"), author: other }
+      },
+    )
+    expect(Object.keys(T(d).messages).sort()).toEqual([
+      "Msg0000001",
+      "Msg0000002",
+      "Msg0000003",
+      "Msg0000004",
+    ])
+  })
+
+  test("deletion wins over an edit on the other side", () => {
+    const d = merged(
+      (o) => {
+        delete T(o).messages.Msg0000002
+      },
+      (t) => {
+        T(t).messages.Msg0000002.text = "Edited"
+        T(t).messages.Msg0000002.edited = "2026-11-10T10:00:00.000Z"
+      },
+    )
+    expect(T(d).messages.Msg0000002).toBeUndefined()
+  })
+
+  test("a deleted thread stays deleted, and the header returns to 1.0", () => {
+    const d = merged(
+      (o) => {
+        delete o.comments.Thread0001
+      },
+      (t) => {
+        T(t).messages.Msg0000005 = msg("2026-11-10T09:05:00.000Z", "Late reply")
+      },
+    )
+    expect(d.comments).toBeUndefined()
+    expect(d.format).toBe("1.0.0")
+    expect(d.features).toBeUndefined()
+  })
+
+  test("text edited on both sides: the later edit wins", () => {
+    const d = merged(
+      (o) => {
+        Object.assign(T(o).messages.Msg0000001, {
+          text: "Early",
+          edited: "2026-11-10T10:00:00.000Z",
+        })
+      },
+      (t) => {
+        Object.assign(T(t).messages.Msg0000001, {
+          text: "Late",
+          edited: "2026-11-10T11:00:00.000Z",
+        })
+      },
+    )
+    expect(T(d).messages.Msg0000001.text).toBe("Late")
+  })
+
+  test("resolve on both sides: the later one wins; reactions merge as sets", () => {
+    const d = merged(
+      (o) => {
+        T(o).resolved = { by: author, at: "2026-11-10T12:00:00.000Z" }
+        T(o).messages.Msg0000002.reactions["👍"].push("acct:42")
+      },
+      (t) => {
+        T(t).resolved = { by: other, at: "2026-11-10T13:00:00.000Z" }
+        T(t).messages.Msg0000002.reactions = { "🎉": ["acct:7"] }
+      },
+    )
+    expect(T(d).resolved.by.id).toBe("acct:42")
+    expect(T(d).messages.Msg0000002.reactions).toEqual({ "👍": ["acct:42"], "🎉": ["acct:7"] })
+  })
+
+  test("a thread added on one side lifts a 1.0 file to 1.1", () => {
+    const plain = doc({ Frame00001: { type: "frame", parent: null, order: "a0", w: 100, h: 100 } })
+    const x = three(
+      plain,
+      () => {},
+      (t) => {
+        t.$schema = "https://getkimo.design/schema/kimo-1.1.json"
+        t.format = "1.1.0"
+        t.features = ["doc/comments"]
+        t.comments = base().comments
+      },
+    )
+    const d = mergeDocuments(x).doc as Loose
+    expect(d.format).toBe("1.1.0")
+    expect(d.features).toEqual(["doc/comments"])
+    expect(Object.keys(d.comments)).toEqual(["Thread0001"])
+    expect(errorsOf(d)).toEqual([])
+  })
+})

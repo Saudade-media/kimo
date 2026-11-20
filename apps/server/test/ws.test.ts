@@ -1,6 +1,15 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test"
-import { sealAwareness, sealUpdate } from "@kimo/sync/mp"
 import {
+  sealAwareness,
+  sealBlob,
+  sealCommentsSnapshot,
+  sealCommentsUpdate,
+  sealSnapshot,
+  sealUpdate,
+} from "@kimo/sync/mp"
+import { addressKeys } from "../src/ws"
+import {
+  bearer,
   Client,
   type Harness,
   joinAs,
@@ -440,5 +449,191 @@ describe("abuse limits", () => {
     const { client } = await joinAs(h, owner, "view")
     for (let i = 0; i < 600; i++) client.send({ type: "ping", n: i })
     expect((await client.closeInfo()).reason).toBe("RATE_LIMITED")
+  })
+})
+
+describe("comment channel (docs/spec/comments.md §4.4)", () => {
+  test("per-person comment limits key one address however it is written", () => {
+    const v4 = addressKeys("198.51.100.7")
+    for (const form of ["::ffff:198.51.100.7", "::ffff:c633:6407", "198.51.100.7:5678"])
+      expect(addressKeys(form)).toEqual(v4)
+    const a = addressKeys("2001:db8:bb:12::1")
+    expect(addressKeys("2001:0db8:00bb:0012:ffff:0:0:9")).toEqual(a)
+    expect(addressKeys("[2001:db8:bb:12::1]:443")).toEqual(a)
+    expect(addressKeys("2001:db8:bb:13::1").host).not.toBe(a.host)
+    expect(addressKeys("2001:db8:bb:13::1").net).toBe(a.net)
+  })
+
+  const commentEnv = (owner: Owner, text: string) =>
+    sealCommentsUpdate(owner.keys, new TextEncoder().encode(text))
+
+  test("a comment token joins as view on the wire, reads both logs and appends comments only", async () => {
+    const owner = await registered(h)
+    const text = await token(owner, "comment", { iat: nowSec() })
+    const { client, welcome } = await Client.join(h, owner.room.id, text)
+    expect(welcome.role).toBe("view")
+    expect(welcome.comments).toEqual({ head: 0, base: 0, snapshot: null })
+    client.send({ type: "comments-subscribe", since: 0 })
+    client.send({ type: "append-comment", cid: 1, env: await commentEnv(owner, "c1") })
+    expect(await client.next("comment-ack")).toEqual({ type: "comment-ack", cid: 1, seq: 1 })
+    // The design log refuses it.
+    client.send({ type: "append", cid: 2, env: await update(owner, "u") })
+    const denied = await client.next("denied")
+    expect([denied.code, denied.cid]).toEqual(["VIEW_ONLY", 2])
+    // A design envelope on the comment channel is refused too.
+    client.send({ type: "append-comment", cid: 3, env: await update(owner, "u") })
+    expect((await client.next("denied")).code).toBe("BAD_MESSAGE")
+    client.close()
+  })
+
+  test("a view token cannot append comments; subscribers get them, others do not", async () => {
+    const owner = await registered(h)
+    const { client: viewer } = await joinAs(h, owner, "view")
+    viewer.send({ type: "comments-subscribe", since: 0 })
+    viewer.send({ type: "append-comment", cid: 1, env: await commentEnv(owner, "x") })
+    expect((await viewer.next("denied")).code).toBe("VIEW_ONLY")
+    const { client: plain } = await joinAs(h, owner, "view")
+    const { client: editor } = await joinAs(h, owner, "edit")
+    editor.send({ type: "comments-subscribe", since: 0 })
+    editor.send({ type: "append-comment", cid: 1, env: await commentEnv(owner, "e") })
+    await editor.next("comment-ack")
+    expect((await viewer.next("comment-entries")).entries.map((e) => e.seq)).toEqual([1])
+    expect(await plain.drain("comment-entries")).toEqual([])
+    // A joiner catches up on the comment log from `since`.
+    const { client: late } = await joinAs(h, owner, "view")
+    late.send({ type: "comments-subscribe", since: 0 })
+    expect((await late.next("comment-entries")).entries.map((e) => e.seq)).toEqual([1])
+    for (const c of [viewer, plain, editor, late]) c.close()
+  })
+
+  test("only edit tokens upload comment snapshots, and a comment token uploads blobs", async () => {
+    const owner = await registered(h)
+    const { client: editor } = await joinAs(h, owner, "edit")
+    editor.send({ type: "comments-subscribe", since: 0 })
+    editor.send({ type: "append-comment", cid: 1, env: await commentEnv(owner, "e") })
+    await editor.next("comment-ack")
+    const commentText = await token(owner, "comment", { iat: nowSec() })
+    const snap = await sealCommentsSnapshot(owner.keys, 1, new Uint8Array([0]))
+    const put = (t: string) =>
+      fetch(`${h.base}/room/${owner.room.id}/comments/snapshot?upTo=1`, {
+        method: "PUT",
+        headers: bearer(t),
+        body: snap as Uint8Array<ArrayBuffer>,
+      })
+    expect((await put(commentText)).status).toBe(403)
+    expect((await put(await token(owner, "edit", { iat: nowSec() }))).status).toBe(201)
+    const got = await fetch(`${h.base}/room/${owner.room.id}/comments/snapshot`, {
+      headers: bearer(commentText),
+    })
+    expect(got.status).toBe(200)
+    expect(got.headers.get("kimo-up-to")).toBe("1")
+    // The design snapshot stays edit only.
+    const design = await sealSnapshot(owner.keys, 0, new Uint8Array([1]))
+    const designPut = await fetch(`${h.base}/room/${owner.room.id}/snapshot?upTo=0`, {
+      method: "PUT",
+      headers: bearer(commentText),
+      body: design as Uint8Array<ArrayBuffer>,
+    })
+    expect(designPut.status).toBe(403)
+    const blob = await sealBlob(owner.keys, new Uint8Array([1, 2, 3]))
+    const blobPut = await fetch(`${h.base}/blob/${owner.room.id}/${blob.id}`, {
+      method: "PUT",
+      headers: bearer(commentText),
+      body: blob.envelope as Uint8Array<ArrayBuffer>,
+    })
+    expect(blobPut.status).toBe(201)
+    editor.close()
+  })
+
+  test("comment appends are capped per token and client address per hour", async () => {
+    const owner = await registered(h)
+    const text = await token(owner, "comment", { iat: nowSec() })
+    const { client } = await Client.join(h, owner.room.id, text)
+    const env = await commentEnv(owner, "spam")
+    // The per-socket append bucket (burst 200) must not hide the hourly cap.
+    for (let i = 1; i <= 300; i++) {
+      client.send({ type: "append-comment", cid: i, env })
+      if (i % 100 === 0) {
+        await until(
+          () => client.messages.some((m) => m.type === "comment-ack" && m.cid === i),
+          5000,
+        )
+        h.clock.now += 2_000
+      }
+    }
+    // One reviewer on a shared link spends their own share, not the whole link's.
+    for (let i = 301; i <= 305; i++) client.send({ type: "append-comment", cid: i, env })
+    const denied = await client.next("denied", 5000)
+    expect(denied.code).toBe("RATE_LIMITED")
+    expect(denied.cid).toBeLessThanOrEqual(302)
+    client.close()
+  })
+
+  test("one IPv6 /48 cannot spend a shared link's comment budget", async () => {
+    const proxied = startRelay({ trustProxy: true, trustProxyHops: 1 })
+    try {
+      const owner = await registered(proxied)
+      const text = await token(owner, "comment", { iat: Math.floor(proxied.clock.now / 1000) })
+      const env = await commentEnv(owner, "spam")
+      const from = async (ip: string) =>
+        (await Client.join(proxied, owner.room.id, text, 0, { "x-forwarded-for": ip })).client
+      // Four /64s of one /48 at their own limit of 300 each fill the /48.
+      for (let n = 0; n < 4; n++) {
+        const client = await from(`2001:db8:bb:${n}::1`)
+        for (let i = 1; i <= 300; i++) {
+          client.send({ type: "append-comment", cid: i, env })
+          if (i % 100 === 0) {
+            await until(
+              () => client.messages.some((m) => m.type === "comment-ack" && m.cid === i),
+              5000,
+            )
+            proxied.clock.now += 2_000
+          }
+        }
+        client.close()
+      }
+      const next = await from("2001:db8:bb:4::1")
+      for (let i = 1; i <= 20; i++) next.send({ type: "append-comment", cid: i, env })
+      const denied = await next.next("denied", 5000)
+      expect(denied.code).toBe("RATE_LIMITED")
+      expect(denied.cid).toBeLessThanOrEqual(12)
+      next.close()
+      const other = await from("2001:db8:cc:0::1")
+      other.send({ type: "append-comment", cid: 1, env })
+      expect((await other.next("comment-ack", 5000)).cid).toBe(1)
+      other.close()
+    } finally {
+      await proxied.stop()
+    }
+  })
+
+  test("a comment-only link fills its own storage budget, and editors still write", async () => {
+    const small = startRelay({ commentQuotaBytes: 4096 })
+    try {
+      const owner = await registered(small)
+      const text = await token(owner, "comment", { iat: Math.floor(small.clock.now / 1000) })
+      const { client } = await Client.join(small, owner.room.id, text)
+      const env = await commentEnv(owner, "x".repeat(1000))
+      for (let i = 1; i <= 8; i++) client.send({ type: "append-comment", cid: i, env })
+      const denied = await client.next("denied", 3000)
+      expect([denied.code, denied.cid]).toEqual(["QUOTA_EXCEEDED", 4])
+      const blob = await sealBlob(owner.keys, new Uint8Array(2000))
+      const blobPut = await fetch(`${small.base}/blob/${owner.room.id}/${blob.id}`, {
+        method: "PUT",
+        headers: bearer(text),
+        body: blob.envelope as Uint8Array<ArrayBuffer>,
+      })
+      expect(blobPut.status).not.toBe(201)
+      const { client: editor } = await joinAs(small, owner, "edit")
+      editor.send({ type: "append", cid: 1, env: await update(owner, "design") })
+      expect((await editor.next("ack")).cid).toBe(1)
+      editor.send({ type: "comments-subscribe", since: 0 })
+      editor.send({ type: "append-comment", cid: 2, env })
+      expect((await editor.next("comment-ack")).cid).toBe(2)
+      client.close()
+      editor.close()
+    } finally {
+      await small.stop()
+    }
   })
 })

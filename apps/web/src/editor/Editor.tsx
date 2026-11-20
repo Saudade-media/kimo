@@ -14,7 +14,7 @@
 import { referencedAssets } from "@kimo/core-schema"
 import { documentView } from "@kimo/editor-state"
 import { createLayoutEngine, type LayoutResult } from "@kimo/layout"
-import { KIMO_OPEN_FILTER } from "@kimo/platform"
+import { formatDeepLink, KIMO_OPEN_FILTER } from "@kimo/platform"
 import type { DocumentFontFace, FontFaceKey, OverlayTheme } from "@kimo/renderer"
 import { browserIconProvider, createRenderer } from "@kimo/renderer/browser"
 import { EmptyState } from "@kimo/ui"
@@ -37,6 +37,8 @@ import {
   type IconPickerRequest,
 } from "../canvas/contract"
 import { toggleViewPref, useCanvasViewPrefs } from "../canvas/view-prefs"
+import { useCommentIdentity } from "../comments/identity"
+import { type UseComments, useComments } from "../comments/useComments"
 import { CanvasConflictOverlay, useNextConflictShortcut } from "../conflicts"
 import {
   copySelectionAsPng,
@@ -80,6 +82,7 @@ import type { Capabilities } from "../multiplayer/model"
 import type { SharedSession } from "../multiplayer/share"
 import { TopbarShare, TopbarSyncStatus } from "../multiplayer/ui/TopbarShare"
 import { useEditorMultiplayer } from "../multiplayer-canvas/MultiplayerCanvas"
+import { isUntitledRef } from "../platform/contract"
 import { useOpenSettings, useRuntime } from "../platform/runtime"
 import { exitSelection, PreviewOverlay, pickPreviewFrame, usePreviewTarget } from "../preview"
 import { diskPath, lastHomePath, navigate } from "../router"
@@ -471,6 +474,8 @@ function EditorShell({
   const [iconRequest, setIconRequest] = useState<IconPickerRequest | null>(null)
   // M3: libraries, expanded view, commands, toasts, confirms (one per open file).
   const m3 = useMemo(() => new M3Controller(session, () => canvas.current), [session])
+  /** Comment mode (board 51), set below once the Right Card header exists. */
+  const commentsRef = useRef<UseComments | null>(null)
   useEffect(() => m3.attach(), [m3])
   useLibraries(m3)
   const panels = useBusValue(m3.panels)
@@ -720,6 +725,11 @@ function EditorShell({
         return
       }
       if (!spec?.enabled) return
+      // C toggles comment mode (docs/spec/comments.md §7).
+      if (id === "comment" && session.ui.getState().tool === "comment") {
+        session.ui.getState().setTool("select")
+        return
+      }
       if (canvas.current) canvas.current.activateTool(id)
       else if (spec.tool) session.ui.getState().setTool(spec.tool)
     },
@@ -901,6 +911,11 @@ function EditorShell({
         toggleViewPref(platform.settings, "canvas.pixelGrid", (err) =>
           m3.toast({ tone: "danger", text: failureText(t("errors.changeViewSetting"), err) }),
         )
+        return
+      }
+      if (matches("view.comments", e)) {
+        e.preventDefault()
+        commentsRef.current?.toggleHidden()
         return
       }
       if (matches("view.rulers", e)) {
@@ -1187,6 +1202,26 @@ function EditorShell({
     />
   )
 
+  // Board 51: comment mode, its pins over the canvas and the Comments panel.
+  const commentIdentity = useCommentIdentity(shareKey)
+  const comments = useComments({
+    store: session.store,
+    ui: session.ui,
+    layout,
+    fileKey: room ? room.room : session.id,
+    platform,
+    m3,
+    displayName: commentIdentity.displayName,
+    guestLabel: commentIdentity.guestLabel,
+    ...(commentIdentity.setDisplayName ? { setDisplayName: commentIdentity.setDisplayName } : {}),
+    room: room?.room ?? null,
+    ...(doc && platform.capabilities.deepLinks && !isUntitledRef(doc.ref)
+      ? { deepLink: () => formatDeepLink({ action: "open", path: doc.ref }) }
+      : {}),
+    header: rightHeader,
+  })
+  commentsRef.current = comments
+
   return (
     <M3Context.Provider value={m3}>
       <ViewOnlyContext.Provider value={viewOnly}>
@@ -1293,6 +1328,8 @@ function EditorShell({
                 agentCanvas={agentCanvas}
                 noteAuthor={agentPanel.noteAuthor}
                 onContextMenu={canvasMenu.onContextMenu}
+                onComment={(g) => commentsRef.current?.onComment(g)}
+                onCommentDraft={(r) => commentsRef.current?.onCommentDraft(r)}
                 libraries={m3.libraries()}
                 route={(ops) => (session.route ? session.route(ops) : ops)}
                 onNotice={(n) => m3.toast({ tone: n.tone, text: n.text, action: n.action })}
@@ -1319,6 +1356,7 @@ function EditorShell({
               <div className="editor__canvas-layers">
                 {agents.canvasLayer}
                 {multiplayer.canvasLayer}
+                {comments.layer}
               </div>
               {agentPanel.modeSummary}
               {conflicts && (
@@ -1326,6 +1364,7 @@ function EditorShell({
               )}
               <FloatingToolbar
                 ui={session.ui}
+                badges={comments.active ? undefined : { comment: comments.unread }}
                 onActivate={activate}
                 {...(agentPanel.controller ? { onAsk: openAgentTab } : {})}
                 viewOnly={viewOnly}
@@ -1351,6 +1390,7 @@ function EditorShell({
               )}
             </main>
             <RightPanel
+              override={cards.right ? null : comments.panel}
               header={rightHeader}
               collapsed={cards.right}
               agentActivity={agentTabActivity}

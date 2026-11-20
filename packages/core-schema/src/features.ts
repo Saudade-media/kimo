@@ -15,6 +15,7 @@ export const FEATURES = {
   "fill/shader": 'Shader paints (`kind: "shader"`).',
   "node/script": 'Script nodes (`type: "script"`).',
   "node/browser": 'Browser nodes (`type: "browser"`).',
+  "doc/comments": "Canvas comments: root `comments` (format 1.1).",
   "merge/conflicts":
     "Stored merge conflicts: root `conflicts` table and `merge` labels (written by `kimo merge`).",
 } as const

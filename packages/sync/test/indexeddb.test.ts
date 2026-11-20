@@ -341,4 +341,22 @@ describe("IndexedDbProvider", () => {
     expect(opened.toDocument().nodes[id("child", 0)]?.parent).toBe(id("frame", 0))
     expect(opened.toDocument()).toEqual(b.toDocument())
   })
+
+  test("keeps the file's comments: a thread written before a reload is there after it", async () => {
+    const name = dbName()
+    const store = new YjsDocStore()
+    const provider = new IndexedDbProvider(name)
+    await provider.attach(store)
+    const author = { id: "dev:abc", name: "Ana", kind: "person" as const }
+    const { threadId } = store.comments.createThread(
+      { anchor: { x: 10, y: 20 }, message: { author, text: "Move this up" } },
+      "user",
+    )
+    store.comments.reply(threadId, { author, text: "Done" }, "user")
+    await provider.detach()
+
+    const opened = await reopen(name)
+    expect(opened.comments.toJSON()).toEqual(store.comments.toJSON())
+    expect(opened.toDocument().comments?.[threadId]).toBeDefined()
+  })
 })

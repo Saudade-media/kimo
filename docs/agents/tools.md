@@ -54,6 +54,19 @@ Tool descriptions stay short (every model call carries them); the details are he
   referencing a font.
 - `kimo_styles {apply: true}` needs scope edit plus the globals grant.
 
+## Comments
+
+- `kimo_comments`: `list` (open threads; `includeResolved`, `page`, `unreadOnly` = the last
+  message is not yours), `read {threadId}`, `reply {threadId, text}`, `resolve` / `unresolve`,
+  `react {threadId, messageId, emoji}` (toggles).
+- `create {anchor, text}` starts a thread. Use it only when the person asked you to comment ("leave
+  review comments on this page"), never on your own. `anchor.node` is a top-level frame,
+  component or group (`x`, `y` are an offset from its corner); without it, page coordinates.
+- Text is a Markdown subset: `**bold**`, `*italic*`, `~strike~`, `[label](https://…)`, `- ` and
+  `1. ` lists, mentions as `@[Name](author id)`.
+- There is no edit or delete. A view-only room gives `READ_ONLY`. Comments are not in undo and need
+  no `baseRevision`.
+
 ## Output
 
 - `kimo_render`: the same CanvasKit engine as the canvas; always reflects every committed edit.

@@ -176,7 +176,7 @@ const RECORD_KEYS = new Set([
 const OPAQUE_VALUE_RECORDS = new Set(["meta", "args", "inputs", "uniforms", "options"])
 
 /** Header members laid out as one-entry-per-line tables. */
-const TABLES = new Set(["variables", "assets", "conflicts", "nodes"])
+const TABLES = new Set(["variables", "assets", "conflicts", "comments", "nodes"])
 
 type Mode = "struct" | "record" | "opaque"
 
@@ -215,6 +215,7 @@ const ROOT_ORDER: readonly string[] = [
   "pages",
   "merge",
   "conflicts",
+  "comments",
   "nodes",
 ]
 const ROOT_MEMBERS: ReadonlySet<string> = new Set(ROOT_ORDER)
@@ -225,6 +226,7 @@ const ROOT_ONLY_MODES: ReadonlyMap<string, Mode> = new Map<string, Mode>([
   ["pages", "record"],
   ["merge", "struct"],
   ["conflicts", "record"],
+  ["comments", "record"],
 ])
 
 /** Root order (§15.1 rule 2): defined members by rank, then unknown ones by code unit, `nodes` last. */

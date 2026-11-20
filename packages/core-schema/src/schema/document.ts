@@ -5,6 +5,7 @@
 import Type, { type Static, type TSchema } from "typebox"
 import { FEATURE_PATTERN } from "../features"
 import { SCHEMA_URL, SCHEMA_URL_PATTERN } from "../version"
+import { Comments } from "./comments"
 import { ShadowEffect } from "./graphics"
 import { Conflicts, MergeInfo } from "./merge"
 import { Node } from "./nodes"
@@ -159,6 +160,9 @@ export type Page = Static<typeof Page>
 /** Pattern of `format` accepted by the 1.0 schema (any 1.0 patch). */
 export const FORMAT_1_0_PATTERN = "^1\\.0\\.(0|[1-9][0-9]*)$"
 
+/** Pattern of `format` accepted by this schema: 1.0 or 1.1, any patch. */
+export const FORMAT_1_X_PATTERN = "^1\\.[01]\\.(0|[1-9][0-9]*)$"
+
 /** The `.kimo` document root (format 1.0). */
 export const KimoDocument = Strict(
   {
@@ -166,7 +170,7 @@ export const KimoDocument = Strict(
       pattern: SCHEMA_URL_PATTERN,
       description: `For format 1.0: "${SCHEMA_URL}". Another version's URL is only a SCHEMA_URL_MISMATCH warning in validate().`,
     }),
-    format: Type.String({ pattern: FORMAT_1_0_PATTERN }),
+    format: Type.String({ pattern: FORMAT_1_X_PATTERN }),
     features: opt(Type.Array(Type.String({ pattern: FEATURE_PATTERN }), { uniqueItems: true })),
     meta: opt(DocumentMeta),
     themes: opt(Themes),
@@ -184,9 +188,10 @@ export const KimoDocument = Strict(
     ),
     merge: opt(MergeInfo),
     conflicts: opt(Conflicts),
+    comments: opt(Comments),
     nodes: RecordOf(ID_PATTERN, Node),
   },
-  { title: "Kimo document (.kimo), format 1.0" },
+  { title: "Kimo document (.kimo), format 1.0 and 1.1" },
 )
 export type KimoDocument = Static<typeof KimoDocument>
 

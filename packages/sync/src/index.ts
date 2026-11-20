@@ -16,6 +16,13 @@ export type { DocStore } from "@kimo/editor-state"
 export { type AwarenessHost, KimoAwareness, parseClaims } from "./awareness"
 export { type BindClaimsOptions, bindClaimsToPresence } from "./claims-presence"
 export {
+  CommentChannel,
+  type CommentReplica,
+  type CommentReplicaStore,
+  type CommentSigner,
+  MemoryCommentReplicaStore,
+} from "./comment-channel"
+export {
   countChangedNodes,
   type DocumentMerge,
   FileDocumentProvider,
@@ -39,6 +46,7 @@ export {
   WindowSyncProvider,
   type WindowSyncProviderOptions,
 } from "./host-sync"
+export * from "./mp/comments"
 export {
   type Awareness,
   type CreateNetworkProvider,
@@ -51,7 +59,11 @@ export {
   type PresenceState,
   type TextPresence,
 } from "./network"
-export { VIEW_ONLY_REASON } from "./network-provider"
+export {
+  COMMENTS_NO_KEY_REASON,
+  COMMENTS_UNSUPPORTED_REASON,
+  VIEW_ONLY_REASON,
+} from "./network-provider"
 export { BaseProvider, type SyncProvider, type SyncStatus, type SyncStatusEvent } from "./provider"
 export { MemoryRoomStateStore, type RoomCursor, type RoomStateStore } from "./room-state"
 export { recoveryIdFor, sha256Sync } from "./sha256"

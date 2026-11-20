@@ -24,6 +24,9 @@ export const ClientType = {
   caughtUp: 4,
   refresh: 5,
   ping: 6,
+  /** Comment channel (docs/spec/comments.md §4.4). */
+  appendComment: 7,
+  commentsSubscribe: 8,
 } as const
 
 export const RelayType = {
@@ -38,7 +41,22 @@ export const RelayType = {
   denied: 24,
   token: 25,
   pong: 26,
+  /** Comment channel, only to connections that subscribed (docs/spec/comments.md §4.4). */
+  commentEntries: 27,
+  commentSnapshot: 28,
+  commentCompact: 29,
+  commentAck: 30,
 } as const
+
+/** `welcome` feature bits (trailing field). */
+export const RelayFeature = { comments: 1 } as const
+
+/** The comment log's state in `welcome` (feature bit 0). */
+export interface CommentLogInfo {
+  head: number
+  base: number
+  snapshot: SnapshotInfo | null
+}
 
 export interface RelayLimits {
   maxEntryBytes: number
@@ -93,6 +111,8 @@ export type ClientMessage =
   | { type: "caught-up"; seq: number }
   | { type: "refresh"; token: string }
   | { type: "ping"; n: number }
+  | { type: "append-comment"; cid: number; env: Uint8Array }
+  | { type: "comments-subscribe"; since: number }
 
 export type RelayMessage =
   | {
@@ -109,6 +129,8 @@ export type RelayMessage =
       snapshot: SnapshotInfo | null
       limits: RelayLimits
       peers: PeerInfo[]
+      /** Set by relays with the comment channel; older relays send nothing after `peers`. */
+      comments?: CommentLogInfo
     }
   | { type: "entries"; entries: LogEntry[] }
   | { type: "ack"; cid: number; seq: number }
@@ -120,6 +142,10 @@ export type RelayMessage =
   | { type: "denied"; code: MpErrorCode; cid: number; message: string }
   | { type: "token"; exp: number }
   | { type: "pong"; n: number }
+  | { type: "comment-entries"; entries: LogEntry[] }
+  | { type: "comment-snapshot"; info: SnapshotInfo }
+  | { type: "comment-compact"; upTo: number }
+  | { type: "comment-ack"; cid: number; seq: number }
 
 // Encoding ------------------------------------------------------------------------------------
 
@@ -199,6 +225,14 @@ export function encodeClientMessage(message: ClientMessage): Uint8Array {
         .done()
     case "ping":
       return w.uint("type", ClientType.ping).uint("n", message.n).done()
+    case "append-comment":
+      return w
+        .uint("type", ClientType.appendComment)
+        .uint("cid", message.cid)
+        .bytes("env", message.env)
+        .done()
+    case "comments-subscribe":
+      return w.uint("type", ClientType.commentsSubscribe).uint("since", message.since).done()
     default:
       throw badMessage("unknown client message type")
   }
@@ -233,15 +267,45 @@ export function encodeRelayMessage(message: RelayMessage): Uint8Array {
         .uint("awarenessHz", limits.awarenessHz)
         .uint("peers", message.peers.length)
       for (const peer of message.peers) w.peer(peer)
+      const c = message.comments
+      if (c) {
+        w.uint("features", RelayFeature.comments)
+          .uint("commentHead", c.head)
+          .uint("commentBase", c.base)
+          .flag(c.snapshot !== null)
+        if (c.snapshot)
+          w.uint("upTo", c.snapshot.upTo)
+            .uint("gen", c.snapshot.gen)
+            .uint("bytes", c.snapshot.bytes)
+      }
       return w.done()
     }
     case "entries":
-      w.uint("type", RelayType.entries).uint("n", message.entries.length)
+    case "comment-entries":
+      w.uint(
+        "type",
+        message.type === "entries" ? RelayType.entries : RelayType.commentEntries,
+      ).uint("n", message.entries.length)
       for (const entry of message.entries) {
         if (!isMpOrigin(entry.origin)) throw badMessage("invalid entry origin")
         w.uint("seq", entry.seq).string("origin", entry.origin).bytes("env", entry.env)
       }
       return w.done()
+    case "comment-snapshot":
+      return w
+        .uint("type", RelayType.commentSnapshot)
+        .uint("upTo", message.info.upTo)
+        .uint("gen", message.info.gen)
+        .uint("bytes", message.info.bytes)
+        .done()
+    case "comment-compact":
+      return w.uint("type", RelayType.commentCompact).uint("upTo", message.upTo).done()
+    case "comment-ack":
+      return w
+        .uint("type", RelayType.commentAck)
+        .uint("cid", message.cid)
+        .uint("seq", message.seq)
+        .done()
     case "ack":
       return w.uint("type", RelayType.ack).uint("cid", message.cid).uint("seq", message.seq).done()
     case "awareness":
@@ -393,6 +457,12 @@ export function decodeClientMessage(bytes: Uint8Array): ClientMessage {
     case ClientType.ping:
       message = { type: "ping", n: r.uint("n") }
       break
+    case ClientType.appendComment:
+      message = { type: "append-comment", cid: r.uint("cid"), env: r.bytes("env") }
+      break
+    case ClientType.commentsSubscribe:
+      message = { type: "comments-subscribe", since: r.uint("since") }
+      break
     default:
       throw badMessage(`unknown client message type ${type}`)
   }
@@ -432,6 +502,19 @@ export function decodeRelayMessage(bytes: Uint8Array): RelayMessage | null {
       const peers: PeerInfo[] = []
       for (let i = 0; i < n; i++)
         peers.push({ peer: r.uint("peer"), role: r.role(), origin: r.origin() })
+      // Trailing fields from newer relays (docs/spec/comments.md §4.4).
+      let comments: CommentLogInfo | undefined
+      if (r.remaining > 0) {
+        const features = r.uint("features")
+        if (features & RelayFeature.comments) {
+          const head = r.uint("commentHead")
+          const base = r.uint("commentBase")
+          const snapshot = r.flag("hasCommentSnapshot")
+            ? { upTo: r.uint("upTo"), gen: r.uint("gen"), bytes: r.uint("bytes") }
+            : null
+          comments = { head, base, snapshot }
+        }
+      }
       return {
         type: "welcome",
         peer,
@@ -446,8 +529,25 @@ export function decodeRelayMessage(bytes: Uint8Array): RelayMessage | null {
         snapshot,
         limits,
         peers,
+        ...(comments ? { comments } : {}),
       }
     }
+    case RelayType.commentEntries: {
+      const n = r.count("entries", 3)
+      const entries: LogEntry[] = []
+      for (let i = 0; i < n; i++)
+        entries.push({ seq: r.uint("seq"), origin: r.origin(), env: r.bytes("env") })
+      return { type: "comment-entries", entries }
+    }
+    case RelayType.commentSnapshot:
+      return {
+        type: "comment-snapshot",
+        info: { upTo: r.uint("upTo"), gen: r.uint("gen"), bytes: r.uint("bytes") },
+      }
+    case RelayType.commentCompact:
+      return { type: "comment-compact", upTo: r.uint("upTo") }
+    case RelayType.commentAck:
+      return { type: "comment-ack", cid: r.uint("cid"), seq: r.uint("seq") }
     case RelayType.entries: {
       const n = r.count("entries", 3)
       const entries: LogEntry[] = []

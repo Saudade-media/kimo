@@ -8206,6 +8206,761 @@
         "openWorldHint": false,
         "title": "Build with a script"
       }
+    },
+    {
+      "name": "kimo_comments",
+      "title": "Comments",
+      "description": "Canvas comments (guide tools). create only when the person asked you to comment.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "docId",
+          "action"
+        ],
+        "properties": {
+          "docId": {
+            "type": "string",
+            "description": "Document id (d_…) from the turn context, kimo_get_state or kimo_open."
+          },
+          "action": {
+            "type": "string",
+            "enum": [
+              "list",
+              "read",
+              "create",
+              "reply",
+              "resolve",
+              "unresolve",
+              "react"
+            ],
+            "description": "Action."
+          },
+          "threadId": {
+            "type": "string",
+            "description": "Thread."
+          },
+          "messageId": {
+            "type": "string",
+            "description": "Message."
+          },
+          "text": {
+            "type": "string",
+            "description": "Text."
+          },
+          "emoji": {
+            "type": "string",
+            "description": "Emoji."
+          },
+          "node": {
+            "type": "string",
+            "description": "Pin frame."
+          },
+          "page": {
+            "type": "string",
+            "description": "Page."
+          },
+          "x": {
+            "type": "number",
+            "description": "X."
+          },
+          "y": {
+            "type": "number",
+            "description": "Y."
+          },
+          "w": {
+            "type": "number",
+            "description": "Area w.",
+            "minimum": 1
+          },
+          "h": {
+            "type": "number",
+            "description": "Area h.",
+            "minimum": 1
+          },
+          "includeResolved": {
+            "type": "boolean",
+            "description": "list."
+          },
+          "unreadOnly": {
+            "type": "boolean",
+            "description": "list."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "ok",
+          "summary"
+        ],
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "description": "True on success; false means errors[] is set and nothing changed."
+          },
+          "summary": {
+            "type": "string",
+            "description": "Short human-readable summary."
+          },
+          "doc": {
+            "type": "object",
+            "required": [
+              "id",
+              "path",
+              "dirty",
+              "readOnly"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "description": "docId: d_<hash(path)>_<epoch>. Changes when the file is reloaded."
+              },
+              "path": {
+                "type": "string",
+                "description": "Canonical absolute path, untitled:<id>, or kimo-room:<room> for a room joined from a share link."
+              },
+              "dirty": {
+                "type": "boolean",
+                "description": "Unsaved edits exist."
+              },
+              "readOnly": {
+                "type": "boolean",
+                "description": "Edits are refused (READ_ONLY)."
+              },
+              "lastSavedRevision": {
+                "type": "object",
+                "required": [
+                  "epoch",
+                  "seq"
+                ],
+                "properties": {
+                  "epoch": {
+                    "type": "string",
+                    "description": "Random id minted when the document was (re)loaded.",
+                    "minLength": 1
+                  },
+                  "seq": {
+                    "type": "integer",
+                    "description": "Commits since the epoch began.",
+                    "minimum": 0
+                  }
+                },
+                "additionalProperties": false,
+                "description": "Opaque revision token {epoch, seq}. Pass back verbatim as baseRevision."
+              }
+            },
+            "additionalProperties": false,
+            "description": "The document the call acted on."
+          },
+          "revision": {
+            "type": "object",
+            "required": [
+              "before",
+              "after"
+            ],
+            "properties": {
+              "before": {
+                "type": "object",
+                "required": [
+                  "epoch",
+                  "seq"
+                ],
+                "properties": {
+                  "epoch": {
+                    "type": "string",
+                    "description": "Random id minted when the document was (re)loaded.",
+                    "minLength": 1
+                  },
+                  "seq": {
+                    "type": "integer",
+                    "description": "Commits since the epoch began.",
+                    "minimum": 0
+                  }
+                },
+                "additionalProperties": false,
+                "description": "Opaque revision token {epoch, seq}. Pass back verbatim as baseRevision."
+              },
+              "after": {
+                "type": "object",
+                "required": [
+                  "epoch",
+                  "seq"
+                ],
+                "properties": {
+                  "epoch": {
+                    "type": "string",
+                    "description": "Random id minted when the document was (re)loaded.",
+                    "minLength": 1
+                  },
+                  "seq": {
+                    "type": "integer",
+                    "description": "Commits since the epoch began.",
+                    "minimum": 0
+                  }
+                },
+                "additionalProperties": false,
+                "description": "Opaque revision token {epoch, seq}. Pass back verbatim as baseRevision."
+              }
+            },
+            "additionalProperties": false,
+            "description": "Revision before and after the call (equal for reads and dry runs)."
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "code",
+                "message"
+              ],
+              "properties": {
+                "code": {
+                  "type": "string",
+                  "description": "Warning code (lint code such as TEXT_NO_FILL, or a host code)."
+                },
+                "message": {
+                  "type": "string",
+                  "description": "Explanation."
+                },
+                "nodeId": {
+                  "type": "string",
+                  "description": "Node the warning is about."
+                },
+                "fix": {
+                  "type": "string",
+                  "description": "Suggested fix."
+                }
+              },
+              "additionalProperties": false
+            },
+            "description": "Non-fatal issues to fix in a later call."
+          },
+          "errors": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "code",
+                "message"
+              ],
+              "properties": {
+                "code": {
+                  "type": "string",
+                  "enum": [
+                    "DOCUMENT_NOT_OPEN",
+                    "DOCUMENT_LOCKED",
+                    "LOAD_FAILED",
+                    "READ_ONLY",
+                    "REVISION_CONFLICT",
+                    "AREA_BUSY",
+                    "NODE_NOT_FOUND",
+                    "NODE_EXISTS",
+                    "INVALID_PROPERTY",
+                    "INVALID_INPUT",
+                    "SCHEMA_VIOLATION",
+                    "OUT_OF_SCOPE",
+                    "INSTANCE_STRUCTURE",
+                    "CYCLE",
+                    "BATCH_TOO_LARGE",
+                    "ASSET_NOT_FOUND",
+                    "FILE_EXISTS",
+                    "FILE_NOT_FOUND",
+                    "TIMEOUT",
+                    "PERMISSION_DENIED",
+                    "APP_NOT_RUNNING",
+                    "PROTOCOL_MISMATCH",
+                    "UNSUPPORTED",
+                    "RATE_LIMITED",
+                    "INTERNAL"
+                  ],
+                  "description": "Stable error code (see kimo://docs/errors)."
+                },
+                "message": {
+                  "type": "string",
+                  "description": "What went wrong, for the agent."
+                },
+                "path": {
+                  "type": "string",
+                  "description": "Input location, e.g. ops[3].id."
+                },
+                "nodeId": {
+                  "type": "string",
+                  "description": "Node the error is about."
+                },
+                "suggestion": {
+                  "type": "string",
+                  "description": "How to fix or what to call next."
+                },
+                "retryable": {
+                  "type": "boolean",
+                  "description": "True when the same call may succeed later unchanged."
+                },
+                "detail": {
+                  "type": "object",
+                  "required": [
+                    "kind"
+                  ],
+                  "properties": {
+                    "kind": {
+                      "type": "string",
+                      "description": "Detail discriminator (revision, lock, plan, schema)."
+                    }
+                  },
+                  "additionalProperties": true,
+                  "description": "Code-specific detail: REVISION_CONFLICT {current, changed[]} or {kind: human-edit, ids[], by}; AREA_BUSY {kind: area, holder, holderLabel?, ids[], touched[], since}; DOCUMENT_NOT_OPEN {currentDocId?}; DOCUMENT_LOCKED {holder}; SCHEMA_VIOLATION {issue}; BATCH_TOO_LARGE {limit, newLayers}."
+                }
+              },
+              "additionalProperties": false
+            },
+            "description": "Present when ok is false."
+          },
+          "rolledBack": {
+            "type": "boolean",
+            "description": "Present (true) when ok is false."
+          },
+          "retryId": {
+            "type": "string",
+            "description": "Fix and rerun this call: {docId, retryId, edits}."
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "threads": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "id",
+                    "number",
+                    "anchor",
+                    "resolved",
+                    "messageCount",
+                    "first"
+                  ],
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "description": "Thread id."
+                    },
+                    "number": {
+                      "type": "integer",
+                      "description": "Display number (#n).",
+                      "minimum": 1
+                    },
+                    "anchor": {
+                      "type": "object",
+                      "required": [
+                        "x",
+                        "y"
+                      ],
+                      "properties": {
+                        "page": {
+                          "type": "string",
+                          "description": "Page id."
+                        },
+                        "node": {
+                          "type": "string",
+                          "description": "Top-level frame, component or group the pin moves with."
+                        },
+                        "x": {
+                          "type": "number",
+                          "description": "With node: offset from its top-left. Without: page coordinates."
+                        },
+                        "y": {
+                          "type": "number",
+                          "description": "Y, as x."
+                        },
+                        "w": {
+                          "type": "number",
+                          "description": "Area width.",
+                          "minimum": 0
+                        },
+                        "h": {
+                          "type": "number",
+                          "description": "Area height.",
+                          "minimum": 0
+                        },
+                        "detached": {
+                          "type": "boolean",
+                          "description": "The anchored node was deleted."
+                        }
+                      },
+                      "additionalProperties": false,
+                      "description": "Where the pin is."
+                    },
+                    "resolved": {
+                      "type": "boolean",
+                      "description": "Resolved."
+                    },
+                    "messageCount": {
+                      "type": "integer",
+                      "description": "Messages.",
+                      "minimum": 1
+                    },
+                    "first": {
+                      "type": "object",
+                      "required": [
+                        "id",
+                        "author",
+                        "at",
+                        "text"
+                      ],
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "description": "Message id."
+                        },
+                        "author": {
+                          "type": "object",
+                          "required": [
+                            "name",
+                            "kind",
+                            "id"
+                          ],
+                          "properties": {
+                            "name": {
+                              "type": "string",
+                              "description": "Display name."
+                            },
+                            "kind": {
+                              "type": "string",
+                              "enum": [
+                                "person",
+                                "agent"
+                              ],
+                              "description": "Person or agent."
+                            },
+                            "id": {
+                              "type": "string",
+                              "description": "Author id (acct:, dev: or agent:)."
+                            }
+                          },
+                          "additionalProperties": false,
+                          "description": "Who wrote it."
+                        },
+                        "at": {
+                          "type": "string",
+                          "description": "Posted at (RFC 3339)."
+                        },
+                        "text": {
+                          "type": "string",
+                          "description": "Text: Markdown subset, mentions as @[Name](id)."
+                        },
+                        "edited": {
+                          "type": "string",
+                          "description": "Last edit."
+                        },
+                        "reactions": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "required": [
+                              "emoji",
+                              "count"
+                            ],
+                            "properties": {
+                              "emoji": {
+                                "type": "string",
+                                "description": "Emoji."
+                              },
+                              "count": {
+                                "type": "integer",
+                                "description": "How many reacted.",
+                                "minimum": 1
+                              }
+                            },
+                            "additionalProperties": false,
+                            "description": "One reaction."
+                          },
+                          "description": "Reactions."
+                        },
+                        "images": {
+                          "type": "integer",
+                          "description": "Attached images.",
+                          "minimum": 1
+                        }
+                      },
+                      "additionalProperties": false,
+                      "description": "The opening message."
+                    },
+                    "last": {
+                      "type": "object",
+                      "required": [
+                        "id",
+                        "author",
+                        "at",
+                        "text"
+                      ],
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "description": "Message id."
+                        },
+                        "author": {
+                          "type": "object",
+                          "required": [
+                            "name",
+                            "kind",
+                            "id"
+                          ],
+                          "properties": {
+                            "name": {
+                              "type": "string",
+                              "description": "Display name."
+                            },
+                            "kind": {
+                              "type": "string",
+                              "enum": [
+                                "person",
+                                "agent"
+                              ],
+                              "description": "Person or agent."
+                            },
+                            "id": {
+                              "type": "string",
+                              "description": "Author id (acct:, dev: or agent:)."
+                            }
+                          },
+                          "additionalProperties": false,
+                          "description": "Who wrote it."
+                        },
+                        "at": {
+                          "type": "string",
+                          "description": "Posted at (RFC 3339)."
+                        },
+                        "text": {
+                          "type": "string",
+                          "description": "Text: Markdown subset, mentions as @[Name](id)."
+                        },
+                        "edited": {
+                          "type": "string",
+                          "description": "Last edit."
+                        },
+                        "reactions": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "required": [
+                              "emoji",
+                              "count"
+                            ],
+                            "properties": {
+                              "emoji": {
+                                "type": "string",
+                                "description": "Emoji."
+                              },
+                              "count": {
+                                "type": "integer",
+                                "description": "How many reacted.",
+                                "minimum": 1
+                              }
+                            },
+                            "additionalProperties": false,
+                            "description": "One reaction."
+                          },
+                          "description": "Reactions."
+                        },
+                        "images": {
+                          "type": "integer",
+                          "description": "Attached images.",
+                          "minimum": 1
+                        }
+                      },
+                      "additionalProperties": false,
+                      "description": "The latest reply."
+                    }
+                  },
+                  "additionalProperties": false,
+                  "description": "One thread."
+                },
+                "description": "list."
+              },
+              "thread": {
+                "type": "object",
+                "required": [
+                  "id",
+                  "number",
+                  "anchor",
+                  "resolved",
+                  "messages"
+                ],
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "description": "Thread id."
+                  },
+                  "number": {
+                    "type": "integer",
+                    "description": "Display number.",
+                    "minimum": 1
+                  },
+                  "anchor": {
+                    "type": "object",
+                    "required": [
+                      "x",
+                      "y"
+                    ],
+                    "properties": {
+                      "page": {
+                        "type": "string",
+                        "description": "Page id."
+                      },
+                      "node": {
+                        "type": "string",
+                        "description": "Top-level frame, component or group the pin moves with."
+                      },
+                      "x": {
+                        "type": "number",
+                        "description": "With node: offset from its top-left. Without: page coordinates."
+                      },
+                      "y": {
+                        "type": "number",
+                        "description": "Y, as x."
+                      },
+                      "w": {
+                        "type": "number",
+                        "description": "Area width.",
+                        "minimum": 0
+                      },
+                      "h": {
+                        "type": "number",
+                        "description": "Area height.",
+                        "minimum": 0
+                      },
+                      "detached": {
+                        "type": "boolean",
+                        "description": "The anchored node was deleted."
+                      }
+                    },
+                    "additionalProperties": false,
+                    "description": "Where the pin is."
+                  },
+                  "resolved": {
+                    "type": "boolean",
+                    "description": "Resolved."
+                  },
+                  "messages": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "required": [
+                        "id",
+                        "author",
+                        "at",
+                        "text"
+                      ],
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "description": "Message id."
+                        },
+                        "author": {
+                          "type": "object",
+                          "required": [
+                            "name",
+                            "kind",
+                            "id"
+                          ],
+                          "properties": {
+                            "name": {
+                              "type": "string",
+                              "description": "Display name."
+                            },
+                            "kind": {
+                              "type": "string",
+                              "enum": [
+                                "person",
+                                "agent"
+                              ],
+                              "description": "Person or agent."
+                            },
+                            "id": {
+                              "type": "string",
+                              "description": "Author id (acct:, dev: or agent:)."
+                            }
+                          },
+                          "additionalProperties": false,
+                          "description": "Who wrote it."
+                        },
+                        "at": {
+                          "type": "string",
+                          "description": "Posted at (RFC 3339)."
+                        },
+                        "text": {
+                          "type": "string",
+                          "description": "Text: Markdown subset, mentions as @[Name](id)."
+                        },
+                        "edited": {
+                          "type": "string",
+                          "description": "Last edit."
+                        },
+                        "reactions": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "required": [
+                              "emoji",
+                              "count"
+                            ],
+                            "properties": {
+                              "emoji": {
+                                "type": "string",
+                                "description": "Emoji."
+                              },
+                              "count": {
+                                "type": "integer",
+                                "description": "How many reacted.",
+                                "minimum": 1
+                              }
+                            },
+                            "additionalProperties": false,
+                            "description": "One reaction."
+                          },
+                          "description": "Reactions."
+                        },
+                        "images": {
+                          "type": "integer",
+                          "description": "Attached images.",
+                          "minimum": 1
+                        }
+                      },
+                      "additionalProperties": false,
+                      "description": "One message."
+                    },
+                    "description": "Opening message first."
+                  }
+                },
+                "additionalProperties": false,
+                "description": "read."
+              },
+              "threadId": {
+                "type": "string",
+                "description": "create: the new thread."
+              },
+              "messageId": {
+                "type": "string",
+                "description": "create / reply: the new message."
+              },
+              "reacted": {
+                "type": "boolean",
+                "description": "react: the reaction is now on."
+              }
+            },
+            "additionalProperties": false,
+            "description": "Tool-specific result (present when ok)."
+          }
+        },
+        "additionalProperties": false,
+        "description": "Kimo result envelope (kimo://docs/envelope)."
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "title": "Comments"
+      }
     }
   ]
 }

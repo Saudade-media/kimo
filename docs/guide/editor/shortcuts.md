@@ -21,6 +21,7 @@ Every binding in Kimo, from the same table the app's **Keyboard shortcuts** shee
 | Text | `T` | `T` |
 | Pen | `P` | `P` |
 | Note | `N` | `N` |
+| Comment | `C` | `C` |
 | Prompt | `⇧P` | `Shift+P` |
 | Image | `⇧⌘K` | `Ctrl+Shift+K` |
 | Icon picker | `I` | `I` |
@@ -105,6 +106,7 @@ Every binding in Kimo, from the same table the app's **Keyboard shortcuts** shee
 | Zoom to selection | `⇧2` | `Shift+2` |
 | Pixel grid | `⇧'` | `Shift+'` |
 | Rulers | `⇧R` | `Shift+R` |
+| Show or hide comments | `⇧C` | `Shift+C` |
 | Pan | `Space drag` | `Space drag` |
 | Preview | `⇧Space` | `Shift+Space` |
 | Show / hide panels | `⌘\` | `Ctrl+\` |

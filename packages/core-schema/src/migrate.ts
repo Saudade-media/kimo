@@ -9,6 +9,7 @@ import {
   compareFormat,
   type FormatVersion,
   formatLine,
+  isCurrentFormat,
   parseFormatVersion,
   schemaUrlFor,
 } from "./version"
@@ -94,7 +95,11 @@ export function migrate(doc: JsonObject, options: MigrateOptions = {}): MigrateR
   const from = parseFormatVersion(doc.format)
   if (!from || !target)
     return { status: "invalid", doc, from: fromString, to: fromString, applied: [] }
-  const c = compareFormat(from, target)
+  const c = options.target
+    ? compareFormat(from, target)
+    : isCurrentFormat(from)
+      ? 0
+      : compareFormat(from, target)
   if (c === 0) return { status: "current", doc, from: fromString, to: fromString, applied: [] }
   if (c > 0) return { status: "newer", doc, from: fromString, to: fromString, applied: [] }
 

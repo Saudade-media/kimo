@@ -192,6 +192,7 @@ export function createRegistryToolHost(opts: RegistryToolHostOptions): ToolHost 
 
 /** Tools a spawned child never sees (coordinator-only; ADR 0014 §8). */
 export const CHILD_EXCLUDED_TOOLS: readonly string[] = [
+  "kimo_comments",
   "kimo_save",
   "kimo_export",
   "kimo_create",

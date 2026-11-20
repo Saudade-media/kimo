@@ -1,4 +1,4 @@
-/** `createToolHandlers`: the 20 handlers plus per-call activity entries. */
+/** `createToolHandlers`: the 21 handlers plus per-call activity entries. */
 
 import type { ActivityKind } from "../policy"
 import type { DocumentHost, HandlerOutput, ToolHandler, ToolHandlers } from "../runtime"
@@ -29,6 +29,8 @@ function kindOf(tool: string, input: Record<string, unknown>): ActivityKind {
       return input.action === "import" ? "edit" : "read"
     case "kimo_styles":
       return input.apply === true ? "edit" : "read"
+    case "kimo_comments":
+      return input.action === "list" || input.action === "read" ? "read" : "edit"
     default:
       return "read"
   }
@@ -81,7 +83,7 @@ function withActivity(tool: string, h: ToolHandler): ToolHandler {
   }
 }
 
-/** All 20 handlers over `host`. */
+/** All 21 handlers over `host`. */
 export function createToolHandlers(
   host: DocumentHost,
   options: ToolHandlerOptions = {},

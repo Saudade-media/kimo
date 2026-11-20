@@ -49,6 +49,7 @@
  * undoes remote changes).
  */
 import type { ClaimRecord, LocalOrigin } from "@kimo/editor-state"
+import type { CommentReplicaStore, CommentSigner } from "./comment-channel"
 import type { MpErrorCode, MultiplayerError, PeerInfo, RelayLimits, Role } from "./mp/index"
 import { RelayNetworkProvider } from "./network-provider"
 import type { SyncProvider } from "./provider"
@@ -158,6 +159,16 @@ export interface NetworkProviderOptions {
   now?: () => number
   /** Timing overrides (tests). */
   timing?: Partial<NetworkTiming>
+  /**
+   * Signs this device's comment changes (docs/spec/comments.md §4). Without it the comments of
+   * a shared file stay read-only.
+   */
+  comments?: {
+    device: CommentSigner
+    /** The room root key, on the owner's devices. */
+    root?: CommentSigner | null
+    replica?: CommentReplicaStore
+  }
 }
 
 /** What the provider reports besides status transitions (headless hooks for the UI). */

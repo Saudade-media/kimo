@@ -5,11 +5,23 @@
  * release is editorial only and never changes what a document may contain.
  */
 
-/** The format version this package reads and writes. */
+/**
+ * The format version this package writes by default. Documents with comments are written as
+ * {@link COMMENTS_FORMAT_VERSION}; every other document stays 1.0 so older Kimo keeps editing it.
+ */
 export const FORMAT_VERSION = "1.0.0"
 
-/** `$schema` URL written into every document of this format version. */
+/** The newest format version this package reads and writes (1.1 adds root `comments`). */
+export const READER_FORMAT_VERSION = "1.1.0"
+
+/** The format version of a document that has comments. */
+export const COMMENTS_FORMAT_VERSION = "1.1.0"
+
+/** `$schema` URL written into every document of format 1.0. */
 export const SCHEMA_URL = "https://getkimo.design/schema/kimo-1.0.json"
+
+/** `$schema` URL of format 1.1. */
+export const COMMENTS_SCHEMA_URL = "https://getkimo.design/schema/kimo-1.1.json"
 
 /** JSON Schema `$id` of the generated schema (same as {@link SCHEMA_URL}). */
 export const SCHEMA_ID = SCHEMA_URL
@@ -58,9 +70,22 @@ export function schemaUrlFor(v: FormatVersion): string {
 /** The parsed {@link FORMAT_VERSION}. */
 export const CURRENT_FORMAT: FormatVersion = parseFormatVersion(FORMAT_VERSION) as FormatVersion
 
+/** The parsed {@link READER_FORMAT_VERSION}. */
+export const READER_FORMAT: FormatVersion = parseFormatVersion(
+  READER_FORMAT_VERSION,
+) as FormatVersion
+
+/**
+ * True for a version this reader opens as current: from {@link CURRENT_FORMAT} up to
+ * {@link READER_FORMAT}. Format 1.1 only adds a member, so 1.0 and 1.1 need no migration.
+ */
+export function isCurrentFormat(v: FormatVersion): boolean {
+  return compareFormat(v, CURRENT_FORMAT) >= 0 && compareFormat(v, READER_FORMAT) <= 0
+}
+
 /**
  * How a document's `format` relates to this reader.
- * - `current`: same major.minor (any patch).
+ * - `current`: 1.0 or 1.1 (any patch).
  * - `older`: must be migrated in memory before editing (10.2 rule 6).
  * - `newer`: opens read-only (10.2 rule 7).
  * - `invalid`: not a semver `format`.
@@ -71,6 +96,6 @@ export type FormatStatus = "current" | "older" | "newer" | "invalid"
 export function formatStatus(format: unknown): FormatStatus {
   const v = parseFormatVersion(format)
   if (!v) return "invalid"
-  const c = compareFormat(v, CURRENT_FORMAT)
-  return c === 0 ? "current" : c < 0 ? "older" : "newer"
+  if (isCurrentFormat(v)) return "current"
+  return compareFormat(v, CURRENT_FORMAT) < 0 ? "older" : "newer"
 }

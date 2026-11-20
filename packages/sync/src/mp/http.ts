@@ -24,6 +24,8 @@ export interface RelayInfo {
   relayId: Uint8Array
   /** `external`: an owner policy module decides who may register (§14.12); owner ops answer `OWNER_EXTERNAL`. */
   owner: "unclaimed" | "claimed" | "external"
+  /** What the relay carries beyond kimo-mp/1 (`comments`); empty or absent on older relays. */
+  features?: string[]
 }
 
 /** A device of the relay's owner set, as `POST /owner` lists it (§6.1). */
@@ -266,6 +268,11 @@ export class RelayHttpClient {
       limits,
       relayId,
       owner: info.owner,
+      ...(Array.isArray(info.features)
+        ? {
+            features: info.features.filter((f): f is string => typeof f === "string").slice(0, 32),
+          }
+        : {}),
     }
   }
 
@@ -372,6 +379,44 @@ export class RelayHttpClient {
       jsonObject("snapshot response"),
     )
     if (!isCount(body.gen) || !isCount(body.upTo)) throw malformed("snapshot response")
+    return { gen: body.gen, upTo: body.upTo }
+  }
+
+  /** `GET /room/<room>/comments/snapshot` (docs/spec/comments.md §4.4); null when there is none. */
+  async getCommentSnapshot(room: string, token: string): Promise<FetchedSnapshot | null> {
+    return this.request<FetchedSnapshot | null>(
+      "GET",
+      `/room/${roomPath(room)}/comments/snapshot`,
+      { token },
+      async (response, kick) => {
+        const upTo = headerCount(response, "kimo-up-to")
+        const gen = headerCount(response, "kimo-gen")
+        if (upTo === null || gen === null) {
+          await response.body?.cancel().catch(() => {})
+          throw malformed("comment snapshot response")
+        }
+        const limit = this.limits.maxSnapshotBytes + ENVELOPE_OVERHEAD
+        return { upTo, gen, envelope: await readCapped(response, limit, "snapshot", kick) }
+      },
+      () => null,
+    )
+  }
+
+  /** `PUT /room/<room>/comments/snapshot?upTo=<n>`: edit tokens only. */
+  async putCommentSnapshot(
+    room: string,
+    token: string,
+    upTo: number,
+    envelope: Uint8Array,
+  ): Promise<{ gen: number; upTo: number }> {
+    if (!isCount(upTo)) throw new MultiplayerError("BAD_REQUEST", "upTo must be an integer >= 0")
+    const body = await this.request(
+      "PUT",
+      `/room/${roomPath(room)}/comments/snapshot?upTo=${upTo}`,
+      { token, headers: { "content-type": OCTETS }, body: envelope },
+      jsonObject("comment snapshot response"),
+    )
+    if (!isCount(body.gen) || !isCount(body.upTo)) throw malformed("comment snapshot response")
     return { gen: body.gen, upTo: body.upTo }
   }
 

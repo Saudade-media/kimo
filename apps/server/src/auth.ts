@@ -38,7 +38,7 @@ export async function verifyToken(
   if (token.kid !== room.link_kid) throw new MultiplayerError("KEY_ROTATED", "links were reset")
   if (!(await verifyTokenSignature(token, room.link_pub)))
     throw new MultiplayerError("AUTH_INVALID", "bad token signature")
-  if (token.role !== "view" && token.role !== "edit")
+  if (token.role !== "view" && token.role !== "edit" && token.role !== "comment")
     throw new MultiplayerError("ROLE_UNSUPPORTED", "role not supported")
   if (token.exp !== 0 && token.exp <= nowSeconds)
     throw new MultiplayerError("TOKEN_EXPIRED", "token expired")

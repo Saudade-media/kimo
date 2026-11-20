@@ -64,7 +64,7 @@ describe("persistence", () => {
     const got = await fetch(`${h.base}/blob/${owner.room.id}/${blob.id}`, { headers: bearer(edit) })
     expect(Array.from(new Uint8Array(await got.arrayBuffer()))).toEqual(Array.from(blob.envelope))
     const version = h.relay.db.sqlite.query("PRAGMA user_version").get()
-    expect(version).toEqual({ user_version: 1 })
+    expect(version).toEqual({ user_version: 2 })
     // New appends continue the sequence.
     const next = await joinAs(h, owner, "edit")
     next.client.send({ type: "append", cid: 1, env: await update(owner, "four") })

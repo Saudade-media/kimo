@@ -67,6 +67,8 @@ function agentDot(kind: "working" | "waiting"): TabDot {
 }
 
 interface RightPanelProps {
+  /** Board 51: the Comments panel shown in place of the tabs while comment mode is on. */
+  override?: ReactNode
   session: FileSession
   /** The canvas's latest layout; sections select only the boxes they show from it. */
   layout: Bus<LayoutResult | null>
@@ -129,6 +131,7 @@ export function RightPanel({
   header = null,
   collapsed = false,
   agentActivity = null,
+  override = null,
 }: RightPanelProps) {
   const [tab, setTab] = useState<RightTab>(initialTab)
   const agentRev = useBusValue(openAgent ?? NO_REV)
@@ -192,6 +195,7 @@ export function RightPanel({
         {header}
       </aside>
     )
+  if (override) return override
   // Board 44 rule "Floating cards": 280 on every tab (boards 05 / 25 widened Agent and Code to
   // 360); §2: the Design tab with nothing selected shrinks to the Page card (256, hug).
   const page = tab === "design" && nothingSelected

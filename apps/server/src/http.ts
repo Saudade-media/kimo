@@ -21,6 +21,7 @@ import type { Server } from "bun"
 import pkg from "../package.json" with { type: "json" }
 import { runAdmin } from "./admin"
 import { bearerToken, recheckToken, type VerifiedToken, verifyToken } from "./auth"
+import { roomBytes } from "./db"
 import { retryAfterSeconds } from "./rate-limit"
 import type { Relay, SocketData } from "./rooms"
 import { webResponse } from "./web"
@@ -44,6 +45,8 @@ export interface VersionBody {
   relayId: string
   /** `external` under an external owner policy (§14.12). */
   owner: "unclaimed" | "claimed" | "external"
+  /** `comments`: the comment channel and `comment` tokens (docs/spec/comments.md §4.4). */
+  features: string[]
 }
 
 function versionBody(relay: Relay): VersionBody {
@@ -54,6 +57,7 @@ function versionBody(relay: Relay): VersionBody {
     limits: relay.limits,
     relayId: toBase64Url(relay.relayId),
     owner: relay.owner.status(),
+    features: ["comments"],
   }
 }
 
@@ -191,7 +195,7 @@ async function authorize(
   relay: Relay,
   req: Request,
   roomId: string,
-  need: "view" | "edit",
+  need: "view" | "comment" | "edit",
 ): Promise<VerifiedToken> {
   const verified = await verifyToken(
     relay.db,
@@ -200,6 +204,8 @@ async function authorize(
     Math.floor(relay.now() / 1000),
   )
   if (need === "edit" && verified.token.role !== "edit") fail("VIEW_ONLY", "this link is view only")
+  if (need === "comment" && verified.token.role === "view")
+    fail("VIEW_ONLY", "this link is view only")
   return verified
 }
 
@@ -270,7 +276,7 @@ export function createFetchHandler(relay: Relay) {
       head: room.head,
       base: room.base,
       snapshot: snap ? { upTo: snap.up_to, gen: snap.gen, bytes: snap.bytes } : null,
-      usedBytes: room.blob_bytes + room.snapshot_bytes + room.log_bytes,
+      usedBytes: roomBytes(room),
       quotaBytes: relay.quotaFor(room),
       peers: relay.rooms.get(roomId)?.peers.size ?? 0,
     })
@@ -315,7 +321,8 @@ export function createFetchHandler(relay: Relay) {
   }
 
   async function blobPut(req: Request, roomId: string, id: string): Promise<Response> {
-    const verified = await authorize(relay, req, roomId, "edit")
+    // Comment tokens upload attachments (docs/spec/comments.md §4.4).
+    const verified = await authorize(relay, req, roomId, "comment")
     const { jtiHex } = verified
     if (!isBlobId(id)) fail("BAD_REQUEST", "invalid blob id")
     const wait = relay.blobLimiter.take(`${roomId}:${jtiHex}`, relay.now())
@@ -323,16 +330,22 @@ export function createFetchHandler(relay: Relay) {
     const max = config.blobMaxBytes + ENVELOPE_OVERHEAD
     const declared = Number(req.headers.get("content-length") ?? "0")
     if (Number.isFinite(declared) && declared > max) fail("TOO_LARGE", "blob too large")
-    if (db.getBlob(roomId, id) && relay.blobs.has(roomId, id)) {
+    // Comment-only links draw on their own budgets (docs/spec/comments.md §4.4).
+    const commentOnly = verified.token.role === "comment"
+    const existing = db.getBlob(roomId, id)
+    if (existing && relay.blobs.has(roomId, id)) {
       // Unmark before draining: a sweep running during the await must see the blob as kept.
-      db.clearUnref(roomId, id)
+      // A comment-only link keeps only its own uploads from the owner's sweep.
+      if (!commentOnly || existing.comment) db.clearUnref(roomId, id)
       await req.arrayBuffer().catch(() => undefined)
       return json({}, 200)
     }
     const body = await readBody(req, max)
     if (body.length < ENVELOPE_OVERHEAD || envelopeKind(body) !== EnvelopeKind.blob)
       fail("BAD_REQUEST", "not a blob envelope")
-    const bytesWait = relay.blobBytesLimiter.take(roomId, relay.now(), body.length)
+    // A guest cannot starve editors' upload bytes.
+    const bytesKey = commentOnly ? `${roomId}:comment` : roomId
+    const bytesWait = relay.blobBytesLimiter.take(bytesKey, relay.now(), body.length)
     if (bytesWait > 0) fail("RATE_LIMITED", "too many upload bytes", bytesWait)
     // A room with an account asks the owner policy, which records the account's limit (§14.12).
     const before = db.getRoom(roomId)
@@ -340,18 +353,66 @@ export function createFetchHandler(relay: Relay) {
     if (before && account !== null) await relay.owner.write({ ...before, account }, body.length)
     // The room may have been closed, or the link revoked or reset, while the body was uploading.
     const fresh = recheckToken(db, verified, Math.floor(relay.now() / 1000))
-    const after = fresh.blob_bytes + fresh.snapshot_bytes + fresh.log_bytes + body.length
+    // From here on everything is synchronous. Another upload of this id may have finished while
+    // this body arrived: keep the stored one, so the bytes on disk are the bytes counted.
+    const stored = db.getBlob(roomId, id)
+    if (stored && relay.blobs.has(roomId, id)) {
+      if (!commentOnly || stored.comment) db.clearUnref(roomId, id)
+      return json({}, 200)
+    }
+    if (stored && stored.bytes !== body.length) fail("BAD_REQUEST", "blob size does not match")
+    const after = roomBytes(fresh) + body.length
     if (after > relay.quotaFor(fresh)) fail("QUOTA_EXCEEDED", "room storage quota exceeded")
+    if (commentOnly && !relay.commentFits(fresh, body.length))
+      fail("QUOTA_EXCEEDED", "comment storage quota exceeded")
     relay.checkAccountStorage(fresh, after)
     relay.blobs.put(roomId, id, body)
     try {
-      if (db.getBlob(roomId, id)) db.clearUnref(roomId, id)
-      else db.insertBlob(roomId, id, body.length, relay.now())
+      if (stored) db.clearUnref(roomId, id)
+      else db.insertBlob(roomId, id, body.length, relay.now(), commentOnly)
     } catch (error) {
       relay.blobs.delete(roomId, id)
       throw error
     }
     return json({}, 201)
+  }
+
+  /**
+   * The comment snapshot (docs/spec/comments.md §4.4): any role reads it, only edit tokens write
+   * it, because a snapshot could leave other people's changes out.
+   */
+  async function commentSnapshot(req: Request, url: URL, roomId: string): Promise<Response> {
+    if (req.method === "GET") {
+      await authorize(relay, req, roomId, "view")
+      const snap = db.latestChannelSnapshotEnv("comments", roomId)
+      if (!snap) fail("NOT_FOUND", "no snapshot")
+      return new Response(snap.env as Uint8Array<ArrayBuffer>, {
+        headers: {
+          "content-type": "application/octet-stream",
+          "kimo-up-to": String(snap.up_to),
+          "kimo-gen": String(snap.gen),
+        },
+      })
+    }
+    if (req.method !== "PUT") return methodNotAllowed("GET, PUT")
+    const verified = await authorize(relay, req, roomId, "edit")
+    const upToText = url.searchParams.get("upTo")
+    if (upToText === null || !/^\d{1,15}$/.test(upToText)) fail("BAD_REQUEST", "upTo is required")
+    const upTo = Number(upToText)
+    const env = await readBody(req, config.snapshotMaxBytes)
+    if (envelopeKind(env) !== EnvelopeKind.commentsSnapshot || env.length < ENVELOPE_OVERHEAD)
+      fail("BAD_REQUEST", "not a comments-snapshot envelope")
+    const room = recheckToken(db, verified, Math.floor(relay.now() / 1000))
+    if (upTo > room.c_head) fail("SNAPSHOT_AHEAD", "snapshot covers entries the room does not have")
+    const cur = db.latestChannelSnapshot("comments", roomId)
+    if (cur && upTo <= cur.up_to)
+      fail("SNAPSHOT_STALE", "snapshot does not advance the current one")
+    const after = roomBytes(room) - room.c_snapshot_bytes + (cur ? cur.bytes : 0) + env.length
+    if (after > relay.quotaFor(room)) fail("QUOTA_EXCEEDED", "room storage quota exceeded")
+    relay.checkAccountStorage(room, after)
+    const gen = db.putChannelSnapshot("comments", roomId, upTo, relay.now(), env)
+    relay.commentSnapshotAccepted(roomId, { upTo, gen, bytes: env.length })
+    return json({ gen, upTo }, 201)
   }
 
   async function blob(req: Request, roomId: string, id: string): Promise<Response> {
@@ -407,6 +468,8 @@ export function createFetchHandler(relay: Relay) {
       if (parts.length === 2) return roomInfo(req, roomId)
       if (parts.length === 3 && tail === "admin") return admin(req, server, roomId)
       if (parts.length === 3 && tail === "snapshot") return snapshot(req, url, roomId)
+      if (parts.length === 4 && tail === "comments" && parts[3] === "snapshot")
+        return commentSnapshot(req, url, roomId)
     }
     if (head === "blob" && roomId && tail && parts.length === 3) {
       if (!isRoomId(roomId)) fail("ROOM_NOT_FOUND", "unknown room")

@@ -24,6 +24,8 @@
  * Output is deterministic: no clocks, no randomness; conflict ids are derived from the target
  * unless `options.newId` is given.
  */
+
+import { mergeComments, withCommentsHeader } from "../comments/index"
 import { jsonEqual, stripDefaults } from "../defaults-ops"
 import { escapePointer, isObject, setOwn } from "../json"
 import { isThemedValue } from "../resolve"
@@ -441,9 +443,13 @@ function semanticMerge(b: Obj, o: Obj, t: Obj): Merged {
   const variables = mergeVariables(b, o, t, ctr, conflicts)
   const header = mergeHeader(b, o, t, ctr, conflicts)
 
+  const comments = mergeComments(b.comments, o.comments, t.comments)
+
   const assemble = (): Merged => {
-    const doc: Obj = { ...header }
+    let doc: Obj = { ...header }
     if (variables !== null) doc.variables = variables
+    if (comments) doc.comments = comments
+    doc = withCommentsHeader(doc)
     doc.nodes = M
     const comps = mergeComponentsIndex(b, o, t, M)
     if (comps !== null) doc.components = comps
@@ -742,7 +748,15 @@ function referencedVariables(doc: Obj): string[] {
 
 // --- Header -----------------------------------------------------------------------------------
 
-const BODY_KEYS = new Set(["nodes", "variables", "features", "conflicts", "merge", "components"])
+const BODY_KEYS = new Set([
+  "nodes",
+  "variables",
+  "features",
+  "conflicts",
+  "merge",
+  "components",
+  "comments",
+])
 /** Header members whose conflicts can be stored (spec §21.2 `header`). */
 const RECORD_HEADER = new Set(["meta", "themes", "imports", "pages"])
 
@@ -880,7 +894,12 @@ function holdOurs(b: Obj, o: Obj, t: Obj): Merged {
         get(t, "components"),
       ),
     })
-  const doc = clone(o)
+  // Comments never conflict, so they merge even when the body holds ours.
+  const comments = mergeComments(b.comments, o.comments, t.comments)
+  const held = clone(o)
+  if (comments) held.comments = comments
+  else delete held.comments
+  const doc = withCommentsHeader(held)
   return { doc, conflicts: conflicts.map((p) => p.conflict), changes: 0, repairs: [] }
 }
 

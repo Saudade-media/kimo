@@ -24,6 +24,7 @@ import {
   ArrowUpRight,
   ArrowUpToLine,
   Atom,
+  AtSign,
   Ban,
   Blend,
   BookOpen,
@@ -122,6 +123,7 @@ import {
   Link2,
   Link2Off,
   List,
+  ListFilter,
   ListOrdered,
   LoaderCircle,
   Lock,
@@ -134,6 +136,7 @@ import {
   MailX,
   Maximize,
   Menu,
+  MessageCircle,
   Minus,
   Monitor,
   Moon,
@@ -185,6 +188,7 @@ import {
   ShieldCheck,
   Smartphone,
   Smile,
+  SmilePlus,
   Sparkles,
   Spline,
   Square,
@@ -468,6 +472,11 @@ const ICONS: Record<string, LucideIcon> = {
   "user-plus": UserPlus,
   crown: Crown,
   receipt: Receipt,
+  // Board 51 comments (Comment tool, panel filter, composer, reactions).
+  "message-circle": MessageCircle,
+  "list-filter": ListFilter,
+  "at-sign": AtSign,
+  "smile-plus": SmilePlus,
 }
 
 export interface IconProps {

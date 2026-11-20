@@ -60,6 +60,11 @@ export const ISSUE_CODES = {
   CONFLICT_OPEN: "A merge conflict is not resolved yet.",
   CONFLICT_STALE:
     "The document body no longer holds the conflict's `applied` side (edited by hand); editors mark it `edited`.",
+  // Comments (feature "doc/comments", docs/spec/comments.md §1)
+  COMMENT_ANCHOR_INVALID: "A comment anchor has fields missing or out of range.",
+  COMMENT_EMPTY: "A comment thread has no messages, or its `first` names no message.",
+  COMMENT_ID_COLLISION: "A thread or message id is also a node id, or is used twice.",
+  COMMENT_ATTACHMENT_MISSING: "A comment attachment's file is not in `assets/`.",
   // Lints
   TEXT_INVISIBLE: "A text node's fill paints nothing.",
   FIT_ALL_FILL: "A `fit` frame whose children all `fill` the same axis (circular sizing).",
@@ -107,6 +112,7 @@ export const WARNING_CODES: ReadonlySet<IssueCode> = new Set<IssueCode>([
   "VARIABLE_UNUSED",
   "CONFLICT_OPEN",
   "CONFLICT_STALE",
+  "COMMENT_ATTACHMENT_MISSING",
 ])
 
 /**
@@ -122,6 +128,10 @@ export const DOCUMENT_LEVEL_CODES: ReadonlySet<IssueCode> = new Set<IssueCode>([
   "CONFLICT_DUPLICATE",
   "CONFLICT_OPEN",
   "CONFLICT_STALE",
+  "COMMENT_ANCHOR_INVALID",
+  "COMMENT_EMPTY",
+  "COMMENT_ID_COLLISION",
+  "COMMENT_ATTACHMENT_MISSING",
 ])
 
 /** Collects issues while validating. */

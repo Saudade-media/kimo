@@ -248,7 +248,7 @@ export function createDocumentHost(options: CoreHostOptions): CoreDocumentHost {
       if (reason !== null)
         return err("READ_ONLY", `This document is read-only (${reason}); it is never saved.`, {
           suggestion:
-            d.shared?.()?.role === "view"
+            d.shared?.() && d.shared()?.role !== "edit"
               ? VIEW_ROOM_SUGGESTION
               : "Save a copy with kimo_export target=kimo instead.",
         })

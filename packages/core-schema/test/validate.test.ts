@@ -2,6 +2,33 @@ import { describe, expect, test } from "bun:test"
 import { type KimoDocument, type ValidateOptions, validate } from "../src/index"
 import { codes, doc, HEADER } from "./helpers"
 
+const C_AUTHOR = { id: "dev:abc123", name: "Ana", kind: "person" } as const
+const cMsg = (at: string, text: string, extra: object = {}) => ({
+  author: C_AUTHOR,
+  at,
+  text,
+  ...extra,
+})
+/** A document with one frame and one thread anchored to it. */
+function withThread(extra: object = {}) {
+  return doc(
+    { Frame00001: { type: "frame", parent: null, order: "a0", w: 100, h: 100 } },
+    {
+      $schema: "https://getkimo.design/schema/kimo-1.1.json",
+      format: "1.1.0",
+      features: ["doc/comments"],
+      comments: {
+        Thread0001: {
+          anchor: { node: "Frame00001", x: 10, y: 10, fallback: { x: 10, y: 10 } },
+          first: "Msg0000001",
+          messages: { Msg0000001: cMsg("2026-11-10T09:00:00.000Z", "Hi") },
+          ...extra,
+        },
+      },
+    },
+  )
+}
+
 type Case = {
   rule: string
   code: string
@@ -330,7 +357,7 @@ describe("validator behaviour", () => {
     expect(codes(validate({ ...HEADER, format: "0.0.9", nodes: {} }).errors)).toEqual([
       "FORMAT_OLDER",
     ])
-    expect(codes(validate({ ...HEADER, format: "1.1.0", nodes: {} }).errors)).toEqual([
+    expect(codes(validate({ ...HEADER, format: "1.2.0", nodes: {} }).errors)).toEqual([
       "FORMAT_NEWER",
     ])
   })
@@ -471,4 +498,65 @@ test("a scoped run reports the same order ties from an order index as from a sca
   })
   expect(indexed).toEqual(ties({}))
   expect(indexed).toHaveLength(2)
+})
+
+describe("comments (format 1.1)", () => {
+  const all = (d: unknown) => {
+    const r = validate(d as KimoDocument)
+    return [...codes(r.errors), ...codes(r.warnings)]
+  }
+
+  test("a well-formed thread validates", () => {
+    expect(validate(withThread()).errors).toEqual([])
+  })
+
+  test("comments need the feature and format 1.1", () => {
+    const d = withThread() as unknown as Record<string, unknown>
+    delete d.features
+    expect(all(d)).toContain("FEATURE_NOT_DECLARED")
+    const old = { ...withThread(), ...HEADER, features: ["doc/comments"] }
+    expect(all(old)).toContain("SCHEMA")
+  })
+
+  test("a thread whose first message is gone is COMMENT_EMPTY", () => {
+    expect(all(withThread({ first: "Missing001" }))).toContain("COMMENT_EMPTY")
+  })
+
+  test("an area needs both w and h", () => {
+    const d = withThread({ anchor: { x: 0, y: 0, w: 10 } })
+    expect(all(d)).toContain("COMMENT_ANCHOR_INVALID")
+  })
+
+  test("thread and message ids must not reuse node ids", () => {
+    const d = withThread({
+      first: "Frame00001",
+      messages: { Frame00001: cMsg("2026-11-10T09:00:00.000Z", "Hi") },
+    })
+    expect(all(d)).toContain("COMMENT_ID_COLLISION")
+  })
+
+  test("an attachment whose file is missing warns", () => {
+    const att = {
+      file: "./assets/0123456789abcdef.png",
+      mime: "image/png",
+      sha256: "0123456789abcdef".padEnd(64, "0"),
+    }
+    const d = withThread({
+      messages: { Msg0000001: cMsg("2026-11-10T09:00:00.000Z", "Hi", { attachments: [att] }) },
+    })
+    const r = validate(d, { assetFiles: [] })
+    expect(codes(r.warnings)).toContain("COMMENT_ATTACHMENT_MISSING")
+    expect(r.ok).toBe(true)
+  })
+
+  test("text over 5,000 code points is rejected", () => {
+    const d = withThread({
+      messages: { Msg0000001: cMsg("2026-11-10T09:00:00.000Z", "😀".repeat(5001)) },
+    })
+    expect(all(d)).toContain("SCHEMA")
+    const ok = withThread({
+      messages: { Msg0000001: cMsg("2026-11-10T09:00:00.000Z", "😀".repeat(5000)) },
+    })
+    expect(validate(ok).errors).toEqual([])
+  })
 })

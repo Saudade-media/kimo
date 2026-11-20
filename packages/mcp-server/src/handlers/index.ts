@@ -1,5 +1,5 @@
 /**
- * Real tool handlers (ADR 0013 §12 item 2): `createToolHandlers(host)` implements all 20 tools
+ * Real tool handlers (ADR 0013 §12 item 2): `createToolHandlers(host)` implements all 21 tools
  * over any {@link DocumentHost}; `createMemoryDocumentHost` is the runtime-neutral headless host;
  * `createDocumentHost` is the core the desktop document host builds on; `createMcpHostRuntime`
  * adds connections (origin per client session), approvals, activity and presence.

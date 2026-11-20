@@ -25,6 +25,8 @@ export type Tool =
   | "text"
   | "icon"
   | "note"
+  /** Comment mode (docs/spec/comments.md §7): a click places a pin, a drag an area. */
+  | "comment"
 
 /**
  * The visible region: `x`/`y` are the world coordinates shown at the canvas's top-left corner;

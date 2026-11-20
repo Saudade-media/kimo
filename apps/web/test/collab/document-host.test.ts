@@ -436,9 +436,10 @@ describe("rooms joined from a share link (#79)", () => {
       doc: { readOnly: false },
       shared: { relay: relayHost, role: "edit" },
     })
+    // A relay with the comment channel mints view links as comment tokens (comments.md §4.4).
     expect(await docOf(roomKeyOf(viewRoom))).toMatchObject({
       doc: { readOnly: true },
-      shared: { relay: relayHost, role: "view" },
+      shared: { relay: relayHost, role: "comment" },
     })
     // Neither link, its capability token nor its room key reaches an agent.
     const text = JSON.stringify(listed)

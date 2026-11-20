@@ -1,5 +1,5 @@
 /**
- * The 20 tool handlers over a `DocumentHost` (ADR 0013 §2), one function per tool. Each one
+ * The 21 tool handlers over a `DocumentHost` (ADR 0013 §2), one function per tool. Each one
  * returns exactly one envelope; nothing throws past the dispatcher. Mutations are single
  * `DocStore.apply` op groups with the caller's origin (`ctx.origin`), so undo, attribution and
  * revisions work the same for every surface (MCP, M6 agent, CLI).
@@ -63,6 +63,7 @@ import type { ToolDef } from "../tools/define"
 import { CODE_EXPORT_TARGETS, M5_EXPORT_TARGETS } from "../tools/output"
 import { AGENT_MAX_NEW_LAYERS, STREAM_MAX_NEW_LAYERS } from "../tools/write"
 import { CHECK_MAX_LIST, type CheckProblem, checkDesign, formatProblems } from "./check"
+import { commentsHandler } from "./comments"
 import { compileWireOps, pointerTarget, touchedIds, wirePath } from "./compile"
 import type { CoreDocumentHost } from "./core-host"
 import { EXTENSION, imageSize, parseCssTokens, parseDtcg, sniffFont, sniffImage } from "./importers"
@@ -247,7 +248,7 @@ function docLine(x: {
 }): string {
   if (!x.shared) return `${x.name} (${x.doc.id})`
   const via = x.shared.relay ? ` via ${x.shared.relay}` : ""
-  return `${x.name} (${x.doc.id}, shared room${via}, ${x.shared.role === "view" ? "view only" : "can edit"})`
+  return `${x.name} (${x.doc.id}, shared room${via}, ${x.shared.role === "edit" ? "can edit" : x.shared.role === "comment" ? "can comment" : "view only"})`
 }
 
 function nameOf(d: HostDocument): string {
@@ -294,7 +295,7 @@ export function readOnlyError(d: HostDocument): ToolError {
     code: "READ_ONLY",
     message: `This document is read-only (${d.store.readOnly?.reason ?? "read-only"}).`,
     suggestion:
-      d.shared?.role === "view"
+      d.shared && d.shared.role !== "edit"
         ? VIEW_ROOM_SUGGESTION
         : "Export a copy with kimo_export target=kimo, or open a writable document.",
   }
@@ -1695,7 +1696,7 @@ export function createToolHandlerMap(
     if (!code && !(M5_EXPORT_TARGETS as readonly string[]).includes(target))
       return fail({ code: "UNSUPPORTED", message: `Unknown export target ${target}.` })
     // A viewer may export but not duplicate the file (board 41).
-    if (target === "kimo" && d.shared?.role === "view")
+    if (target === "kimo" && d.shared && d.shared.role !== "edit")
       return fail({
         code: "UNSUPPORTED",
         message: "A room joined with a view link can't be copied to a .kimo file.",
@@ -2081,6 +2082,7 @@ export function createToolHandlerMap(
     kimo_close: close,
     kimo_styles: styles,
     kimo_script: script,
+    kimo_comments: commentsHandler,
   }
   map[STREAM_ENGINE] = streams
   ;(map as { [SCRIPT_COMPILER]?: ScriptCompiler })[SCRIPT_COMPILER] = compileScript

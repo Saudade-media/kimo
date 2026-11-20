@@ -100,6 +100,7 @@ export const SHORTCUT_LIST: readonly Shortcut[] = [
   tool("tool.text", "ui.shortcuts.text", "t"),
   tool("tool.pen", "ui.shortcuts.pen", "p"),
   tool("tool.note", "ui.shortcuts.note", "n"),
+  tool("tool.comment", "ui.shortcuts.comment", "c"),
   shiftTool("tool.prompt", "ui.shortcuts.prompt", "p"),
   {
     id: "tool.image",
@@ -551,6 +552,14 @@ export const SHORTCUT_LIST: readonly Shortcut[] = [
     scope: "global",
     group: "view",
     combos: [{ keys: ["r"], mod: false, alt: false, shift: true, label: "R" }],
+  },
+  {
+    // Board 51 §1: ⇧C hides or shows comment pins (docs/spec/comments.md §7).
+    id: "view.comments",
+    label: "ui.shortcuts.show-comments",
+    scope: "global",
+    group: "view",
+    combos: [{ keys: ["c"], mod: false, alt: false, shift: true, label: "C" }],
   },
   {
     id: "pan",

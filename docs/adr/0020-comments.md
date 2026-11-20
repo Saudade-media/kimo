@@ -1,0 +1,156 @@
+# 0020. Comments: threads live in the file, sync on their own room channel, and viewers can write them
+
+- **Status:** Proposed
+- **Date:** 2026-11-10
+- **Deciders:** project owner
+- **Teardown refs:** 12 (v2 multiplayer)
+- **Builds on:** [0005](0005-kimo-file-format.md) (file format), [0016](0016-multiplayer-transport-and-sessions.md)
+  (relay, capability links), [0019](0019-kimo-cloud-workspaces.md) (Kimo Cloud holds the keys)
+- **Design:** board 51 "Comments" in `desing.kimo` (page Editor)
+- **Contract:** [docs/spec/comments.md](../spec/comments.md)
+
+## Context
+
+Design reviews happen on the canvas: press C, click or drag, write, reply, react, resolve. Kimo
+has sticky notes (`note` nodes) but nothing that a reviewer without edit rights can leave, nothing
+threaded and nothing that tells you someone answered. The owner asked for full canvas comments and
+settled the product questions on 2026-11-10:
+
+- Comments live in the file. A local file keeps them on disk; a shared file (self-hosted room or
+  Kimo Cloud) keeps them in its room. They work on unshared files too.
+- Editors and viewers comment. Authors edit and delete their own messages; anyone who can comment
+  resolves; file owners and Cloud admins may delete any thread.
+- v1 has pins and area comments, replies, emoji reactions, @mentions, up to 5 images, rich text,
+  unread state, sort and filters, links to a thread, Shift+C to hide, a guest name prompt.
+- Pins attach to top-level frames, components and groups.
+- Agents read, reply and resolve through MCP. They start a thread only when someone asks them to,
+  and never delete a person's comment.
+- Exports never include comments.
+- Notifications: in the app, plus a Kimo Cloud email digest sent after the comments go quiet.
+
+Facts that shape the answer:
+
+- **The relay is blind.** It stores encrypted Yjs updates (spec §9) and checks only the token
+  role: `view` reads, `edit` appends (§11.2). It cannot tell a comment from a layer inside one
+  encrypted update, so "viewers may comment but not edit" cannot be enforced on the design log.
+- **The role is already reserved.** Capability tokens define `role = 3` "comment", which v2.0
+  relays reject with `ROLE_UNSUPPORTED` (§4).
+- **Older readers are safe by rule.** A reader that sees a newer format minor, or a feature it
+  does not know, opens the file read-only (format spec §13, §16.3). It never saves and so never
+  drops data it cannot read.
+- **Kimo Cloud already decrypts rooms** it holds keys for (0019), so it can read comment text to
+  send email. Self-hosted relays cannot.
+
+## Decision
+
+Comments are a new optional root member of the `.kimo` file, `comments`, behind the feature
+`doc/comments` and format 1.1. In a room they travel on a second encrypted channel next to the
+design log, so the relay can let `comment` tokens write comments and nothing else.
+
+1. **File.** Root `comments` is a record of threads keyed by id. A thread holds its anchor, an
+   optional resolution, and a record of messages keyed by id. Message text is a small Markdown
+   subset with mention tokens. The exact schema is in the contract. A writer emits format
+   `1.1.0` and lists `doc/comments` only when the file has at least one thread, so files without
+   comments stay `1.0.x` and keep opening for editing in older Kimo.
+2. **Anchors.** A pin or area dropped inside a top-level frame, component or group stores that
+   node id and an offset within it, so it moves with the node. Anywhere else it stores page
+   coordinates. When a client deletes an anchored node it also writes a `fallback` position on
+   each affected thread; a thread whose node is gone shows at its fallback and is listed as
+   Detached. Undo of the delete reattaches it because the node id is kept. Copying or cutting a
+   frame does not move its comments.
+3. **Room channel.** Comments are a separate log of signed changes per room (see 5) with their
+   own envelope kinds (`comments-update`, `comments-snapshot`), their own sequence and their own
+   compaction. Relays
+   accept a comment append from `comment` and `edit` tokens and refuse it from `view`. A `comment`
+   token can read everything a `view` token reads. The relay advertises the channel in a
+   trailing `welcome` field (client decoders already ignore trailing bytes), and only clients
+   that then subscribe receive comment traffic; a client that meets an older relay keeps view
+   links read-only and says so in the Share popover. On the wire the relay reports a comment
+   connection as `view`, because 1.2.x decoders reject any other role.
+4. **Links.** On a relay that supports it, "view" links minted from now on carry role `comment`
+   (shown as "Can view and comment"). Links minted before keep role `view`. Kimo Cloud mints
+   view links the same way.
+5. **Rights are signed.** The relay enforces only "who may write comments". Every comment change
+   in a room is signed with the writer's device key (ADR 0017) and bound to the room, and every
+   client drops a change that breaks the rules: an edit or delete must be signed by the key that
+   wrote the message, or by the room root key (the owner). So a modified client with a comment
+   token can add, react, resolve and move pins, all reversible, but cannot rewrite or delete
+   anyone else's message. Deletions leave signed markers that survive compaction, so replaying an
+   old change never brings a message back, and a deleted id is never used again. A delete may
+   name a live message only when its key may delete it, and an id nobody holds only when it
+   comes from the owner or a snapshot, so a guest cannot freeze other people's threads, even
+   after a relay loses data. Fields anyone may set (resolved, anchor) take the
+   relay's log order, which a client cannot forge. Only edit tokens upload comment snapshots.
+   A message can be edited from the device that wrote it; `dev:` author ids are the device's
+   public key and are checked, while `acct:` ids and display names are claims. Local files are
+   unsigned: their trust is the file system and git.
+6. **Undo and export.** Comment changes never enter the document undo stack; delete asks for
+   confirmation instead. Every exporter ignores `comments`.
+7. **Read state** is local to each person and device (a per-file map of thread id to the last
+   message seen), never in the file or the room.
+8. **Agents.** The MCP server gets one `kimo_comments` tool (list, read, create, reply, resolve,
+   unresolve, react) and the built-in agent the same capability. `create` is for requests only:
+   an agent starts a thread when a person asks it to ("leave review comments on this page"),
+   never on its own initiative. Agent messages carry the agent as author. Agents may not edit or
+   delete messages they did not write.
+9. **Notifications.** In the app: a count on the Comment tool, a toast for live comments in the
+   room, desktop notifications for mentions and replies to you while Kimo is in the background.
+   Kimo Cloud email: one digest per file and recipient, sent 15 minutes after the last new comment
+   in that file and at most once an hour, mentions first. Default: mentions and replies to your
+   threads; Settings offers All comments and Off. Only workspace members get email. Self-hosted
+   relays send none.
+10. **Attachments** are file assets (format §12), synced as room blobs (multiplayer §10), at most
+    5 per message, PNG, JPEG or GIF. Each message lists its own attachment entries with their
+    digest, since a comment-only participant cannot write the root asset manifest. Deleting the message drops the reference; the bytes go at the
+    next owner-triggered asset sweep.
+
+## Consequences
+
+- Reviewers without edit rights can finally give feedback inside Kimo, which matches how
+  design teams already work and is a reason to pick Kimo Cloud.
+- The relay gains a second log per room, a new role, two envelope kinds and a client message.
+  Room storage, quotas, compaction and the owner sweep each count both logs. Relay tests must
+  cover a `view` token refused on the comment channel and a `comment` token refused on the
+  design channel.
+- Kimo Cloud starts reading comment text to build the digest, a new processing purpose. The
+  kimo-site Privacy page must say so before the digest ships.
+- Files with comments need the Kimo release that ships comments to edit; older versions open
+  them read-only. The
+  release notes must say this.
+- Kimo 1.2.x opening a new view link (role 3) joins as a viewer and cannot comment; the relay
+  must never put the word `comment` on the wire, or those clients fail to decode `welcome`.
+- Comment links carry no key or token, so copying one never hands out access.
+- `kimo merge` gains a three-way merge for `comments` (union by id, later edit wins), which needs
+  convergence tests like the rest of the format.
+- Comment changes are signed per room, so a view link cannot be used to rewrite other people's
+  comments. The cost: a person edits a message only on the device that wrote it, and comment
+  writes need the device key (created on first use, as for relay ownership).
+- The editor gains a tool mode, a right panel, canvas overlays and new keyboard shortcuts
+  (C, Shift+C), all designed on board 51 before any code.
+
+## Alternatives considered
+
+- **Comments inside the design Yjs document.** One log, no protocol change. Rejected: the blind
+  relay could not stop a view link from editing layers, and comments would share undo and
+  compaction with the design.
+- **A Kimo Cloud comment service.** Simplest for email and moderation. Rejected:
+  local files and self-hosted rooms would have no comments, and the owner wants them in the file.
+- **A sidecar file (`.kimo-comments`).** Keeps the design file clean. Rejected: it gets lost when
+  a file is moved or sent, and git diffs would split one review across two files.
+- **A third "Can comment" link type next to view and edit.** Rejected by the owner: view links
+  comment.
+- **Immediate email per mention.** Rejected by the owner in favour of a debounced digest.
+- **Unsigned comment updates, enforced by honest clients only.** Rejected by the owner on
+  2026-11-19 after review: a modified client on a view link could rewrite or delete everyone's
+  comments, and comments are outside undo.
+- **Comments in a Yjs document.** Character merging of concurrent text edits needs no signature
+  model, but a Yjs update cannot be checked against its author. Only an author edits a message,
+  so whole-text replacement loses nothing.
+
+## Revisit when
+
+- Kimo needs comments from people outside a workspace on Kimo Cloud (email would need guests'
+  addresses).
+- Kimo Cloud can attest that an `acct:` id belongs to a device key, so account authors are
+  checked like `dev:` ones and can edit from any of their devices.
+- Agents should comment unprompted (for example a standing review pass).

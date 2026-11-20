@@ -9,7 +9,9 @@
 .kimo-attach-chip {
   box-sizing: border-box;
   display: inline-flex;
-  flex: none;
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 100%;
   flex-direction: row;
   align-items: center;
   gap: 4px;
@@ -29,6 +31,10 @@
 }
 
 .kimo-attach-chip__label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   color: var(--kimo-text-secondary);
   font-family: var(--kimo-font-sans);
   font-size: var(--kimo-text-xs);

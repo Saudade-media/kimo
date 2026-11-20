@@ -203,6 +203,8 @@ export class CommentChannel {
         }
         this.since = 0
         this.signed.clear()
+        // The owner device remembers who held each thread, to win back ids a guest takes.
+        if (this.options.root) this.store.beginRecovery()
         this.store.enterRoom(this.store.room ?? this.roomFallback(), [], this.options.origin)
         this.resetHeld = held
         this.release()
@@ -410,6 +412,7 @@ export class CommentChannel {
    * come back from their own devices.
    */
   private release(): void {
+    if (this.caughtUp && this.options.root) this.store.recover(this.options.origin)
     if (this.resetHeld.length === 0) return
     const has = (thread: string, message?: string) => {
       const t = this.store.thread(thread)
@@ -420,6 +423,8 @@ export class CommentChannel {
     let queued = false
     for (const h of this.resetHeld) {
       const b = h.record.body
+      // A thread deleted (or won back under a new id) takes nothing more.
+      if (b.op !== "thread" && b.op !== "import" && this.store.isDeleted(b.thread)) continue
       const creates = b.op === "thread" || b.op === "import"
       const ready = creates
         ? true
@@ -445,7 +450,10 @@ export class CommentChannel {
   private maybeCaughtUp(session: CommentSession): void {
     if (this.caughtUp || this.session !== session || this.since < session.info.head) return
     this.caughtUp = true
-    if (this.options.root) this.store.importMissing(this.options.origin)
+    if (this.options.root) {
+      this.store.recover(this.options.origin)
+      this.store.importMissing(this.options.origin)
+    }
     this.scheduleFlush()
   }
 

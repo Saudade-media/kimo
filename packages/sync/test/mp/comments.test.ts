@@ -241,6 +241,95 @@ describe("comment channel", () => {
     await chB.dispose()
   })
 
+  test("after a relay loses its log, a guest that takes a thread's id first neither erases nor keeps it", async () => {
+    const root = await signer()
+    const roomId = await deriveRoomId(root.publicKey)
+    const keys = await deriveRoomKeys(generateRoomKey(), roomId)
+    const http = new RelayHttpClient({ relayUrl: "https://relay.invalid" })
+    const opts = { room: roomId.id, keys, http, origin: "remote:mp:test" as const }
+    const [dev, guest, troll] = [await signer(), await signer(), await signer()]
+    const a = new CommentStore()
+    const chA = new CommentChannel({ ...opts, store: a, device: dev, root })
+    const g = new CommentStore()
+    const chG = new CommentChannel({ ...opts, store: g, device: guest })
+    const old = new MiniRelay()
+    old.connect(chA)
+    old.connect(chG)
+    await settle()
+    const person = (k: CommentSigner, name: string) =>
+      ({ id: `dev:${toBase64Url(k.publicKey)}`, name, kind: "person" }) as const
+    const [ana, bo] = [person(dev, "Ana"), person(guest, "Bo")]
+    const at = { x: 0, y: 0 }
+    for (const text of ["a", "b", "c", "d", "e"]) {
+      a.createThread({ anchor: at, message: { author: ana, text } }, "user")
+      await settle()
+    }
+    const launch = a.createThread({ anchor: at, message: { author: ana, text: "Launch" } }, "user")
+    await settle()
+    const mine = g.createThread({ anchor: at, message: { author: bo, text: "Mine" } }, "user")
+    await settle()
+    const gone = g.createThread({ anchor: at, message: { author: bo, text: "Gone" } }, "user")
+    await settle()
+    // The relay comes back empty and a troll who noted the ids writes first.
+    const fresh = new MiniRelay()
+    const author = person(troll, "Troll")
+    const forge = (n: number, op: Record<string, unknown>) =>
+      signComment(
+        roomId.id,
+        {
+          v: 1,
+          id: `Troll0000${n}`,
+          n,
+          base: 0,
+          at: "2026-11-20T10:00:00.000Z",
+          ...op,
+        } as CommentRecordBody,
+        troll.privateKey,
+        troll.publicKey,
+      )
+    const batch = [
+      await forge(1, {
+        op: "thread",
+        thread: launch.threadId,
+        message: "TrollMsg01",
+        anchor: at,
+        author,
+        text: "spam",
+      }),
+      await forge(2, { op: "delete", thread: launch.threadId }),
+      await forge(3, {
+        op: "thread",
+        thread: mine.threadId,
+        message: "TrollMsg02",
+        anchor: at,
+        author,
+        text: "spam",
+      }),
+    ]
+    fresh.append(null, await sealCommentsUpdate(keys, encodeCommentBatch(batch)))
+    chA.stop()
+    chG.stop()
+    // The guest is back first and deletes its own thread: that delete stands.
+    fresh.connect(chG)
+    await settle()
+    g.deleteThread(gone.threadId, bo.id, "user")
+    await settle()
+    fresh.connect(chA)
+    await settle()
+    const b = new CommentStore()
+    const chB = new CommentChannel({ ...opts, store: b, device: await signer() })
+    fresh.connect(chB)
+    await settle()
+    for (const s of [a, g, b]) {
+      const texts = Object.values(s.threads()).map((t) => t.messages[t.first]?.text)
+      expect(texts).toContain("Launch")
+      expect(texts).toContain("Mine")
+      expect(texts).not.toContain("spam")
+      expect(texts).not.toContain("Gone")
+    }
+    for (const ch of [chA, chG, chB]) await ch.dispose()
+  })
+
   test("a device folding its saved replica knows the room root key before it enters", async () => {
     const root = await signer()
     const roomId = await deriveRoomId(root.publicKey)

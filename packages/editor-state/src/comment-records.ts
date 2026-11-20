@@ -336,6 +336,8 @@ export class CommentFold {
    * only when its key may delete it, so nobody can freeze someone else's thread.
    */
   readonly tombs = new Set<string>()
+  /** The key of the delete that tombstoned each id (owner recovery after a reset, §4.4). */
+  private readonly tombBy = new Map<string, string>()
   /** Change ids applied or skipped. */
   readonly seen = new Set<string>()
   /** Every delete change, kept for compaction. */
@@ -362,6 +364,7 @@ export class CommentFold {
         ),
       })
     for (const id of this.tombs) f.tombs.add(id)
+    for (const [k, v] of this.tombBy) f.tombBy.set(k, v)
     for (const id of this.seen) f.seen.add(id)
     for (const [k, v] of this.deletes) f.deletes.set(k, v)
     for (const [k, v] of this.holders) f.holders.set(k, { ...v })
@@ -408,6 +411,16 @@ export class CommentFold {
   /** Whether a delete named `id` (fresh ids avoid these). */
   isTomb(id: string): boolean {
     return this.tombs.has(id)
+  }
+
+  /** The key whose delete tombstoned `id`. */
+  tombKey(id: string): string | undefined {
+    return this.tombBy.get(id)
+  }
+
+  private tomb(id: string, key: string): void {
+    this.tombs.add(id)
+    if (!this.tombBy.has(id)) this.tombBy.set(id, key)
   }
 
   private isRoot(key: string): boolean {
@@ -518,8 +531,8 @@ export class CommentFold {
         } else if (this.held(b.thread) || (mid !== undefined && this.held(mid)) || !final)
           return null
         // A message delete names its thread for routing only: the thread stays alive.
-        if (!t || mid === undefined || mid === t.first) this.tombs.add(b.thread)
-        if (mid !== undefined) this.tombs.add(mid)
+        if (!t || mid === undefined || mid === t.first) this.tomb(b.thread, key)
+        if (mid !== undefined) this.tomb(mid, key)
         // Applied here, so final when folded again (after compact(), or from a snapshot).
         this.deletes.set(b.id, { ...rec, compacted: true })
         return b.thread

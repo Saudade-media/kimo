@@ -264,6 +264,13 @@ Additions to [multiplayer.md](multiplayer.md):
 - **§12 blobs.** `PUT /blob` accepts comment tokens too, so a reviewer can upload an attachment.
   Receivers find the blob from the attachment's own `sha256` (§1), exactly as for a manifest entry
   (§10, §16.4), and store it in their asset store under `file`.
+- **Recovery.** A relay that lost entries lets anyone write first to ids the room held. The
+  owner device records, before it folds the reset log, which key owned each thread. After
+  catch-up, a recorded id held or deleted by any other key (not the root key) was taken: the
+  owner device deletes the taker's thread with the root key and appends the old content as one
+  root `import` under fresh ids. A delete by the thread's own key stands. This needs an owner
+  device that was in the room before the loss; a reviewer's deep link to a moved thread stops
+  working.
 - **Authority.** In a room the comment log is authoritative. A client with a room replica ignores
   the file's `comments`. Without one, the owner device (root key) appends one `import` per
   thread the room lacks; other clients ignore the file's threads until then. A 1.2.x edit

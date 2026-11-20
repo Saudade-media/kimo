@@ -112,6 +112,15 @@ function checkAttachments(list: CommentAttachment[] | undefined): void {
     throw new CommentError("INVALID", `1 to ${COMMENT_ATTACHMENTS_MAX} images per message`)
 }
 
+/** A thread's content under fresh message ids (owner recovery, spec §4.4). */
+function rehomed(t: CommentThread, fresh: () => string): CommentThread {
+  const ids = new Map(Object.keys(t.messages).map((m) => [m, fresh()] as const))
+  const messages = Object.fromEntries(
+    Object.entries(t.messages).map(([m, v]) => [ids.get(m) as string, v]),
+  )
+  return { ...t, first: ids.get(t.first) as string, messages }
+}
+
 export class CommentStore {
   private readonly listeners = new Set<(c: CommentChange) => void>()
   private readonly recordListeners = new Set<(r: CommentRecord, origin: Origin) => void>()
@@ -122,6 +131,8 @@ export class CommentStore {
   private readonly posted = new Map<string, number[]>()
   private _readOnly: string | null = null
   private _room: CommentRoom | null = null
+  /** Owner device after a relay reset: thread owners and content from before it. */
+  private recovering: { owners: Map<string, string | null>; threads: Comments } | null = null
   /** Acknowledged changes, by position. */
   private acked: CommentRecord[] = []
   private confirmed: CommentFold
@@ -545,6 +556,7 @@ export class CommentStore {
   /** Back to a local file: the current state becomes its comments. */
   leaveRoom(origin: Origin = "file"): void {
     if (!this._room) return
+    this.recovering = null
     const now = this.toJSON()
     this._room = null
     this.pendingList = []
@@ -672,6 +684,55 @@ export class CommentStore {
   /** Drops acknowledged changes a snapshot no longer needs (after a compaction). */
   compact(): void {
     this.acked = this.confirmed.kept()
+  }
+
+  /**
+   * Owner device, before a relay reset is folded away: records who owned each thread, so a
+   * guest that takes one of these ids in the empty log can be told apart (spec §4.4 Recovery).
+   */
+  beginRecovery(): void {
+    const room = this._room
+    if (!room?.moderator || !room.root) return
+    const c = this.confirmed
+    const owners = new Map<string, string | null>()
+    for (const [id, t] of c.threads) owners.set(id, c.ownerOf(id, t.first) ?? null)
+    this.recovering = { owners, threads: c.project() }
+  }
+
+  /**
+   * Owner device after a reset: a recorded thread id now held or deleted by a key that is
+   * neither its owner's nor the root key was taken by someone else. Its old content comes back
+   * as a root `import` under fresh ids (and the taker's thread is deleted). Returns the ids moved.
+   */
+  recover(origin: Origin): string[] {
+    const room = this._room
+    const rec = this.recovering
+    if (!room?.moderator || !room.root || !rec) return []
+    const c = this.confirmed
+    const busy = new Set(this.pendingList.map((p) => p.body.thread))
+    const legit = (k: string | null | undefined, was: string | null) => k === room.root || k === was
+    const moved: string[] = []
+    for (const [id, was] of [...rec.owners]) {
+      if (busy.has(id)) continue
+      const t = c.threads.get(id)
+      let taken: boolean
+      if (t) taken = !legit(c.ownerOf(id, t.first), was)
+      else if (c.isTomb(id)) taken = !legit(c.tombKey(id), was)
+      else continue
+      rec.owners.delete(id)
+      const data = rec.threads[id]
+      if (!taken || !data) continue
+      if (t) this.commit({ op: "delete", thread: id }, origin, { asRoot: true })
+      const fresh = rehomed(data, () => this.freshId())
+      this.commit({ op: "import", thread: this.freshId(), data: fresh }, origin, { asRoot: true })
+      moved.push(id)
+    }
+    return moved
+  }
+
+  /** Whether a delete named `id` (a change naming it can never apply again). */
+  isDeleted(id: string): boolean {
+    return this.state().isTomb(id)
   }
 
   /**

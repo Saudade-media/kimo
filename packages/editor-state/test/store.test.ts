@@ -13,6 +13,7 @@ import {
   exportDocument,
   importDocument,
   type NormalizedOp,
+  parseCommentRecordBody,
   type StoreChange,
   YjsDocStore,
 } from "../src/index"
@@ -633,6 +634,17 @@ describe("comments (docs/spec/comments.md)", () => {
     c.enterRoom({ key: "KC", root: "ROOT", moderator: false }, a.kept())
     const top = Math.max(...a.kept().map((k) => k.pos as number))
     c.receive([{ ...created, pos: top + COMMENT_ENTRY_SLOTS }])
+    // A deleted id is single use for every key: a new key cannot take it over.
+    const again = forged("KZ", {
+      op: "thread",
+      thread: threadId,
+      message: "Again00001",
+      anchor: { x: 0, y: 0 },
+      author: { id: "dev:KZ", name: "Zed", kind: "person" },
+      text: "Pay invoice 4411",
+    })
+    r.append([again])
+    c.receive([{ ...again, pos: top + 2 * COMMENT_ENTRY_SLOTS }])
     expect(c.toJSON()).toBeUndefined()
     expect(a.toJSON()).toBeUndefined()
   })
@@ -697,6 +709,63 @@ describe("comments (docs/spec/comments.md)", () => {
     const doc = s.toDocument() as unknown as Record<string, unknown>
     expect(validate(doc).errors).toEqual([])
     expect(Object.keys(doc.comments as object)).toEqual(["Thread0002"])
+    // What autosave writes (the header path) drops it too.
+    expect(validate(JSON.parse(documentText(s))).errors).toEqual([])
+  })
+
+  test("creations re-appended into one entry keep their old bases and all apply", () => {
+    const r = relay()
+    const a = r.join("KA")
+    const author = { id: "dev:KB", name: "Bo", kind: "person" } as const
+    r.append([
+      forged("KB", {
+        op: "thread",
+        thread: "Thread0001",
+        message: "Msg0000001",
+        anchor: { x: 0, y: 0 },
+        author,
+        text: "a",
+      }),
+      forged(
+        "KB",
+        { op: "reply", thread: "Thread0001", message: "Msg0000002", author, text: "b" },
+        256,
+      ),
+      forged(
+        "KB",
+        { op: "reply", thread: "Thread0001", message: "Msg0000003", author, text: "c" },
+        512,
+      ),
+    ])
+    expect(Object.keys(a.thread("Thread0001")?.messages ?? {})).toHaveLength(3)
+  })
+
+  test("the change parser refuses what the file schema refuses", () => {
+    const author = { id: "dev:KB", name: "Bo", kind: "person" }
+    const ok = {
+      v: 1,
+      id: "Change0001",
+      n: 1,
+      base: 0,
+      at: "2026-11-20T10:00:00.000Z",
+      op: "thread",
+      thread: "Thread0001",
+      message: "Msg0000001",
+      anchor: { x: 0, y: 0 },
+      author,
+      text: "hi",
+    }
+    const image = { mime: "image/png", sha256: "a".repeat(64) }
+    expect(parseCommentRecordBody(ok)).not.toBeNull()
+    for (const bad of [
+      { at: "2026-11-20T10:00:00Z" },
+      { anchor: { x: 0, y: 0, zz: 1 } },
+      { anchor: { x: 0, y: 0, fallback: { x: 0, y: 0, q: 1 } } },
+      { author: { ...author, role: "owner" } },
+      { attachments: [{ ...image, file: "../../../../etc/passwd" }] },
+      { attachments: [{ ...image, file: "./assets/0123456789abcdef.png", extra: 1 }] },
+    ])
+      expect(parseCommentRecordBody({ ...ok, ...bad })).toBeNull()
   })
 
   test("replayed changes never bring back a deleted message or an old value", () => {

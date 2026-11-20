@@ -23,7 +23,14 @@ import type { ServerWebSocket } from "bun"
 import type { VerifiedToken } from "./auth"
 import { type BlobStore, createBlobStore } from "./blobs"
 import type { RelayConfig } from "./config"
-import { type LogChannel, type LogRow, RelayDb, type RoomRow, roomBytes as storedBytes } from "./db"
+import {
+  commentBytes,
+  type LogChannel,
+  type LogRow,
+  RelayDb,
+  type RoomRow,
+  roomBytes as storedBytes,
+} from "./db"
 import { bootOwnership, bootRelayId } from "./owners"
 import {
   devicesPolicy,
@@ -41,13 +48,13 @@ const MINUTE = 60_000
 const HOUR = 60 * MINUTE
 const DAY = 24 * HOUR
 const ACTIVE_WRITE_MS = MINUTE
-/** Comment appends per token per hour (docs/spec/comments.md §4.4). */
-export const COMMENT_APPENDS_PER_HOUR = 600
 /**
- * Comment appends per token per client address per hour: everyone on a shared link has their
- * own share, so one reviewer cannot spend the whole link's budget (§4.4).
+ * Comment appends per token per hour (docs/spec/comments.md §4.4): a ceiling far above one
+ * address's share, so a few addresses cannot spend a shared link's budget.
  */
-export const COMMENT_APPENDS_PER_HOUR_PER_IP = 200
+export const COMMENT_APPENDS_PER_HOUR = 6000
+/** Comment appends per token per client address (IPv6: per /64) per hour (§4.4). */
+export const COMMENT_APPENDS_PER_HOUR_PER_IP = 300
 /** Blob upload bytes per room per 10 minutes (§14.8). */
 export const BLOB_WINDOW_BYTES = 200 * (1 << 20)
 
@@ -188,9 +195,16 @@ export class Relay {
     return room.quota_bytes ?? this.config.roomQuotaBytes
   }
 
-  /** What comment-only links may store in `room` (docs/spec/comments.md §4.4). */
-  commentQuotaFor(room: RoomRow): number {
-    return Math.min(this.config.commentQuotaBytes, this.quotaFor(room))
+  /**
+   * Whether comment-only links may store `bytes` more in `room` (docs/spec/comments.md §4.4):
+   * within their budget (at most half the room quota), and leaving a tenth of the room free, so
+   * editors can always write and compact.
+   */
+  commentFits(room: RoomRow, bytes: number): boolean {
+    const quota = this.quotaFor(room)
+    const budget = Math.min(this.config.commentQuotaBytes, Math.floor(quota / 2))
+    if (commentBytes(room) + bytes > budget) return false
+    return storedBytes(room) + bytes <= quota - Math.floor(quota / 10)
   }
 
   /**

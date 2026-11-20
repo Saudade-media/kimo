@@ -1,7 +1,12 @@
 /** Signed comment changes (docs/spec/comments.md §4.1, §4.2). */
 import { describe, expect, test } from "bun:test"
 import { type CommentRecordBody, CommentStore } from "@kimo/editor-state"
-import { CommentChannel, type CommentSession, type CommentSigner } from "../../src/comment-channel"
+import {
+  CommentChannel,
+  type CommentSession,
+  type CommentSigner,
+  MemoryCommentReplicaStore,
+} from "../../src/comment-channel"
 import {
   type ClientMessage,
   deriveRoomId,
@@ -191,5 +196,56 @@ describe("comment channel", () => {
     expect(a.threads()).toEqual(b.threads())
     await chA.dispose()
     await chB.dispose()
+  })
+
+  test("a device folding its saved replica knows the room root key before it enters", async () => {
+    const root = await signer()
+    const roomId = await deriveRoomId(root.publicKey)
+    const keys = await deriveRoomKeys(generateRoomKey(), roomId)
+    const troll = await signer()
+    const created = await signComment(
+      roomId.id,
+      body(toBase64Url(troll.publicKey)),
+      troll.privateKey,
+      troll.publicKey,
+    )
+    const removed = await signComment(
+      roomId.id,
+      {
+        v: 1,
+        id: "Change0002",
+        n: 1,
+        base: 256,
+        at: "2026-11-19T10:00:00.000Z",
+        op: "delete",
+        thread: "Thread0001",
+      },
+      root.privateKey,
+      root.publicKey,
+    )
+    const replica = new MemoryCommentReplicaStore()
+    await replica.save(roomId.id, {
+      since: 0,
+      changes: [
+        { pos: 256, signed: created },
+        { pos: 512, signed: removed },
+      ],
+      unsent: [],
+    })
+    const store = new CommentStore()
+    const ch = new CommentChannel({
+      room: roomId.id,
+      keys,
+      http: new RelayHttpClient({ relayUrl: "https://relay.invalid" }),
+      origin: "remote:mp:test",
+      store,
+      device: await signer(),
+      replica,
+    })
+    new MiniRelay().connect(ch)
+    await settle()
+    expect(store.room?.root).toBe(toBase64Url(root.publicKey))
+    expect(store.thread("Thread0001")).toBeUndefined()
+    await ch.dispose()
   })
 })

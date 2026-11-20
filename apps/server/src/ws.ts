@@ -16,7 +16,7 @@ import {
 } from "@kimo/sync/mp"
 import type { WebSocketHandler } from "bun"
 import { recheckToken, verifyToken } from "./auth"
-import { commentBytes, roomBytes } from "./db"
+import { roomBytes } from "./db"
 import { TokenBucket } from "./rate-limit"
 import type { Relay, Sock, SocketData } from "./rooms"
 
@@ -36,6 +36,26 @@ function codeOf(error: unknown): MpErrorCode {
   return error instanceof MultiplayerError && error.code === "BAD_REQUEST"
     ? "AUTH_INVALID"
     : "INTERNAL"
+}
+
+/**
+ * The client address a per-person limit keys on: IPv4 as is, IPv6 by its /64 (one host usually
+ * holds a whole /64, so per address would be per connection).
+ */
+export function addressKey(ip: string): string {
+  const v4 = /^(?:::ffff:)?(\d{1,3}(?:\.\d{1,3}){3})$/i.exec(ip)
+  if (v4) return v4[1] as string
+  if (!ip.includes(":")) return ip
+  const [head = "", tail = ""] = ip.toLowerCase().split("::")
+  const left = head ? head.split(":") : []
+  const right = tail ? tail.split(":") : []
+  const groups = ip.includes("::")
+    ? [...left, ...Array(Math.max(0, 8 - left.length - right.length)).fill("0"), ...right]
+    : left
+  return `${groups
+    .slice(0, 4)
+    .map((g) => g.replace(/^0+(?=.)/, ""))
+    .join(":")}::/64`
 }
 
 export function initialSocketData(room: string, ip: string, now: number): SocketData {
@@ -161,7 +181,8 @@ export function websocketHandlers(relay: Relay): WebSocketHandler<SocketData> {
       return deny(ws, "TOO_LARGE", cid, "entry too large")
     if (envelopeKind(env) !== EnvelopeKind.commentsUpdate)
       return deny(ws, "BAD_MESSAGE", cid, "not a comments-update envelope")
-    if (relay.commentIpLimiter.take(`${data.room}:${data.jti}:${data.ip}`, relay.now()) > 0)
+    const address = addressKey(data.ip)
+    if (relay.commentIpLimiter.take(`${data.room}:${data.jti}:${address}`, relay.now()) > 0)
       return deny(ws, "RATE_LIMITED", cid, "too many comments in the last hour")
     if (relay.commentLimiter.take(`${data.room}:${data.jti}`, relay.now()) > 0)
       return deny(ws, "RATE_LIMITED", cid, "too many comments in the last hour")
@@ -172,7 +193,7 @@ export function websocketHandlers(relay: Relay): WebSocketHandler<SocketData> {
     // can always write and compact (docs/spec/comments.md §4.4).
     if (
       data.tokenRole === "comment" &&
-      (commentBytes(row) + env.length > relay.commentQuotaFor(row) ||
+      (!relay.commentFits(row, env.length) ||
         row.c_log_bytes + env.length > relay.config.logMaxBytes / 2)
     )
       return deny(ws, "QUOTA_EXCEEDED", cid, "comment storage quota exceeded")

@@ -21,7 +21,7 @@ import type { Server } from "bun"
 import pkg from "../package.json" with { type: "json" }
 import { runAdmin } from "./admin"
 import { bearerToken, recheckToken, type VerifiedToken, verifyToken } from "./auth"
-import { commentBytes, roomBytes } from "./db"
+import { roomBytes } from "./db"
 import { retryAfterSeconds } from "./rate-limit"
 import type { Relay, SocketData } from "./rooms"
 import { webResponse } from "./web"
@@ -330,17 +330,20 @@ export function createFetchHandler(relay: Relay) {
     const max = config.blobMaxBytes + ENVELOPE_OVERHEAD
     const declared = Number(req.headers.get("content-length") ?? "0")
     if (Number.isFinite(declared) && declared > max) fail("TOO_LARGE", "blob too large")
-    if (db.getBlob(roomId, id) && relay.blobs.has(roomId, id)) {
+    // Comment-only links draw on their own budgets (docs/spec/comments.md §4.4).
+    const commentOnly = verified.token.role === "comment"
+    const existing = db.getBlob(roomId, id)
+    if (existing && relay.blobs.has(roomId, id)) {
       // Unmark before draining: a sweep running during the await must see the blob as kept.
-      db.clearUnref(roomId, id)
+      // A comment-only link keeps only its own uploads from the owner's sweep.
+      if (!commentOnly || existing.comment) db.clearUnref(roomId, id)
       await req.arrayBuffer().catch(() => undefined)
       return json({}, 200)
     }
     const body = await readBody(req, max)
     if (body.length < ENVELOPE_OVERHEAD || envelopeKind(body) !== EnvelopeKind.blob)
       fail("BAD_REQUEST", "not a blob envelope")
-    // Comment-only links draw on their own byte budget: a guest cannot starve editors' uploads.
-    const commentOnly = verified.token.role === "comment"
+    // A guest cannot starve editors' upload bytes.
     const bytesKey = commentOnly ? `${roomId}:comment` : roomId
     const bytesWait = relay.blobBytesLimiter.take(bytesKey, relay.now(), body.length)
     if (bytesWait > 0) fail("RATE_LIMITED", "too many upload bytes", bytesWait)
@@ -350,14 +353,22 @@ export function createFetchHandler(relay: Relay) {
     if (before && account !== null) await relay.owner.write({ ...before, account }, body.length)
     // The room may have been closed, or the link revoked or reset, while the body was uploading.
     const fresh = recheckToken(db, verified, Math.floor(relay.now() / 1000))
+    // From here on everything is synchronous. Another upload of this id may have finished while
+    // this body arrived: keep the stored one, so the bytes on disk are the bytes counted.
+    const stored = db.getBlob(roomId, id)
+    if (stored && relay.blobs.has(roomId, id)) {
+      if (!commentOnly || stored.comment) db.clearUnref(roomId, id)
+      return json({}, 200)
+    }
+    if (stored && stored.bytes !== body.length) fail("BAD_REQUEST", "blob size does not match")
     const after = roomBytes(fresh) + body.length
     if (after > relay.quotaFor(fresh)) fail("QUOTA_EXCEEDED", "room storage quota exceeded")
-    if (commentOnly && commentBytes(fresh) + body.length > relay.commentQuotaFor(fresh))
+    if (commentOnly && !relay.commentFits(fresh, body.length))
       fail("QUOTA_EXCEEDED", "comment storage quota exceeded")
     relay.checkAccountStorage(fresh, after)
     relay.blobs.put(roomId, id, body)
     try {
-      if (db.getBlob(roomId, id)) db.clearUnref(roomId, id)
+      if (stored) db.clearUnref(roomId, id)
       else db.insertBlob(roomId, id, body.length, relay.now(), commentOnly)
     } catch (error) {
       relay.blobs.delete(roomId, id)

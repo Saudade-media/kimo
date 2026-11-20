@@ -416,9 +416,11 @@ function nodeIdOf(pointer: string): string | undefined {
  * take a node's id; the save must stay valid (COMMENT_ID_COLLISION), and every peer drops the
  * same ids because it reads its own nodes at projection, never in the fold.
  */
-function withoutNodeIds(comments: Comments | undefined, nodes: unknown): Comments | undefined {
-  if (!comments || typeof nodes !== "object" || nodes === null) return comments
-  const isNode = (id: string) => Object.hasOwn(nodes, id)
+function withoutNodeIds(
+  comments: Comments | undefined,
+  isNode: (id: string) => boolean,
+): Comments | undefined {
+  if (!comments) return comments
   let out: Comments | undefined
   for (const [id, t] of Object.entries(comments)) {
     const bad = Object.keys(t.messages).filter(isNode)
@@ -1216,7 +1218,8 @@ export class YjsDocStore implements DocStore {
   /** `doc` with the comment store's threads as root `comments`, header to match (spec §1). */
   private withComments<T extends object>(doc: T): T {
     const d = doc as unknown as Record<string, unknown>
-    const comments = withoutNodeIds(this.comments.toJSON(), d.nodes)
+    // The store's own nodes, not `doc.nodes`: the header (what autosave writes) has none.
+    const comments = withoutNodeIds(this.comments.toJSON(), (id) => this.hasNode(id))
     if (comments) d.comments = comments
     else delete d.comments
     return withCommentsHeader(doc)

@@ -184,16 +184,18 @@ The position of change `i` (from 0) in comment log entry `seq` is `seq * 256 + i
 applied in position order; a change already held (same `id`) is skipped, and so is an invalid
 one, without stopping the fold.
 
-- A change whose `base` is not below its own position is invalid.
+- An `edit`, `resolve`, `anchor` or `react` whose `base` is not below its own position is
+  invalid. Creations and deletes set no last-writer value, so their `base` is not checked.
 - `thread` and `reply` create a message whose id is new (never held, never deleted, not a node
   id). `reply` needs a live thread.
-- `delete` leaves a **tombstone** for each id it names. An id that is held must be deleted
-  through its own thread by the key that wrote it, or by the root key; otherwise the delete is
-  invalid. A delete of an id not held (after compaction its creating change is gone) is a
-  tombstone for the deleting key only: it drops later creations of that id signed by that key.
-  Root key and local file deletes drop every later change for the id. Deleting a thread
-  tombstones the ids the change names, not its other messages, so a fold from a compacted
-  snapshot agrees with a full fold.
+- `delete` leaves a **tombstone** for each id it names; a tombstoned id is never created
+  again, by any key. An id that is held must be deleted through its own thread by the key that
+  wrote it, or by the root key; otherwise the delete is invalid. A delete of an id not held is a
+  tombstone too, so a compacted snapshot keeps it. A message delete tombstones the message only;
+  a thread delete tombstones the ids the change names, not the thread's other messages, so a
+  fold from a compacted snapshot ends with the same tombstones as a full fold.
+- Changes are as strict as the file schema (§1): times with milliseconds, no unknown keys in
+  authors, anchors and attachments, attachment paths of the `./assets/` form.
 - Reaction emoji are keys of a plain map in the file, so any string the parser accepts (even
   `constructor` or `__proto__`) is an ordinary key; readers MUST use own-property lookups.
 - **Last writer, by log order.** `edit`, `resolve`, `anchor` and each reaction (message, emoji,
@@ -226,15 +228,18 @@ Additions to [multiplayer.md](multiplayer.md):
   so the two logs' sequences never mix. Existing types keep their layout.
 - **§14.** The relay stores a second log and snapshot per room with its own `seq`. Room size and
   the owner sweep count both. The relay cannot tell a message from a reaction inside an envelope,
-  so it limits comment appends to 600 an hour per token `jti`, and to 200 an hour per `jti` and
-  client address, so one reviewer on a shared link cannot spend everyone's budget
-  (`RATE_LIMITED`). Clients limit new messages and replies to 100 an hour per author.
+  so it limits comment appends to 300 an hour per token `jti` and client address (IPv6: per
+  /64), under a ceiling of 6000 an hour per `jti`, so one reviewer on a shared link cannot spend
+  everyone's budget (`RATE_LIMITED`). Clients limit new messages and replies to 100 an hour per
+  author.
 - **Comment storage.** Writes by a comment token (comment log appends and blob uploads) count
-  against a separate budget, `KIMO_COMMENT_QUOTA_MB` (default 50, at most the room quota): the
-  comment log, the comment snapshot and blobs comment tokens uploaded. A comment token also may
-  not take the comment log past half of `KIMO_LOG_MAX_MB`. Past either it gets
-  `QUOTA_EXCEEDED`, so editors can always write and compact. Comment tokens' uploads have their
-  own byte rate bucket per room.
+  against a budget of `KIMO_COMMENT_QUOTA_MB` (default 50) or half the room quota, whichever is
+  smaller: the comment log, the comment snapshot and blobs comment tokens uploaded. A comment
+  token also may not take the room past nine tenths of its quota, nor the comment log past half
+  of `KIMO_LOG_MAX_MB`. Past any of these it gets `QUOTA_EXCEEDED`, so editors can always write
+  and compact. Comment tokens' uploads have their own byte rate bucket per room, and a comment
+  token's repeat upload of an existing blob keeps it from the sweep only when a comment token
+  uploaded it.
 - **§12 HTTP.** `GET /room/<room>/comments/snapshot` (any role) and `PUT
   /room/<room>/comments/snapshot?upTo=<n>` (edit only) work like the design snapshot routes,
   with the comment log's `seq`. A comment token MUST NOT upload a snapshot, because a snapshot
@@ -244,7 +249,7 @@ Additions to [multiplayer.md](multiplayer.md):
 - **Compaction.** A snapshot keeps every tombstone change, every creating change of a live
   message, and each change that holds a current value (4.3). It drops the rest.
 - **Re-append.** After catch-up a client appends again, unchanged, the changes it holds that
-  created a live message or hold a current value and that the room lacks (a relay that lost
+  created a live message, hold a current value or delete something, and that the room lacks (a relay that lost
   data, or an edit peer's bad snapshot). They are verified like any change, and duplicates are
   skipped.
 - **§12 blobs.** `PUT /blob` accepts comment tokens too, so a reviewer can upload an attachment.

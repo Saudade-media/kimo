@@ -83,7 +83,7 @@ when the relay is reachable directly.
 | `KIMO_MAX_ROOMS` | `0` (unlimited) | Cap on open rooms |
 | `KIMO_MAX_PEERS` | `32` | Sockets per room |
 | `KIMO_ROOM_QUOTA_MB` | `500` | Default per-room storage quota (blobs + snapshots + log) |
-| `KIMO_COMMENT_QUOTA_MB` | `50` | Part of a room that "view and comment" links may fill (comment log, comment snapshot, their uploads). Editors keep the rest |
+| `KIMO_COMMENT_QUOTA_MB` | `50` | Part of a room that "view and comment" links may fill (comment log, comment snapshot, their uploads), at most half the room quota. They also stop at nine tenths of the room quota, so editors keep the rest |
 | `KIMO_BLOB_MAX_MB` | `20` | Largest blob |
 | `KIMO_ENTRY_MAX_MB` | `4` | Largest log entry |
 | `KIMO_SNAPSHOT_MAX_MB` | `64` | Largest snapshot |

@@ -147,11 +147,14 @@ export class CommentChannel {
     this.loaded ??= (async () => {
       const replica = (await this.options.replica?.load(this.options.room)) ?? null
       const records: CommentRecord[] = []
+      // The replica's root is found before entering: the store is not in the room yet, so
+      // learnRoot could not tell it (and the owner's changes would fold as a stranger's).
+      let learned: string | null = null
       if (replica) {
         for (const c of replica.changes) {
           const rec = await verifyComment(this.options.room, c.signed, c.pos)
           if (!rec) continue
-          await this.learnRoot(c.signed)
+          if (learned === null && (await this.isRootKey(c.signed))) learned = strayKey(c.signed)
           this.signed.set(rec.body.id, c.signed)
           records.push(rec)
         }
@@ -162,9 +165,10 @@ export class CommentChannel {
         this.since = replica.since
       }
       if (this.disposed) return
-      const root = this.options.root ? toBase64Url(this.options.root.publicKey) : null
+      const own = this.options.root ? toBase64Url(this.options.root.publicKey) : null
+      const root = own ?? learned
       this.store.enterRoom(
-        { key: toBase64Url(this.options.device.publicKey), root, moderator: root !== null },
+        { key: toBase64Url(this.options.device.publicKey), root, moderator: own !== null },
         records,
         this.options.origin,
       )
@@ -365,14 +369,18 @@ export class CommentChannel {
   /** A change signed by the key the room id derives from is the owner's (spec §4.1). */
   private async learnRoot(signed: SignedComment): Promise<void> {
     const key = strayKey(signed)
-    const room = this.store.room
-    if (room?.root === key) return
+    if (this.store.room?.root === key) return
+    if (await this.isRootKey(signed)) this.store.setRoomRoot(key, this.options.origin)
+  }
+
+  private isRootKey(signed: SignedComment): Promise<boolean> {
+    const key = strayKey(signed)
     let check = this.rootChecks.get(key)
     if (!check) {
       check = roomMatchesRootKey(this.roomId, signed.key)
       this.rootChecks.set(key, check)
     }
-    if (await check) this.store.setRoomRoot(key, this.options.origin)
+    return check
   }
 
   private receive(records: CommentRecord[]): void {

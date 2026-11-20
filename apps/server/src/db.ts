@@ -93,6 +93,8 @@ export interface BlobRow {
   bytes: number
   at: number
   unref_since: number | null
+  /** 1: a comment-only link uploaded it. */
+  comment: number
 }
 
 export interface OwnerRow {
@@ -707,7 +709,7 @@ export class RelayDb {
   getBlob(room: string, id: string): BlobRow | null {
     return this.sqlite
       .query<BlobRow, [string, string]>(
-        "SELECT id, bytes, at, unref_since FROM blobs WHERE room = ? AND id = ?",
+        "SELECT id, bytes, at, unref_since, comment FROM blobs WHERE room = ? AND id = ?",
       )
       .get(room, id)
   }
@@ -733,7 +735,9 @@ export class RelayDb {
 
   allBlobs(room: string): BlobRow[] {
     return this.sqlite
-      .query<BlobRow, [string]>("SELECT id, bytes, at, unref_since FROM blobs WHERE room = ?")
+      .query<BlobRow, [string]>(
+        "SELECT id, bytes, at, unref_since, comment FROM blobs WHERE room = ?",
+      )
       .all(room)
   }
 

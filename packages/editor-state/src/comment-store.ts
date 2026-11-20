@@ -426,7 +426,8 @@ export class CommentStore {
     const dev = devKeyOf(authorId)
     if (this._room && dev !== null && dev !== this._room.key)
       throw new CommentError("INVALID", "A dev: author must be this device")
-    const on = !(message.reactions?.[emoji] ?? []).includes(authorId)
+    const r = message.reactions
+    const on = !(r && Object.hasOwn(r, emoji) ? (r[emoji] ?? []) : []).includes(authorId)
     this.commit(
       { op: "react", thread: threadId, message: messageId, emoji, author: authorId, on },
       origin,

@@ -75,7 +75,10 @@ export interface CommentRecord {
 
 const ID_RE = new RegExp(ID_PATTERN)
 const AUTHOR_ID_RE = /^(?:acct|dev|agent):[^\s]{1,128}$/
-const TIME_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?Z$/
+// As strict as the file schema (core-schema schema/comments.ts): a change the fold takes must
+// never make the saved file invalid.
+const TIME_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/
+const FILE_RE = /^\.\/assets\/[0-9a-f]{16}\.(?:png|jpg|jpeg|gif)$/
 const SHA_RE = /^[0-9a-f]{64}$/
 const MAX_EMOJI = 32
 
@@ -83,9 +86,12 @@ const isId = (v: unknown): v is string => typeof v === "string" && ID_RE.test(v)
 const isUintValue = (v: unknown): v is number =>
   typeof v === "number" && Number.isSafeInteger(v) && v >= 0
 const finite = (v: unknown): v is number => typeof v === "number" && Number.isFinite(v)
+/** Whether `v` has no keys but `allowed` (the schema's objects are strict). */
+const only = (v: Record<string, unknown>, allowed: readonly string[]): boolean =>
+  Object.keys(v).every((k) => allowed.includes(k))
 
 export function isCommentAuthor(v: unknown): v is CommentAuthor {
-  if (!isObject(v)) return false
+  if (!isObject(v) || !only(v, ["id", "name", "kind"])) return false
   const name = v.name
   return (
     typeof v.id === "string" &&
@@ -99,6 +105,7 @@ export function isCommentAuthor(v: unknown): v is CommentAuthor {
 
 export function isCommentAnchor(v: unknown): v is CommentAnchor {
   if (!isObject(v) || !finite(v.x) || !finite(v.y)) return false
+  if (!only(v, ["page", "node", "x", "y", "w", "h", "fallback"])) return false
   if ((v.w === undefined) !== (v.h === undefined)) return false
   if (v.w !== undefined && (!finite(v.w) || v.w <= 0 || !finite(v.h) || (v.h as number) <= 0))
     return false
@@ -106,7 +113,7 @@ export function isCommentAnchor(v: unknown): v is CommentAnchor {
   if (v.page !== undefined && !isId(v.page)) return false
   if (v.fallback !== undefined) {
     const f = v.fallback
-    if (!isObject(f) || !finite(f.x) || !finite(f.y)) return false
+    if (!isObject(f) || !finite(f.x) || !finite(f.y) || !only(f, ["x", "y"])) return false
   }
   return true
 }
@@ -120,8 +127,9 @@ function isAttachments(v: unknown): v is CommentAttachment[] {
   return v.every(
     (a) =>
       isObject(a) &&
+      only(a, ["file", "mime", "sha256", "width", "height"]) &&
       typeof a.file === "string" &&
-      a.file.length <= 200 &&
+      FILE_RE.test(a.file) &&
       (COMMENT_ATTACHMENT_MIMES as readonly string[]).includes(a.mime as string) &&
       typeof a.sha256 === "string" &&
       SHA_RE.test(a.sha256) &&
@@ -136,6 +144,7 @@ export function isEmoji(v: unknown): v is string {
 
 function isMessage(v: unknown): v is CommentMessage {
   if (!isObject(v) || !isCommentAuthor(v.author) || typeof v.at !== "string") return false
+  if (!only(v, ["author", "at", "text", "edited", "attachments", "reactions"])) return false
   if (!TIME_RE.test(v.at) || !isCommentText(v.text)) return false
   if (v.edited !== undefined && (typeof v.edited !== "string" || !TIME_RE.test(v.edited)))
     return false
@@ -152,7 +161,7 @@ function isMessage(v: unknown): v is CommentMessage {
 
 function isThread(v: unknown): v is CommentThread {
   if (!isObject(v) || !isCommentAnchor(v.anchor) || !isId(v.first)) return false
-  if (!isObject(v.messages)) return false
+  if (!only(v, ["anchor", "first", "messages", "resolved"]) || !isObject(v.messages)) return false
   const ids = Object.keys(v.messages)
   if (ids.length === 0 || ids.length > 10_000 || !Object.hasOwn(v.messages, v.first)) return false
   if (!ids.every((id) => isId(id) && isMessage((v.messages as Record<string, unknown>)[id])))
@@ -160,6 +169,7 @@ function isThread(v: unknown): v is CommentThread {
   if (v.resolved !== undefined) {
     const r = v.resolved
     if (!isObject(r) || !isCommentAuthor(r.by) || typeof r.at !== "string") return false
+    if (!only(r, ["by", "at"]) || !TIME_RE.test(r.at)) return false
   }
   return true
 }
@@ -277,6 +287,9 @@ interface ThreadState {
   messages: Map<string, MessageState>
 }
 
+/** Ops that set a last-writer value (spec §4.3): only these use `base`. */
+const LAST_WRITER_OPS: ReadonlySet<string> = new Set(["edit", "resolve", "anchor", "react"])
+
 /** Pending local changes sort after every acknowledged one. */
 const PENDING_POS = Number.MAX_SAFE_INTEGER
 
@@ -305,13 +318,11 @@ export interface FoldContext {
  */
 export class CommentFold {
   readonly threads = new Map<string, ThreadState>()
-  /** Ids the room owner (root key) or a local file deleted: dead for every writer. */
-  readonly tombs = new Set<string>()
   /**
-   * Ids other keys deleted, with those keys. A delete names ids its key may hold, so only that
-   * key's later creations are dropped (spec §4.3): a guest cannot freeze someone else's ids.
+   * Ids a delete named: never created again, by any key (spec §4.3). A delete may name a held id
+   * only when its key may delete it, so nobody can freeze someone else's thread.
    */
-  readonly keyedTombs = new Map<string, Set<string>>()
+  readonly tombs = new Set<string>()
   /** Change ids applied or skipped. */
   readonly seen = new Set<string>()
   /** Every delete change, kept for compaction. */
@@ -338,7 +349,6 @@ export class CommentFold {
         ),
       })
     for (const id of this.tombs) f.tombs.add(id)
-    for (const [id, keys] of this.keyedTombs) f.keyedTombs.set(id, new Set(keys))
     for (const id of this.seen) f.seen.add(id)
     for (const [k, v] of this.deletes) f.deletes.set(k, v)
     for (const [k, v] of this.holders) f.holders.set(k, { ...v })
@@ -382,25 +392,9 @@ export class CommentFold {
     return false
   }
 
-  /** Whether `id` was deleted, for every writer or by `key`. */
-  private dead(id: string, key: string | null): boolean {
-    return this.tombs.has(id) || (key !== null && (this.keyedTombs.get(id)?.has(key) ?? false))
-  }
-
-  /** Whether any delete named `id` (fresh ids avoid these). */
+  /** Whether a delete named `id` (fresh ids avoid these). */
   isTomb(id: string): boolean {
-    return this.tombs.has(id) || this.keyedTombs.has(id)
-  }
-
-  private tomb(id: string, key: string, everyone: boolean): void {
-    if (everyone) {
-      this.tombs.add(id)
-      this.keyedTombs.delete(id)
-      return
-    }
-    const keys = this.keyedTombs.get(id)
-    if (keys) keys.add(key)
-    else this.keyedTombs.set(id, new Set([key]))
+    return this.tombs.has(id)
   }
 
   private isRoot(key: string): boolean {
@@ -424,7 +418,9 @@ export class CommentFold {
     this.seen.add(b.id)
     if (rec.pos !== null) {
       this.maxPos = Math.max(this.maxPos, rec.pos)
-      if (b.base >= rec.pos) return null
+      // A creation or delete takes no last-writer value, so its base only matters to the
+      // ops that do; re-appended creations keep their old base (spec §4.4 Re-append).
+      if (b.base >= rec.pos && LAST_WRITER_OPS.has(b.op)) return null
     }
     const setter: Setter = { pos: rec.pos ?? PENDING_POS, key: rec.key, n: b.n }
     return this.applyOp(rec, setter, rec.key === LOCAL_KEY)
@@ -457,7 +453,6 @@ export class CommentFold {
       case "thread": {
         if (!this.authorOk(key, b.author.id)) return null
         if (this.taken(b.thread) || this.taken(b.message) || b.thread === b.message) return null
-        if (this.dead(b.thread, key) || this.dead(b.message, key)) return null
         const m = this.newMessage(rec, b, trusted ? null : key)
         this.threads.set(b.thread, {
           anchor: clone(b.anchor),
@@ -472,7 +467,6 @@ export class CommentFold {
       }
       case "reply": {
         if (!t || !this.authorOk(key, b.author.id) || this.taken(b.message)) return null
-        if (this.dead(b.message, key)) return null
         t.messages.set(b.message, this.newMessage(rec, b, trusted ? null : key))
         return b.thread
       }
@@ -488,28 +482,25 @@ export class CommentFold {
         return b.thread
       }
       case "delete": {
-        // Every id a delete names is either held and checked against its owner, or not held
-        // and tombstoned for this key alone (spec §4.3). Root and local deletes are for all.
+        // Every id a delete names is either held, and checked against its owner through its
+        // own thread, or not held and tombstoned (spec §4.3). The ids tombstoned depend only on
+        // the change, so a fold from a compacted snapshot ends with the same tombstones.
         const mid = b.message
         const everyone = trusted || this.isRoot(key)
         if (t && (mid === undefined || mid === t.first)) {
           const first = t.messages.get(t.first)
           if (!everyone && first?.owner !== key) return null
           this.dropThread(b.thread, t)
-          this.tomb(b.thread, key, everyone)
-          if (mid !== undefined) this.tomb(mid, key, everyone)
         } else if (t && mid !== undefined) {
           const m = t.messages.get(mid)
           if (m) {
             if (!everyone && m.owner !== key) return null
             this.dropMessage(t, mid, m)
           } else if (this.held(mid)) return null
-          this.tomb(mid, key, everyone)
-        } else {
-          if (this.held(b.thread) || (mid !== undefined && this.held(mid))) return null
-          this.tomb(b.thread, key, everyone)
-          if (mid !== undefined) this.tomb(mid, key, everyone)
-        }
+        } else if (this.held(b.thread) || (mid !== undefined && this.held(mid))) return null
+        // A message delete names its thread for routing only: the thread stays alive.
+        if (!t || mid === undefined || mid === t.first) this.tombs.add(b.thread)
+        if (mid !== undefined) this.tombs.add(mid)
         this.deletes.set(b.id, rec)
         return b.thread
       }
@@ -561,16 +552,13 @@ export class CommentFold {
         if (t) {
           let added = false
           for (const [mid, m] of Object.entries(d.messages)) {
-            if (this.taken(mid) || this.dead(mid, ownerOf(m))) continue
+            if (this.taken(mid)) continue
             add(t, mid, m)
             added = true
           }
           return added ? b.thread : null
         }
         if (this.taken(b.thread) || this.taken(d.first) || d.first === b.thread) return null
-        const opening = d.messages[d.first] as CommentMessage
-        if (this.dead(b.thread, ownerOf(opening)) || this.dead(d.first, ownerOf(opening)))
-          return null
         const thread: ThreadState = {
           anchor: clone(d.anchor),
           anchorBy: setter,
@@ -581,11 +569,7 @@ export class CommentFold {
         }
         this.threads.set(b.thread, thread)
         for (const [mid, m] of Object.entries(d.messages))
-          if (
-            mid === d.first ||
-            (!this.taken(mid) && mid !== b.thread && !this.dead(mid, ownerOf(m)))
-          )
-            add(thread, mid, m)
+          if (mid === d.first || (!this.taken(mid) && mid !== b.thread)) add(thread, mid, m)
         this.anchorHolder.set(b.thread, this.ref(rec))
         if (d.resolved) this.resolveHolder.set(b.thread, this.ref(rec))
         return b.thread
@@ -668,8 +652,11 @@ export class CommentFold {
       .sort((a, b) => (a.pos as number) - (b.pos as number))
   }
 
-  /** Changes that hold something now (re-append candidates), acknowledged or not. */
+  /**
+   * Re-append candidates, acknowledged or not: changes that hold something now, and every
+   * delete, so a reset log keeps its tombstones too.
+   */
   live(): CommentRecord[] {
-    return [...this.holders.values()].map((h) => h.rec)
+    return [...[...this.holders.values()].map((h) => h.rec), ...this.deletes.values()]
   }
 }

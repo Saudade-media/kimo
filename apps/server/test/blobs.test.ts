@@ -96,6 +96,41 @@ describe("blob endpoints", () => {
     await small.stop()
   })
 
+  test("a second upload of one id while the first is arriving keeps the counted bytes", async () => {
+    const small = await sealed("small")
+    const big = await sealed("big".repeat(2000))
+    let release = () => {}
+    const gate = new Promise<void>((r) => {
+      release = r
+    })
+    const cut = big.envelope.length - 100
+    let step = 0
+    const body = new ReadableStream<Uint8Array>({
+      async pull(c) {
+        if (step++ === 0) return c.enqueue(big.envelope.slice(0, cut))
+        await gate
+        c.enqueue(big.envelope.slice(cut))
+        c.close()
+      },
+    })
+    try {
+      const first = fetch(url(small.id), {
+        method: "PUT",
+        headers: bearer(edit),
+        body,
+        duplex: "half",
+      } as RequestInit)
+      await new Promise((r) => setTimeout(r, 50))
+      expect((await put(small.id, small.envelope)).status).toBe(201)
+      release()
+      expect((await first).status).toBe(200)
+      const got = await fetch(url(small.id), { headers: bearer(view) })
+      expect((await got.arrayBuffer()).byteLength).toBe(small.envelope.length)
+    } finally {
+      release()
+    }
+  })
+
   test("the room quota is 507", async () => {
     const tight = startRelay({ roomQuotaBytes: 300 })
     const o = await registered(tight)

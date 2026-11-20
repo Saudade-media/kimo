@@ -539,7 +539,7 @@ describe("comment channel (docs/spec/comments.md §4.4)", () => {
     const { client } = await Client.join(h, owner.room.id, text)
     const env = await commentEnv(owner, "spam")
     // The per-socket append bucket (burst 200) must not hide the hourly cap.
-    for (let i = 1; i <= 200; i++) {
+    for (let i = 1; i <= 300; i++) {
       client.send({ type: "append-comment", cid: i, env })
       if (i % 100 === 0) {
         await until(
@@ -549,11 +549,11 @@ describe("comment channel (docs/spec/comments.md §4.4)", () => {
         h.clock.now += 2_000
       }
     }
-    // One reviewer on a shared link spends their own share, not the link's 600.
-    for (let i = 201; i <= 205; i++) client.send({ type: "append-comment", cid: i, env })
+    // One reviewer on a shared link spends their own share, not the whole link's.
+    for (let i = 301; i <= 305; i++) client.send({ type: "append-comment", cid: i, env })
     const denied = await client.next("denied", 5000)
     expect(denied.code).toBe("RATE_LIMITED")
-    expect(denied.cid).toBeLessThanOrEqual(202)
+    expect(denied.cid).toBeLessThanOrEqual(302)
     client.close()
   })
 

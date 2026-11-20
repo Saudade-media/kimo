@@ -108,6 +108,7 @@ import {
 import { autoApprovalLine } from "./approval"
 import { type CostWarningView, estimateTurn, shouldWarn } from "./cost-warning"
 import { modelLabel, newTokens } from "./format"
+import { insertLayerRefs, layerRefs } from "./layer-refs"
 import { pushRecent } from "./model-chooser"
 import { type ProviderMark, pickerGroups, providerMark, selectionEfforts } from "./picker-groups"
 import { type AgentPanelRuntime, providerFor } from "./runtime"
@@ -212,7 +213,6 @@ export interface AgentPanelViewState extends AgentPanelState {
   mark: AgentMarkState
   modeRun: ModeRunView | null
   canvas: CanvasAgentState
-  /** Selection chips the user removed (until the selection changes). */
   composerFocused: boolean
   /** Short label of the composer's model chip ("Opus 5.5"). */
   modelLabel: string
@@ -291,7 +291,9 @@ interface PromptRunInput {
 export interface AgentPanelControllerExt extends AgentPanelController {
   readonly state: AgentPanelViewState
   subscribe(listener: (s: AgentPanelViewState) => void): () => void
-  setText(text: string): void
+  setText(text: string, cursor?: number): void
+  /** The composer's last caret offset in the text (where selected layers are inserted). */
+  setCursor(cursor: number): void
   setFocused(focused: boolean): void
   openMenu(menu: PanelMenu): void
   /** Inserts `/name ` at the start of the composer text (skills menu Enter). */
@@ -527,8 +529,12 @@ export function createAgentPanelController(o: AgentPanelOptions): AgentPanelCont
   let providers: ProviderConfig[] = []
   let catalog: SkillCatalog = { builtin: [], user: [], errors: [] }
   let session: Session | null = null
-  let selection: SelectionItem[] = []
-  let removedSelection = new Set<string>()
+  /** Ids selected on the canvas at the last sync (null until the first one is seen). */
+  let selectedIds: Set<string> | null = null
+  /** Composer caret offset in `text` (null: never focused, so chips go at the end). */
+  let cursor: number | null = null
+  /** Set when a layer chip was inserted: where the composer should put its caret. */
+  let caret: number | null = null
   let images: AttachmentChipView[] = []
   let text = ""
   let model: ModelSelection | null = rt.defaultSelection()
@@ -632,17 +638,7 @@ export function createAgentPanelController(o: AgentPanelOptions): AgentPanelCont
   }
 
   function attachments(): AttachmentChipView[] {
-    return [
-      ...selection
-        .filter((s) => !removedSelection.has(s.id))
-        .map((s) => ({
-          id: `sel:${s.id}`,
-          kind: "selection" as const,
-          label: s.name,
-          nodeIds: [s.id],
-        })),
-      ...images,
-    ]
+    return [...images]
   }
 
   function slash(): AgentComposerView["slash"] {
@@ -704,6 +700,7 @@ export function createAgentPanelController(o: AgentPanelOptions): AgentPanelCont
         efforts,
         mode,
         attachments: attachments(),
+        ...(caret != null ? { caret } : {}),
         slash: slash(),
       },
       header: {
@@ -1241,7 +1238,7 @@ export function createAgentPanelController(o: AgentPanelOptions): AgentPanelCont
       ...(p.free ? { free: true } : {}),
       text: t,
       history: messages.map((m) => m.text),
-      frames: atts.filter((a) => a.kind === "selection").length,
+      frames: layerRefs(t).length,
       images: atts.filter((a) => a.kind === "image").length,
       multiplier:
         mode.mode === "side-by-side" || mode.mode === "split"
@@ -1430,12 +1427,6 @@ export function createAgentPanelController(o: AgentPanelOptions): AgentPanelCont
     return { user, forced }
   }
 
-  function selectionSummary(atts: AttachmentChipView[]): string | undefined {
-    const sel = atts.filter((a) => a.kind === "selection")
-    if (!sel.length) return undefined
-    return sel.map((a) => `${a.label} (${a.nodeIds?.[0] ?? ""})`).join(", ")
-  }
-
   async function finishTurn(raw: TurnRecord, msgId: string, extra?: { agents?: number }) {
     const s = ensureSession()
     // Board 34: the turn's auto-approved lines are saved with it (reopening shows them).
@@ -1584,6 +1575,8 @@ export function createAgentPanelController(o: AgentPanelOptions): AgentPanelCont
     ]
     if (!opts.regenerateOf) {
       text = ""
+      cursor = null
+      caret = null
       images = []
     }
     menu = null
@@ -1598,7 +1591,12 @@ export function createAgentPanelController(o: AgentPanelOptions): AgentPanelCont
           label: x.name,
           nodeIds: [x.id],
         }))
-      : atts.filter((a) => a.kind === "selection")
+      : layerRefs(raw).map((x) => ({
+          id: `ref:${x.id}`,
+          kind: "selection" as const,
+          label: x.name,
+          nodeIds: [x.id],
+        }))
     try {
       // A prompt node always runs one Single turn (ADR 0014 §9), whatever the composer's mode.
       const m = opts.scope ? "single" : mode.mode
@@ -1635,7 +1633,6 @@ export function createAgentPanelController(o: AgentPanelOptions): AgentPanelCont
           ...(scopeItems.length
             ? { scope: scopeItems.map((a) => ({ id: a.nodeIds?.[0] ?? "", name: a.label })) }
             : {}),
-          ...(selectionSummary(atts) ? { selectionSummary: selectionSummary(atts) } : {}),
           ...(opts.fromHome ? { fromHome: true } : {}),
           modeName: "single",
           ...(s.cliSessionId ? { cliSessionId: s.cliSessionId } : {}),
@@ -2785,8 +2782,7 @@ export function createAgentPanelController(o: AgentPanelOptions): AgentPanelCont
       emit()
     },
     removeAttachment(id) {
-      if (id.startsWith("sel:")) removedSelection = new Set([...removedSelection, id.slice(4)])
-      else images = images.filter((i) => i.id !== id)
+      images = images.filter((i) => i.id !== id)
       emit()
     },
     async answerApproval(id, choice: McpApprovalChoice) {
@@ -2953,8 +2949,10 @@ export function createAgentPanelController(o: AgentPanelOptions): AgentPanelCont
         emit()
       }
     },
-    setText(t) {
+    setText(t, at) {
       text = t
+      cursor = at ?? null
+      caret = null
       if (/^\/[a-z0-9-]*$/.test(t.trimStart())) menu = "skills"
       else if (menu === "skills" && !t.trimStart().startsWith("/")) menu = null
       emit()
@@ -2972,9 +2970,20 @@ export function createAgentPanelController(o: AgentPanelOptions): AgentPanelCont
       menu = null
       emit()
     },
+    setCursor(at) {
+      cursor = at
+    },
     setSelection(items) {
-      selection = items
-      removedSelection = new Set()
+      const prev = selectedIds
+      selectedIds = new Set(items.map((i) => i.id))
+      // The first sync is the baseline; later ones insert the newly selected layers, in order.
+      if (!prev) return
+      const added = items.filter((i) => !prev.has(i.id))
+      if (!added.length) return
+      const r = insertLayerRefs(text, cursor, added)
+      text = r.text
+      cursor = r.caret
+      caret = r.caret
       emit()
     },
     async startFromHome(h) {

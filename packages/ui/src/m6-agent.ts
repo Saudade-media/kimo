@@ -57,6 +57,7 @@ export {
   ComposerAgent,
   type ComposerAgentProps,
   type ComposerMoreDot,
+  type ComposerPart,
   composerMoreDot,
 } from "./composer-agent/ComposerAgent"
 export { MessageMeta, type MessageMetaProps } from "./message-meta/MessageMeta"

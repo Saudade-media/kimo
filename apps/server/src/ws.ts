@@ -39,23 +39,33 @@ function codeOf(error: unknown): MpErrorCode {
 }
 
 /**
- * The client address a per-person limit keys on: IPv4 as is, IPv6 by its /64 (one host usually
- * holds a whole /64, so per address would be per connection).
+ * Keys a per-person comment limit uses for a client address: `host` is IPv4 as is or an IPv6
+ * /64 (one host usually holds a whole /64), `net` the IPv6 /48 a single allocation spans
+ * (null for IPv4). Ports and IPv4-mapped forms are normalised first.
  */
-export function addressKey(ip: string): string {
-  const v4 = /^(?:::ffff:)?(\d{1,3}(?:\.\d{1,3}){3})$/i.exec(ip)
-  if (v4) return v4[1] as string
-  if (!ip.includes(":")) return ip
-  const [head = "", tail = ""] = ip.toLowerCase().split("::")
+export function addressKeys(raw: string): { host: string; net: string | null } {
+  let ip = raw.trim().toLowerCase()
+  const bracket = /^\[([^\]]+)\](?::\d+)?$/.exec(ip)
+  if (bracket) ip = bracket[1] as string
+  const v4port = /^(\d{1,3}(?:\.\d{1,3}){3}):\d+$/.exec(ip)
+  if (v4port) ip = v4port[1] as string
+  const mapped = /^(?:0{0,4}:){0,5}:?ffff:(\d{1,3}(?:\.\d{1,3}){3})$/.exec(ip)
+  if (mapped) return { host: mapped[1] as string, net: null }
+  const hexMapped = /^(?:0{0,4}:){0,5}:?ffff:([0-9a-f]{1,4}):([0-9a-f]{1,4})$/.exec(ip)
+  if (hexMapped) {
+    const hi = Number.parseInt(hexMapped[1] as string, 16)
+    const lo = Number.parseInt(hexMapped[2] as string, 16)
+    return { host: [hi >> 8, hi & 255, lo >> 8, lo & 255].join("."), net: null }
+  }
+  if (!ip.includes(":")) return { host: ip, net: null }
+  const [head = "", tail = ""] = ip.split("::")
   const left = head ? head.split(":") : []
   const right = tail ? tail.split(":") : []
   const groups = ip.includes("::")
     ? [...left, ...Array(Math.max(0, 8 - left.length - right.length)).fill("0"), ...right]
     : left
-  return `${groups
-    .slice(0, 4)
-    .map((g) => g.replace(/^0+(?=.)/, ""))
-    .join(":")}::/64`
+  const g = groups.map((x) => x.replace(/^0+(?=.)/, ""))
+  return { host: `${g.slice(0, 4).join(":")}::/64`, net: `${g.slice(0, 3).join(":")}::/48` }
 }
 
 export function initialSocketData(room: string, ip: string, now: number): SocketData {
@@ -181,8 +191,11 @@ export function websocketHandlers(relay: Relay): WebSocketHandler<SocketData> {
       return deny(ws, "TOO_LARGE", cid, "entry too large")
     if (envelopeKind(env) !== EnvelopeKind.commentsUpdate)
       return deny(ws, "BAD_MESSAGE", cid, "not a comments-update envelope")
-    const address = addressKey(data.ip)
-    if (relay.commentIpLimiter.take(`${data.room}:${data.jti}:${address}`, relay.now()) > 0)
+    const address = addressKeys(data.ip)
+    const key = `${data.room}:${data.jti}`
+    if (relay.commentIpLimiter.take(`${key}:${address.host}`, relay.now()) > 0)
+      return deny(ws, "RATE_LIMITED", cid, "too many comments in the last hour")
+    if (address.net && relay.commentNetLimiter.take(`${key}:${address.net}`, relay.now()) > 0)
       return deny(ws, "RATE_LIMITED", cid, "too many comments in the last hour")
     if (relay.commentLimiter.take(`${data.room}:${data.jti}`, relay.now()) > 0)
       return deny(ws, "RATE_LIMITED", cid, "too many comments in the last hour")

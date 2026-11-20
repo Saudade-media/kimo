@@ -31,6 +31,7 @@ import {
   isCommentText,
   isEmoji,
   LOCAL_KEY,
+  parseCommentOp,
 } from "./comment-records"
 import { generateId } from "./ids"
 import type { Origin } from "./origin"
@@ -508,6 +509,7 @@ export class CommentStore {
   /**
    * Switches to a room: from now on the state is the room's changes (`records`: this device's
    * replica, verified), and every write is a change to sign. The file's comments are kept aside.
+   * The replica holds only changes a fold applied, so they enter as compacted (spec §4.3).
    */
   enterRoom(
     room: CommentRoom,
@@ -520,7 +522,10 @@ export class CommentStore {
     this.pendingList = []
     this.confirmed = this.newFold()
     this.view = null
-    this.receive(records, origin)
+    this.receive(
+      records.map((r) => ({ ...r, compacted: true })),
+      origin,
+    )
     this.changed(origin, "load")
   }
 
@@ -574,6 +579,18 @@ export class CommentStore {
       else if (!own) throw new CommentError("NOT_AUTHOR", "Only the author can change this comment")
     }
     this.commit(op, origin, { asRoot })
+  }
+
+  /**
+   * Writes again, as a new change of this device, what an old change of this device set (a
+   * relay that lost its log: the old bytes name positions the new log does not have).
+   */
+  reissue(rec: CommentRecord, origin: Origin): void {
+    const room = this._room
+    const op = parseCommentOp(rec.body)
+    if (!room || !op) return
+    if (rec.key !== room.key && rec.key !== room.root) return
+    this.commit(op, origin, { asRoot: rec.key === room.root && rec.key !== room.key })
   }
 
   /** Reports each local change to sign and send (rooms only). */
@@ -632,8 +649,12 @@ export class CommentStore {
 
   private refold(): void {
     this.acked.sort((a, b) => (a.pos as number) - (b.pos as number))
+    // A change refused at one position may apply when replayed at a later one: keep each copy.
     const seen = new Set<string>()
-    this.acked = this.acked.filter((r) => !seen.has(r.body.id) && seen.add(r.body.id))
+    this.acked = this.acked.filter((r) => {
+      const k = `${r.body.id}@${r.pos}`
+      return !seen.has(k) && seen.add(k)
+    })
     this.confirmed = this.newFold()
     for (const r of this.acked) this.confirmed.apply(r)
   }

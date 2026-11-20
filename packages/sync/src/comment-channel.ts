@@ -46,6 +46,9 @@ export interface CommentSigner {
   publicKey: Uint8Array
 }
 
+/** A signed change and its parsed record. */
+type Held = { signed: SignedComment; record: CommentRecord }
+
 /** What a device keeps of a room's comment log between sessions. */
 export interface CommentReplica {
   /** Highest comment log seq applied. */
@@ -117,7 +120,9 @@ export class CommentChannel {
   /** Signed bytes of every change held, by change id. */
   private readonly signed = new Map<string, SignedComment>()
   /** Signed changes of earlier sessions not in the room yet: sent, then received on ack. */
-  private readonly unsent = new Map<string, { signed: SignedComment; record: CommentRecord }>()
+  private readonly unsent = new Map<string, Held>()
+  /** After a relay reset: changes to send again once the room has what they need. */
+  private resetHeld: Held[] = []
   private readonly rootChecks = new Map<string, Promise<boolean>>()
   private session: CommentSession | null = null
   private since = 0
@@ -187,15 +192,20 @@ export class CommentChannel {
       await this.enter()
       if (this.session !== session || !session.alive()) return
       if (session.info.head < this.since) {
-        // The relay lost entries this device saw: start over and send what it holds again.
+        // The relay lost entries this device saw: start over. What this device holds goes back
+        // once what it needs is there again (spec §4.4 Re-append).
+        const live = new Set(this.store.live().map((r) => r.body.id))
+        const held: Held[] = []
         for (const [id, s] of this.signed) {
+          if (!live.has(id)) continue
           const rec = await verifyComment(this.options.room, s, null)
-          if (rec && this.store.live().some((r) => r.body.id === id))
-            this.unsent.set(id, { signed: s, record: rec })
+          if (rec) held.push({ signed: s, record: rec })
         }
         this.since = 0
         this.signed.clear()
         this.store.enterRoom(this.store.room ?? this.roomFallback(), [], this.options.origin)
+        this.resetHeld = held
+        this.release()
       }
       session.send({ type: "comments-subscribe", since: this.since })
       this.maybeCaughtUp(session)
@@ -267,7 +277,8 @@ export class CommentChannel {
       for (const c of changes) {
         if (c.pos >= limit) continue
         const rec = await this.verify(c.signed, c.pos)
-        if (rec) records.push(rec)
+        // An edit peer's fold applied these (spec §4.3): a delete in it is final.
+        if (rec) records.push({ ...rec, compacted: true })
       }
       this.since = Math.max(this.since, fetched.upTo)
       this.receive(records)
@@ -295,6 +306,7 @@ export class CommentChannel {
           this.store.receive([{ ...orphan.record, pos }], this.options.origin)
         } else this.store.acknowledge(id, pos)
       })
+      this.release()
       this.scheduleSave()
     })
     return true
@@ -386,7 +398,48 @@ export class CommentChannel {
   private receive(records: CommentRecord[]): void {
     for (const r of records) this.unsent.delete(r.body.id)
     this.store.receive(records, this.options.origin)
+    this.release()
     this.scheduleSave()
+  }
+
+  /**
+   * After a reset, sends each held change once the room has what it needs: creations at once,
+   * replies when their thread is back, a delete when what it names is held again (a delete of
+   * an id nobody holds is refused, spec §4.3), and this device's own last-writer values signed
+   * anew (the old bytes name positions the new log does not have). Others' last-writer values
+   * come back from their own devices.
+   */
+  private release(): void {
+    if (this.resetHeld.length === 0) return
+    const has = (thread: string, message?: string) => {
+      const t = this.store.thread(thread)
+      return !!t && (message === undefined || Object.hasOwn(t.messages, message))
+    }
+    const coming = new Set<string>()
+    const keep: Held[] = []
+    let queued = false
+    for (const h of this.resetHeld) {
+      const b = h.record.body
+      const creates = b.op === "thread" || b.op === "import"
+      const ready = creates
+        ? true
+        : b.op === "delete"
+          ? has(b.thread, b.message)
+          : b.op === "reply"
+            ? coming.has(b.thread) || has(b.thread)
+            : has(b.thread, b.op === "edit" || b.op === "react" ? b.message : undefined)
+      if (!ready) {
+        keep.push(h)
+        continue
+      }
+      if (creates) coming.add(b.thread)
+      if (b.op === "thread" || b.op === "import" || b.op === "reply" || b.op === "delete") {
+        this.unsent.set(b.id, h)
+        queued = true
+      } else this.store.reissue(h.record, this.options.origin)
+    }
+    this.resetHeld = keep
+    if (queued) this.scheduleFlush()
   }
 
   private maybeCaughtUp(session: CommentSession): void {

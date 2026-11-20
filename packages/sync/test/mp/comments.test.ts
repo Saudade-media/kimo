@@ -198,6 +198,49 @@ describe("comment channel", () => {
     await chB.dispose()
   })
 
+  test("after a relay loses its log, a device's edits, resolves and reactions come back", async () => {
+    const root = await signer()
+    const roomId = await deriveRoomId(root.publicKey)
+    const keys = await deriveRoomKeys(generateRoomKey(), roomId)
+    const http = new RelayHttpClient({ relayUrl: "https://relay.invalid" })
+    const opts = { room: roomId.id, keys, http, origin: "remote:mp:test" as const }
+    const dev = await signer()
+    const a = new CommentStore()
+    const chA = new CommentChannel({ ...opts, store: a, device: dev, root })
+    new MiniRelay().connect(chA)
+    await settle()
+    const ana = { id: `dev:${toBase64Url(dev.publicKey)}`, name: "Ana", kind: "person" as const }
+    // Earlier entries, so the old changes' bases lie past every position of the new log.
+    for (const text of ["a", "b", "c"]) {
+      a.createThread({ anchor: { x: 0, y: 0 }, message: { author: ana, text } }, "user")
+      await settle()
+    }
+    const t = a.createThread(
+      { anchor: { x: 1, y: 1 }, message: { author: ana, text: "3rd" } },
+      "user",
+    )
+    await settle()
+    a.editMessage(t.threadId, t.messageId, "10th", ana.id, "user")
+    a.setResolved(t.threadId, ana, "user")
+    a.toggleReaction(t.threadId, t.messageId, "👍", ana.id, "user")
+    await settle()
+    // The relay comes back empty; the device reconnects and sends what it holds.
+    chA.stop()
+    const fresh = new MiniRelay()
+    fresh.connect(chA)
+    await settle()
+    const b = new CommentStore()
+    const chB = new CommentChannel({ ...opts, store: b, device: await signer() })
+    fresh.connect(chB)
+    await settle()
+    const got = b.thread(t.threadId)
+    expect(got?.messages[t.messageId]?.text).toBe("10th")
+    expect(got?.resolved?.by.id).toBe(ana.id)
+    expect(got?.messages[t.messageId]?.reactions?.["👍"]).toEqual([ana.id])
+    await chA.dispose()
+    await chB.dispose()
+  })
+
   test("a device folding its saved replica knows the room root key before it enters", async () => {
     const root = await signer()
     const roomId = await deriveRoomId(root.publicKey)

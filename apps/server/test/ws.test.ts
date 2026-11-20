@@ -7,6 +7,7 @@ import {
   sealSnapshot,
   sealUpdate,
 } from "@kimo/sync/mp"
+import { addressKeys } from "../src/ws"
 import {
   bearer,
   Client,
@@ -452,6 +453,17 @@ describe("abuse limits", () => {
 })
 
 describe("comment channel (docs/spec/comments.md §4.4)", () => {
+  test("per-person comment limits key one address however it is written", () => {
+    const v4 = addressKeys("198.51.100.7")
+    for (const form of ["::ffff:198.51.100.7", "::ffff:c633:6407", "198.51.100.7:5678"])
+      expect(addressKeys(form)).toEqual(v4)
+    const a = addressKeys("2001:db8:bb:12::1")
+    expect(addressKeys("2001:0db8:00bb:0012:ffff:0:0:9")).toEqual(a)
+    expect(addressKeys("[2001:db8:bb:12::1]:443")).toEqual(a)
+    expect(addressKeys("2001:db8:bb:13::1").host).not.toBe(a.host)
+    expect(addressKeys("2001:db8:bb:13::1").net).toBe(a.net)
+  })
+
   const commentEnv = (owner: Owner, text: string) =>
     sealCommentsUpdate(owner.keys, new TextEncoder().encode(text))
 

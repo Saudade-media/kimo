@@ -190,12 +190,18 @@ one, without stopping the fold.
   id). `reply` needs a live thread.
 - `delete` leaves a **tombstone** for each id it names; a tombstoned id is never created
   again, by any key. An id that is held must be deleted through its own thread by the key that
-  wrote it, or by the root key; otherwise the delete is invalid. A delete of an id not held is a
-  tombstone too, so a compacted snapshot keeps it. A message delete tombstones the message only;
-  a thread delete tombstones the ids the change names, not the thread's other messages, so a
-  fold from a compacted snapshot ends with the same tombstones as a full fold.
-- Changes are as strict as the file schema (§1): times with milliseconds, no unknown keys in
-  authors, anchors and attachments, attachment paths of the `./assets/` form.
+  wrote it, or by the root key; otherwise the delete is invalid. A delete of an id not held is
+  valid only from the root key, or read from a comment snapshot or the device's own replica (a
+  fold applied it while the id was held). In the live log it is invalid, so after a relay loses
+  entries a guest cannot delete ids before their writers append them again. A message delete
+  tombstones the message only; a thread delete tombstones the ids the change names, not the
+  thread's other messages, so a fold from a compacted snapshot ends with the same tombstones as
+  a full fold.
+- A change that is invalid at its position is not remembered: the same bytes appended again
+  are judged at their new position, as a peer joining from a snapshot judges them.
+- Changes are as strict as the file schema (§1): times with milliseconds, no unknown keys at
+  any level (the change, authors, anchors and attachments), attachment paths of the
+  `./assets/` form.
 - Reaction emoji are keys of a plain map in the file, so any string the parser accepts (even
   `constructor` or `__proto__`) is an ordinary key; readers MUST use own-property lookups.
 - **Last writer, by log order.** `edit`, `resolve`, `anchor` and each reaction (message, emoji,
@@ -229,8 +235,9 @@ Additions to [multiplayer.md](multiplayer.md):
 - **§14.** The relay stores a second log and snapshot per room with its own `seq`. Room size and
   the owner sweep count both. The relay cannot tell a message from a reaction inside an envelope,
   so it limits comment appends to 300 an hour per token `jti` and client address (IPv6: per
-  /64), under a ceiling of 6000 an hour per `jti`, so one reviewer on a shared link cannot spend
-  everyone's budget (`RATE_LIMITED`). Clients limit new messages and replies to 100 an hour per
+  /64, and 1200 per /48), under a ceiling of 6000 an hour per `jti`, so one reviewer on a shared
+  link cannot spend everyone's budget (`RATE_LIMITED`). Addresses are normalised first: ports
+  and brackets dropped, IPv4-mapped forms read as IPv4. Clients limit new messages and replies to 100 an hour per
   author.
 - **Comment storage.** Writes by a comment token (comment log appends and blob uploads) count
   against a budget of `KIMO_COMMENT_QUOTA_MB` (default 50) or half the room quota, whichever is
@@ -248,10 +255,12 @@ Additions to [multiplayer.md](multiplayer.md):
   log's base; the client downloads it, then entries follow.
 - **Compaction.** A snapshot keeps every tombstone change, every creating change of a live
   message, and each change that holds a current value (4.3). It drops the rest.
-- **Re-append.** After catch-up a client appends again, unchanged, the changes it holds that
-  created a live message, hold a current value or delete something, and that the room lacks (a relay that lost
-  data, or an edit peer's bad snapshot). They are verified like any change, and duplicates are
-  skipped.
+- **Re-append.** After catch-up a client appends again the changes it holds that created a
+  live message, hold a current value or delete something, and that the room lacks (a relay that
+  lost data, or an edit peer's bad snapshot). Creations go unchanged at once, a reply once its
+  thread is back, and a delete once what it names is held again. A value the device set itself
+  (`edit`, `resolve`, `anchor`, `react`) is written again as a new change, since the old
+  `base` lies past the new log. They are verified like any change, and duplicates are skipped.
 - **§12 blobs.** `PUT /blob` accepts comment tokens too, so a reviewer can upload an attachment.
   Receivers find the blob from the attachment's own `sha256` (§1), exactly as for a manifest entry
   (§10, §16.4), and store it in their asset store under `file`.

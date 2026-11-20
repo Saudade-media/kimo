@@ -713,6 +713,52 @@ describe("comments (docs/spec/comments.md)", () => {
     expect(validate(JSON.parse(documentText(s))).errors).toEqual([])
   })
 
+  test("after a relay loses its log, a guest's delete of ids nobody holds yet binds no one", () => {
+    const r = relay()
+    const a = r.join("KA")
+    const { threadId, messageId } = a.createThread(
+      { anchor: { x: 0, y: 0 }, message: { author: { ...ana, id: "dev:KA" }, text: "Keep" } },
+      "user",
+    )
+    r.flush(a)
+    const created = r.log.find((c) => c.body.op === "thread") as CommentRecord
+    // A fresh log: the guest who noted the ids deletes them before anyone re-appends.
+    const fresh = relay()
+    const b = fresh.join("KB")
+    fresh.append([forged("KZ", { op: "delete", thread: threadId, message: messageId })])
+    fresh.append([{ ...created, pos: null }])
+    expect(b.thread(threadId)?.messages[messageId]?.text).toBe("Keep")
+  })
+
+  test("a refused change replayed later is judged alike by online peers and joiners", () => {
+    const r = relay()
+    const a = r.join("KA")
+    const author = { id: "dev:KB", name: "Bo", kind: "person" } as const
+    const hidden = forged("KB", {
+      op: "reply",
+      thread: "Thread0001",
+      message: "Msg0000002",
+      author,
+      text: "hidden",
+    })
+    r.append([hidden])
+    r.append([
+      forged("KB", {
+        op: "thread",
+        thread: "Thread0001",
+        message: "Msg0000001",
+        anchor: { x: 0, y: 0 },
+        author,
+        text: "q",
+      }),
+    ])
+    r.append([{ ...hidden, pos: null }])
+    const c = new CommentStore()
+    c.enterRoom({ key: "KC", root: "ROOT", moderator: false }, a.kept())
+    expect(Object.keys(a.thread("Thread0001")?.messages ?? {})).toHaveLength(2)
+    expect(c.toJSON()).toEqual(a.toJSON())
+  })
+
   test("creations re-appended into one entry keep their old bases and all apply", () => {
     const r = relay()
     const a = r.join("KA")
@@ -764,6 +810,7 @@ describe("comments (docs/spec/comments.md)", () => {
       { author: { ...author, role: "owner" } },
       { attachments: [{ ...image, file: "../../../../etc/passwd" }] },
       { attachments: [{ ...image, file: "./assets/0123456789abcdef.png", extra: 1 }] },
+      { pad: "x".repeat(1000) },
     ])
       expect(parseCommentRecordBody({ ...ok, ...bad })).toBeNull()
   })

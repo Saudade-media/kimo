@@ -69,6 +69,11 @@ export interface CommentRecord {
   key: string
   /** Log position; null while a local change is not acknowledged. */
   pos: number | null
+  /**
+   * From a comment snapshot or this device's saved replica: a change a fold already applied,
+   * so a delete of an id it no longer holds is final (spec §4.3). Never set on live entries.
+   */
+  compacted?: boolean
 }
 
 // --- Parsing ----------------------------------------------------------------------------------
@@ -177,6 +182,12 @@ function isThread(v: unknown): v is CommentThread {
 /** A change body from parsed JSON, or null when it is malformed (spec §4.1). */
 export function parseCommentRecordBody(v: unknown): CommentRecordBody | null {
   if (!isObject(v) || v.v !== COMMENT_RECORD_VERSION) return null
+  // Unknown keys would ride along in the signed bytes and every snapshot (spec §4.1).
+  const fields =
+    typeof v.op === "string" && Object.hasOwn(OP_FIELDS, v.op)
+      ? OP_FIELDS[v.op as CommentOp["op"]]
+      : null
+  if (!fields || !only(v, [...RECORD_FIELDS, ...fields])) return null
   if (!isId(v.id) || !isUintValue(v.n) || !isUintValue(v.base)) return null
   if (typeof v.at !== "string" || !TIME_RE.test(v.at)) return null
   return isId(v.thread) && opOk(v) ? (v as unknown as CommentRecordBody) : null
@@ -223,6 +234,8 @@ function opOk(v: Record<string, unknown>): boolean {
       return false
   }
 }
+
+const RECORD_FIELDS = ["v", "id", "n", "base", "at", "op"] as const
 
 const OP_FIELDS: Record<CommentOp["op"], readonly string[]> = {
   thread: ["thread", "message", "anchor", "author", "text", "attachments"],
@@ -415,7 +428,6 @@ export class CommentFold {
   apply(rec: CommentRecord): string | null {
     const b = rec.body
     if (this.seen.has(b.id)) return null
-    this.seen.add(b.id)
     if (rec.pos !== null) {
       this.maxPos = Math.max(this.maxPos, rec.pos)
       // A creation or delete takes no last-writer value, so its base only matters to the
@@ -423,7 +435,11 @@ export class CommentFold {
       if (b.base >= rec.pos && LAST_WRITER_OPS.has(b.op)) return null
     }
     const setter: Setter = { pos: rec.pos ?? PENDING_POS, key: rec.key, n: b.n }
-    return this.applyOp(rec, setter, rec.key === LOCAL_KEY)
+    // Only an applied change is seen: a refused one replayed later is judged at its new
+    // position, as a peer that joins from a snapshot (which never had it) judges it.
+    const out = this.applyOp(rec, setter, rec.key === LOCAL_KEY)
+    if (out !== null) this.seen.add(b.id)
+    return out
   }
 
   private newMessage(
@@ -483,10 +499,12 @@ export class CommentFold {
       }
       case "delete": {
         // Every id a delete names is either held, and checked against its owner through its
-        // own thread, or not held and tombstoned (spec §4.3). The ids tombstoned depend only on
-        // the change, so a fold from a compacted snapshot ends with the same tombstones.
+        // own thread, or not held. A delete of an id not held is final only from the root key,
+        // a local file, or a snapshot or replica (a fold applied it when the id was held):
+        // otherwise a guest could delete ids a relay that lost its log no longer holds (§4.3).
         const mid = b.message
         const everyone = trusted || this.isRoot(key)
+        const final = everyone || rec.compacted === true
         if (t && (mid === undefined || mid === t.first)) {
           const first = t.messages.get(t.first)
           if (!everyone && first?.owner !== key) return null
@@ -496,8 +514,9 @@ export class CommentFold {
           if (m) {
             if (!everyone && m.owner !== key) return null
             this.dropMessage(t, mid, m)
-          } else if (this.held(mid)) return null
-        } else if (this.held(b.thread) || (mid !== undefined && this.held(mid))) return null
+          } else if (this.held(mid) || !final) return null
+        } else if (this.held(b.thread) || (mid !== undefined && this.held(mid)) || !final)
+          return null
         // A message delete names its thread for routing only: the thread stays alive.
         if (!t || mid === undefined || mid === t.first) this.tombs.add(b.thread)
         if (mid !== undefined) this.tombs.add(mid)

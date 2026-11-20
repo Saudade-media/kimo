@@ -55,6 +55,8 @@ const ACTIVE_WRITE_MS = MINUTE
 export const COMMENT_APPENDS_PER_HOUR = 6000
 /** Comment appends per token per client address (IPv6: per /64) per hour (§4.4). */
 export const COMMENT_APPENDS_PER_HOUR_PER_IP = 300
+/** Comment appends per token per IPv6 /48 per hour: one allocation stays far below the ceiling. */
+export const COMMENT_APPENDS_PER_HOUR_PER_NET = 1200
 /** Blob upload bytes per room per 10 minutes (§14.8). */
 export const BLOB_WINDOW_BYTES = 200 * (1 << 20)
 
@@ -132,6 +134,11 @@ export class Relay {
   readonly commentIpLimiter = new KeyedLimiter(
     COMMENT_APPENDS_PER_HOUR_PER_IP,
     COMMENT_APPENDS_PER_HOUR_PER_IP / HOUR,
+  )
+  /** Comment appends per token `jti` and IPv6 /48. */
+  readonly commentNetLimiter = new KeyedLimiter(
+    COMMENT_APPENDS_PER_HOUR_PER_NET,
+    COMMENT_APPENDS_PER_HOUR_PER_NET / HOUR,
   )
   /** 16 random bytes made at first boot; owner commands and pairing tokens name it (§14.11). */
   readonly relayId: Uint8Array
@@ -647,6 +654,7 @@ export class Relay {
       this.blobBytesLimiter,
       this.commentLimiter,
       this.commentIpLimiter,
+      this.commentNetLimiter,
     ])
       limiter.prune(now)
   }

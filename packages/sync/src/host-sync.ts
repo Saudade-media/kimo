@@ -14,7 +14,13 @@
  *
  * Messages are JSON with base64 payloads, so any string/JSON channel works.
  */
-import type { CommentOp, CommentStore, DocStore, Origin, RemoteOrigin } from "@kimo/editor-state"
+import {
+  type CommentStore,
+  type DocStore,
+  type Origin,
+  parseCommentOp,
+  type RemoteOrigin,
+} from "@kimo/editor-state"
 
 type Comments = Parameters<CommentStore["load"]>[0]
 
@@ -387,7 +393,8 @@ export class HostSyncHub {
     } else if (m.t === "comment-op") {
       const e = this.docs.get(m.doc)
       const comments = e?.store.comments
-      const op = parseJson<CommentOp>(m.op)
+      // A replica's op is checked and rebuilt before this device signs it.
+      const op = parseCommentOp(parseJson<unknown>(m.op))
       if (!e || !comments || !op || !e.peers.has(m.peer)) return
       this.applyingFrom = m.peer
       try {

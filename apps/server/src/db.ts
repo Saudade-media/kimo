@@ -32,6 +32,8 @@ export interface RoomRow {
   c_base: number
   c_log_bytes: number
   c_snapshot_bytes: number
+  /** Blob bytes comment-only links uploaded (docs/spec/comments.md §4.4). */
+  c_blob_bytes: number
 }
 
 /** Bytes a room stores: both logs, both snapshots and blobs. */
@@ -43,6 +45,11 @@ export function roomBytes(room: RoomRow): number {
     room.c_log_bytes +
     room.c_snapshot_bytes
   )
+}
+
+/** Bytes that count against a comment-only link's budget: the comment log, snapshot and uploads. */
+export function commentBytes(room: RoomRow): number {
+  return room.c_log_bytes + room.c_snapshot_bytes + room.c_blob_bytes
 }
 
 /** Which log a call is about. */
@@ -127,7 +134,8 @@ CREATE TABLE IF NOT EXISTS rooms (
   c_head           INTEGER NOT NULL DEFAULT 0,
   c_base           INTEGER NOT NULL DEFAULT 0,
   c_log_bytes      INTEGER NOT NULL DEFAULT 0,
-  c_snapshot_bytes INTEGER NOT NULL DEFAULT 0
+  c_snapshot_bytes INTEGER NOT NULL DEFAULT 0,
+  c_blob_bytes     INTEGER NOT NULL DEFAULT 0
 ) STRICT;
 
 CREATE INDEX IF NOT EXISTS rooms_account ON rooms(account) WHERE account IS NOT NULL;
@@ -186,6 +194,7 @@ CREATE TABLE IF NOT EXISTS blobs (
   bytes       INTEGER NOT NULL,
   at          INTEGER NOT NULL,
   unref_since INTEGER,
+  comment     INTEGER NOT NULL DEFAULT 0,
   PRIMARY KEY (room, id)
 ) STRICT, WITHOUT ROWID;
 
@@ -255,9 +264,15 @@ export class RelayDb {
       this.sqlite.run("ALTER TABLE rooms ADD COLUMN account TEXT")
     // Version 2 adds the comment log: its counters join `rooms`, its tables come from SCHEMA.
     if (rooms.length > 0)
-      for (const column of ["c_head", "c_base", "c_log_bytes", "c_snapshot_bytes"])
+      for (const column of ["c_head", "c_base", "c_log_bytes", "c_snapshot_bytes", "c_blob_bytes"])
         if (!rooms.some((c) => c.name === column))
           this.sqlite.run(`ALTER TABLE rooms ADD COLUMN ${column} INTEGER NOT NULL DEFAULT 0`)
+    // Uploads by comment-only links are marked, so their bytes leave the comment budget too.
+    const blobs = this.sqlite
+      .query<{ name: string }, []>("SELECT name FROM pragma_table_info('blobs')")
+      .all()
+    if (blobs.length > 0 && !blobs.some((c) => c.name === "comment"))
+      this.sqlite.run("ALTER TABLE blobs ADD COLUMN comment INTEGER NOT NULL DEFAULT 0")
     this.sqlite.run(SCHEMA)
     if (version < SCHEMA_VERSION) this.sqlite.run(`PRAGMA user_version = ${SCHEMA_VERSION}`)
   }
@@ -308,7 +323,8 @@ export class RelayDb {
       .query(
         `UPDATE rooms SET link_kid = ?, link_pub = ?, link_cert = ?, active_at = ?,
            closed_at = NULL, head = 0, base = 0, log_bytes = 0, snapshot_bytes = 0, blob_bytes = 0,
-           c_head = 0, c_base = 0, c_log_bytes = 0, c_snapshot_bytes = 0, account = ?
+           c_head = 0, c_base = 0, c_log_bytes = 0, c_snapshot_bytes = 0, c_blob_bytes = 0,
+           account = ?
          WHERE id = ?`,
       )
       .run(room.kid, room.linkPub, room.cert, room.at, room.account ?? null, room.id)
@@ -391,7 +407,7 @@ export class RelayDb {
         .query(
           `UPDATE rooms SET closed_at = ?, head = 0, base = 0, log_bytes = 0,
              snapshot_bytes = 0, blob_bytes = 0, c_head = 0, c_base = 0, c_log_bytes = 0,
-             c_snapshot_bytes = 0 WHERE id = ?`,
+             c_snapshot_bytes = 0, c_blob_bytes = 0 WHERE id = ?`,
         )
         .run(at, id)
     })
@@ -700,14 +716,18 @@ export class RelayDb {
     this.sqlite.query("UPDATE blobs SET unref_since = NULL WHERE room = ? AND id = ?").run(room, id)
   }
 
-  insertBlob(room: string, id: string, bytes: number, at: number): void {
+  /** `comment`: a comment-only link uploaded it (its bytes count in `c_blob_bytes` too). */
+  insertBlob(room: string, id: string, bytes: number, at: number, comment = false): void {
     this.tx(() => {
       this.sqlite
-        .query("INSERT INTO blobs (room, id, bytes, at) VALUES (?, ?, ?, ?)")
-        .run(room, id, bytes, at)
+        .query("INSERT INTO blobs (room, id, bytes, at, comment) VALUES (?, ?, ?, ?, ?)")
+        .run(room, id, bytes, at, comment ? 1 : 0)
       this.sqlite
-        .query("UPDATE rooms SET blob_bytes = blob_bytes + ?, active_at = ? WHERE id = ?")
-        .run(bytes, at, room)
+        .query(
+          `UPDATE rooms SET blob_bytes = blob_bytes + ?, c_blob_bytes = c_blob_bytes + ?,
+             active_at = ? WHERE id = ?`,
+        )
+        .run(bytes, comment ? bytes : 0, at, room)
     })
   }
 
@@ -725,11 +745,22 @@ export class RelayDb {
 
   deleteBlobRows(room: string, ids: readonly string[], bytes: number): void {
     this.tx(() => {
-      for (const id of ids)
+      let commentBytes = 0
+      for (const id of ids) {
+        const row = this.sqlite
+          .query<{ bytes: number; comment: number }, [string, string]>(
+            "SELECT bytes, comment FROM blobs WHERE room = ? AND id = ?",
+          )
+          .get(room, id)
+        if (row?.comment) commentBytes += row.bytes
         this.sqlite.query("DELETE FROM blobs WHERE room = ? AND id = ?").run(room, id)
+      }
       this.sqlite
-        .query("UPDATE rooms SET blob_bytes = MAX(0, blob_bytes - ?) WHERE id = ?")
-        .run(bytes, room)
+        .query(
+          `UPDATE rooms SET blob_bytes = MAX(0, blob_bytes - ?),
+             c_blob_bytes = MAX(0, c_blob_bytes - ?) WHERE id = ?`,
+        )
+        .run(bytes, commentBytes, room)
     })
   }
 

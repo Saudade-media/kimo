@@ -169,48 +169,72 @@ export function parseCommentRecordBody(v: unknown): CommentRecordBody | null {
   if (!isObject(v) || v.v !== COMMENT_RECORD_VERSION) return null
   if (!isId(v.id) || !isUintValue(v.n) || !isUintValue(v.base)) return null
   if (typeof v.at !== "string" || !TIME_RE.test(v.at)) return null
-  if (!isId(v.thread)) return null
-  const ok = (() => {
-    switch (v.op) {
-      case "thread":
-        return (
-          isId(v.message) &&
-          v.message !== v.thread &&
-          isCommentAnchor(v.anchor) &&
-          isCommentAuthor(v.author) &&
-          isCommentText(v.text) &&
-          (v.attachments === undefined || isAttachments(v.attachments))
-        )
-      case "reply":
-        return (
-          isId(v.message) &&
-          isCommentAuthor(v.author) &&
-          isCommentText(v.text) &&
-          (v.attachments === undefined || isAttachments(v.attachments))
-        )
-      case "edit":
-        return isId(v.message) && isCommentText(v.text)
-      case "delete":
-        return v.message === undefined || isId(v.message)
-      case "resolve":
-        return v.by === null || isCommentAuthor(v.by)
-      case "anchor":
-        return isCommentAnchor(v.anchor)
-      case "react":
-        return (
-          isId(v.message) &&
-          isEmoji(v.emoji) &&
-          typeof v.author === "string" &&
-          AUTHOR_ID_RE.test(v.author) &&
-          typeof v.on === "boolean"
-        )
-      case "import":
-        return isThread(v.data)
-      default:
-        return false
-    }
-  })()
-  return ok ? (v as unknown as CommentRecordBody) : null
+  return isId(v.thread) && opOk(v) ? (v as unknown as CommentRecordBody) : null
+}
+
+/** Whether the op fields of `v` are well formed (spec §4.1). `v.thread` is checked by the caller. */
+function opOk(v: Record<string, unknown>): boolean {
+  switch (v.op) {
+    case "thread":
+      return (
+        isId(v.message) &&
+        v.message !== v.thread &&
+        isCommentAnchor(v.anchor) &&
+        isCommentAuthor(v.author) &&
+        isCommentText(v.text) &&
+        (v.attachments === undefined || isAttachments(v.attachments))
+      )
+    case "reply":
+      return (
+        isId(v.message) &&
+        isCommentAuthor(v.author) &&
+        isCommentText(v.text) &&
+        (v.attachments === undefined || isAttachments(v.attachments))
+      )
+    case "edit":
+      return isId(v.message) && isCommentText(v.text)
+    case "delete":
+      return v.message === undefined || isId(v.message)
+    case "resolve":
+      return v.by === null || isCommentAuthor(v.by)
+    case "anchor":
+      return isCommentAnchor(v.anchor)
+    case "react":
+      return (
+        isId(v.message) &&
+        isEmoji(v.emoji) &&
+        typeof v.author === "string" &&
+        AUTHOR_ID_RE.test(v.author) &&
+        typeof v.on === "boolean"
+      )
+    case "import":
+      return isThread(v.data)
+    default:
+      return false
+  }
+}
+
+const OP_FIELDS: Record<CommentOp["op"], readonly string[]> = {
+  thread: ["thread", "message", "anchor", "author", "text", "attachments"],
+  reply: ["thread", "message", "author", "text", "attachments"],
+  edit: ["thread", "message", "text"],
+  delete: ["thread", "message"],
+  resolve: ["thread", "by"],
+  anchor: ["thread", "anchor"],
+  react: ["thread", "message", "emoji", "author", "on"],
+  import: ["thread", "data"],
+}
+
+/**
+ * A comment op from untrusted JSON (a replica's write through host-sync), rebuilt from its own
+ * fields only, or null when it is malformed. The writer signs what this returns.
+ */
+export function parseCommentOp(v: unknown): CommentOp | null {
+  if (!isObject(v) || typeof v.op !== "string" || !Object.hasOwn(OP_FIELDS, v.op)) return null
+  if (!isId(v.thread) || !opOk(v)) return null
+  const out: Record<string, unknown> = { op: v.op }
+  for (const k of OP_FIELDS[v.op as CommentOp["op"]]) if (v[k] !== undefined) out[k] = clone(v[k])
+  return out as CommentOp
 }
 
 // --- Fold -------------------------------------------------------------------------------------
@@ -281,8 +305,13 @@ export interface FoldContext {
  */
 export class CommentFold {
   readonly threads = new Map<string, ThreadState>()
-  /** Deleted thread and message ids. */
+  /** Ids the room owner (root key) or a local file deleted: dead for every writer. */
   readonly tombs = new Set<string>()
+  /**
+   * Ids other keys deleted, with those keys. A delete names ids its key may hold, so only that
+   * key's later creations are dropped (spec §4.3): a guest cannot freeze someone else's ids.
+   */
+  readonly keyedTombs = new Map<string, Set<string>>()
   /** Change ids applied or skipped. */
   readonly seen = new Set<string>()
   /** Every delete change, kept for compaction. */
@@ -309,6 +338,7 @@ export class CommentFold {
         ),
       })
     for (const id of this.tombs) f.tombs.add(id)
+    for (const [id, keys] of this.keyedTombs) f.keyedTombs.set(id, new Set(keys))
     for (const id of this.seen) f.seen.add(id)
     for (const [k, v] of this.deletes) f.deletes.set(k, v)
     for (const [k, v] of this.holders) f.holders.set(k, { ...v })
@@ -343,6 +373,34 @@ export class CommentFold {
     if (this.tombs.has(id) || this.threads.has(id)) return true
     for (const t of this.threads.values()) if (t.messages.has(id)) return true
     return this.ctx.nodeIds?.(id) ?? false
+  }
+
+  /** Whether a thread or message holds `id` now. */
+  private held(id: string): boolean {
+    if (this.threads.has(id)) return true
+    for (const t of this.threads.values()) if (t.messages.has(id)) return true
+    return false
+  }
+
+  /** Whether `id` was deleted, for every writer or by `key`. */
+  private dead(id: string, key: string | null): boolean {
+    return this.tombs.has(id) || (key !== null && (this.keyedTombs.get(id)?.has(key) ?? false))
+  }
+
+  /** Whether any delete named `id` (fresh ids avoid these). */
+  isTomb(id: string): boolean {
+    return this.tombs.has(id) || this.keyedTombs.has(id)
+  }
+
+  private tomb(id: string, key: string, everyone: boolean): void {
+    if (everyone) {
+      this.tombs.add(id)
+      this.keyedTombs.delete(id)
+      return
+    }
+    const keys = this.keyedTombs.get(id)
+    if (keys) keys.add(key)
+    else this.keyedTombs.set(id, new Set([key]))
   }
 
   private isRoot(key: string): boolean {
@@ -399,6 +457,7 @@ export class CommentFold {
       case "thread": {
         if (!this.authorOk(key, b.author.id)) return null
         if (this.taken(b.thread) || this.taken(b.message) || b.thread === b.message) return null
+        if (this.dead(b.thread, key) || this.dead(b.message, key)) return null
         const m = this.newMessage(rec, b, trusted ? null : key)
         this.threads.set(b.thread, {
           anchor: clone(b.anchor),
@@ -413,6 +472,7 @@ export class CommentFold {
       }
       case "reply": {
         if (!t || !this.authorOk(key, b.author.id) || this.taken(b.message)) return null
+        if (this.dead(b.message, key)) return null
         t.messages.set(b.message, this.newMessage(rec, b, trusted ? null : key))
         return b.thread
       }
@@ -428,22 +488,27 @@ export class CommentFold {
         return b.thread
       }
       case "delete": {
+        // Every id a delete names is either held and checked against its owner, or not held
+        // and tombstoned for this key alone (spec §4.3). Root and local deletes are for all.
         const mid = b.message
-        if (!t || mid === undefined || mid === t.first) {
-          if (t) {
-            const first = t.messages.get(t.first)
-            if (!trusted && !this.isRoot(key) && first?.owner !== key) return null
-            this.dropThread(b.thread, t)
-          }
-          this.tombs.add(b.thread)
-          if (mid !== undefined) this.tombs.add(mid)
-        } else {
+        const everyone = trusted || this.isRoot(key)
+        if (t && (mid === undefined || mid === t.first)) {
+          const first = t.messages.get(t.first)
+          if (!everyone && first?.owner !== key) return null
+          this.dropThread(b.thread, t)
+          this.tomb(b.thread, key, everyone)
+          if (mid !== undefined) this.tomb(mid, key, everyone)
+        } else if (t && mid !== undefined) {
           const m = t.messages.get(mid)
           if (m) {
-            if (!trusted && !this.isRoot(key) && m.owner !== key) return null
+            if (!everyone && m.owner !== key) return null
             this.dropMessage(t, mid, m)
-          }
-          this.tombs.add(mid)
+          } else if (this.held(mid)) return null
+          this.tomb(mid, key, everyone)
+        } else {
+          if (this.held(b.thread) || (mid !== undefined && this.held(mid))) return null
+          this.tomb(b.thread, key, everyone)
+          if (mid !== undefined) this.tomb(mid, key, everyone)
         }
         this.deletes.set(b.id, rec)
         return b.thread
@@ -479,8 +544,9 @@ export class CommentFold {
       case "import": {
         if (!trusted && !this.isRoot(key)) return null
         const d = b.data
+        const ownerOf = (m: CommentMessage) => (trusted ? null : (devKeyOf(m.author.id) ?? key))
         const add = (thread: ThreadState, mid: string, m: CommentMessage): void => {
-          const state = this.newMessage(rec, m, trusted ? null : (devKeyOf(m.author.id) ?? key))
+          const state = this.newMessage(rec, m, ownerOf(m))
           for (const [emoji, ids] of Object.entries(m.reactions ?? {}))
             for (const author of ids) {
               const reactor = trusted
@@ -495,13 +561,16 @@ export class CommentFold {
         if (t) {
           let added = false
           for (const [mid, m] of Object.entries(d.messages)) {
-            if (this.taken(mid)) continue
+            if (this.taken(mid) || this.dead(mid, ownerOf(m))) continue
             add(t, mid, m)
             added = true
           }
           return added ? b.thread : null
         }
         if (this.taken(b.thread) || this.taken(d.first) || d.first === b.thread) return null
+        const opening = d.messages[d.first] as CommentMessage
+        if (this.dead(b.thread, ownerOf(opening)) || this.dead(d.first, ownerOf(opening)))
+          return null
         const thread: ThreadState = {
           anchor: clone(d.anchor),
           anchorBy: setter,
@@ -512,7 +581,11 @@ export class CommentFold {
         }
         this.threads.set(b.thread, thread)
         for (const [mid, m] of Object.entries(d.messages))
-          if (mid === d.first || (!this.taken(mid) && mid !== b.thread)) add(thread, mid, m)
+          if (
+            mid === d.first ||
+            (!this.taken(mid) && mid !== b.thread && !this.dead(mid, ownerOf(m)))
+          )
+            add(thread, mid, m)
         this.anchorHolder.set(b.thread, this.ref(rec))
         if (d.resolved) this.resolveHolder.set(b.thread, this.ref(rec))
         return b.thread
@@ -533,10 +606,9 @@ export class CommentFold {
   }
 
   private dropThread(id: string, t: ThreadState): void {
-    for (const [mid, m] of [...t.messages]) {
-      this.dropMessage(t, mid, m)
-      this.tombs.add(mid)
-    }
+    // Only the ids the delete names are tombstoned: a fold from a compacted snapshot never
+    // sees the other messages, and both folds must agree (spec §4.4).
+    for (const [mid, m] of [...t.messages]) this.dropMessage(t, mid, m)
     this.threads.delete(id)
     this.unref(this.resolveHolder.get(id))
     this.unref(this.anchorHolder.get(id))
@@ -561,17 +633,18 @@ export class CommentFold {
         const msg: CommentMessage = { author: clone(m.author), at: m.at, text: m.text }
         if (m.edited) msg.edited = m.edited
         if (m.attachments) msg.attachments = clone(m.attachments)
-        const reactions: Record<string, Set<string>> = {}
+        // A Map: an emoji is any short string, and "constructor" must not find Object's.
+        const reactions = new Map<string, Set<string>>()
         for (const r of m.reactions.values()) {
           if (!r.on) continue
-          const set = reactions[r.emoji] ?? new Set<string>()
+          const set = reactions.get(r.emoji) ?? new Set<string>()
           set.add(r.author)
-          reactions[r.emoji] = set
+          reactions.set(r.emoji, set)
         }
-        const emojis = Object.keys(reactions).sort()
+        const emojis = [...reactions.keys()].sort()
         if (emojis.length > 0)
           msg.reactions = Object.fromEntries(
-            emojis.map((e) => [e, [...(reactions[e] as Set<string>)].sort()]),
+            emojis.map((e) => [e, [...(reactions.get(e) as Set<string>)].sort()]),
           )
         messages[mid] = msg
       }

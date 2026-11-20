@@ -21,7 +21,7 @@ import type { Server } from "bun"
 import pkg from "../package.json" with { type: "json" }
 import { runAdmin } from "./admin"
 import { bearerToken, recheckToken, type VerifiedToken, verifyToken } from "./auth"
-import { roomBytes } from "./db"
+import { commentBytes, roomBytes } from "./db"
 import { retryAfterSeconds } from "./rate-limit"
 import type { Relay, SocketData } from "./rooms"
 import { webResponse } from "./web"
@@ -339,7 +339,10 @@ export function createFetchHandler(relay: Relay) {
     const body = await readBody(req, max)
     if (body.length < ENVELOPE_OVERHEAD || envelopeKind(body) !== EnvelopeKind.blob)
       fail("BAD_REQUEST", "not a blob envelope")
-    const bytesWait = relay.blobBytesLimiter.take(roomId, relay.now(), body.length)
+    // Comment-only links draw on their own byte budget: a guest cannot starve editors' uploads.
+    const commentOnly = verified.token.role === "comment"
+    const bytesKey = commentOnly ? `${roomId}:comment` : roomId
+    const bytesWait = relay.blobBytesLimiter.take(bytesKey, relay.now(), body.length)
     if (bytesWait > 0) fail("RATE_LIMITED", "too many upload bytes", bytesWait)
     // A room with an account asks the owner policy, which records the account's limit (§14.12).
     const before = db.getRoom(roomId)
@@ -349,11 +352,13 @@ export function createFetchHandler(relay: Relay) {
     const fresh = recheckToken(db, verified, Math.floor(relay.now() / 1000))
     const after = roomBytes(fresh) + body.length
     if (after > relay.quotaFor(fresh)) fail("QUOTA_EXCEEDED", "room storage quota exceeded")
+    if (commentOnly && commentBytes(fresh) + body.length > relay.commentQuotaFor(fresh))
+      fail("QUOTA_EXCEEDED", "comment storage quota exceeded")
     relay.checkAccountStorage(fresh, after)
     relay.blobs.put(roomId, id, body)
     try {
       if (db.getBlob(roomId, id)) db.clearUnref(roomId, id)
-      else db.insertBlob(roomId, id, body.length, relay.now())
+      else db.insertBlob(roomId, id, body.length, relay.now(), commentOnly)
     } catch (error) {
       relay.blobs.delete(roomId, id)
       throw error

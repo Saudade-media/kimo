@@ -109,7 +109,7 @@ describe("WindowSyncProvider + HostSyncHub", () => {
     const { host, win } = setup()
     const replica = createDocStore()
     await new WindowSyncProvider({ transport: win, doc: "/a.kimo" }).attach(replica)
-    const user = { id: "local:ana", name: "Ana", kind: "person" as const }
+    const user = { id: "acct:ana", name: "Ana", kind: "person" as const }
     const agent = { id: "agent:mcp:claude", name: "Claude", kind: "agent" as const }
     const hc = host.comments
     const rc = replica.comments
@@ -133,5 +133,32 @@ describe("WindowSyncProvider + HostSyncHub", () => {
     )
     expect(signed).toEqual(["thread"])
     expect(rc.toJSON()).toEqual(hc.toJSON())
+  })
+
+  test("a replica's comment op is rebuilt from its own fields before the hub signs it", async () => {
+    const { host, win } = setup()
+    const p = new WindowSyncProvider({ transport: win, doc: "/a.kimo" })
+    await p.attach(createDocStore())
+    const hc = host.comments
+    if (!hc) throw new Error("no comment store")
+    const user = { id: "acct:ana", name: "Ana", kind: "person" as const }
+    const { threadId } = hc.createThread(
+      { anchor: { x: 1, y: 1 }, message: { author: user, text: "Hi" } },
+      "user",
+    )
+    const bodies: Record<string, unknown>[] = []
+    hc.onRecord((r) => bodies.push(r.body as unknown as Record<string, unknown>))
+    hc.enterRoom({ key: "K".repeat(43), root: null, moderator: false })
+    const peer = p.peer
+    const send = (op: Record<string, unknown>) =>
+      win.send({ t: "comment-op", doc: "/a.kimo", peer, op: JSON.stringify(op), origin: "user" })
+    // A replica sets the change's own fields (a base that wins every race) and a stray one.
+    send({ op: "resolve", thread: threadId, by: null, base: 9e15, id: "Forged0001", extra: 1 })
+    // A malformed op is never signed.
+    send({ op: "reply", thread: threadId, message: "Reply00001", author: user, text: "" })
+    await new Promise((r) => setTimeout(r, 5))
+    expect(bodies.map((b) => [b.op, b.base, b.id === "Forged0001", "extra" in b])).toEqual([
+      ["resolve", 0, false, false],
+    ])
   })
 })

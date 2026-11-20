@@ -189,7 +189,8 @@ export class CommentStore {
 
   /** Whether `actor` (this device in a room) may edit or delete the message. */
   canModify(threadId: string, messageId: string, actor: string): boolean {
-    const m = this.thread(threadId)?.messages[messageId]
+    const msgs = this.thread(threadId)?.messages
+    const m = msgs && Object.hasOwn(msgs, messageId) ? msgs[messageId] : undefined
     if (!m) return false
     const owner = this.state().ownerOf(threadId, messageId)
     if (this._room && owner !== null) return owner === this._room.key
@@ -231,7 +232,7 @@ export class CommentStore {
     const s = this.state()
     for (;;) {
       const id = generateId()
-      if (!this.thread(id) && !s.tombs.has(id) && !(this.nodeIds?.(id) ?? false)) return id
+      if (!this.thread(id) && !s.isTomb(id) && !(this.nodeIds?.(id) ?? false)) return id
     }
   }
 
@@ -278,7 +279,7 @@ export class CommentStore {
     const messageId = input.message.id ?? this.freshId()
     if (!ID_RE.test(threadId) || !ID_RE.test(messageId) || threadId === messageId)
       throw new CommentError("INVALID", "Bad comment id")
-    if (this.thread(threadId) || this.state().tombs.has(threadId))
+    if (this.thread(threadId) || this.state().isTomb(threadId))
       throw new CommentError("INVALID", "Thread id is taken")
     checkText(input.message.text)
     checkAttachments(input.message.attachments)
@@ -321,7 +322,8 @@ export class CommentStore {
       },
       origin,
     )
-    if (!this.thread(threadId)?.messages[id])
+    const after = this.thread(threadId)?.messages
+    if (!after || !Object.hasOwn(after, id))
       throw new CommentError("INVALID", "Comment id is taken")
     return id
   }
@@ -329,7 +331,7 @@ export class CommentStore {
   private message(threadId: string, messageId: string) {
     const t = this.thread(threadId)
     if (!t) throw new CommentError("NOT_FOUND", `No thread "${threadId}"`)
-    const m = t.messages[messageId]
+    const m = Object.hasOwn(t.messages, messageId) ? t.messages[messageId] : undefined
     if (!m) throw new CommentError("NOT_FOUND", `No message "${messageId}"`)
     return { thread: t, message: m }
   }
@@ -663,7 +665,11 @@ export class CommentStore {
     for (const [id, t] of Object.entries(file)) {
       if (s.tombs.has(id)) continue
       const cur = this.thread(id)
-      if (cur && Object.keys(t.messages).every((m) => cur.messages[m] || s.tombs.has(m))) continue
+      if (
+        cur &&
+        Object.keys(t.messages).every((m) => Object.hasOwn(cur.messages, m) || s.tombs.has(m))
+      )
+        continue
       this.commit({ op: "import", thread: id, data: t }, origin, { asRoot: true })
       n++
     }

@@ -43,6 +43,11 @@ const DAY = 24 * HOUR
 const ACTIVE_WRITE_MS = MINUTE
 /** Comment appends per token per hour (docs/spec/comments.md §4.4). */
 export const COMMENT_APPENDS_PER_HOUR = 600
+/**
+ * Comment appends per token per client address per hour: everyone on a shared link has their
+ * own share, so one reviewer cannot spend the whole link's budget (§4.4).
+ */
+export const COMMENT_APPENDS_PER_HOUR_PER_IP = 200
 /** Blob upload bytes per room per 10 minutes (§14.8). */
 export const BLOB_WINDOW_BYTES = 200 * (1 << 20)
 
@@ -116,6 +121,11 @@ export class Relay {
     COMMENT_APPENDS_PER_HOUR,
     COMMENT_APPENDS_PER_HOUR / HOUR,
   )
+  /** Comment appends per token `jti` and client address. */
+  readonly commentIpLimiter = new KeyedLimiter(
+    COMMENT_APPENDS_PER_HOUR_PER_IP,
+    COMMENT_APPENDS_PER_HOUR_PER_IP / HOUR,
+  )
   /** 16 random bytes made at first boot; owner commands and pairing tokens name it (§14.11). */
   readonly relayId: Uint8Array
   /** Who may register rooms and run owner commands (§14.12). */
@@ -176,6 +186,11 @@ export class Relay {
 
   quotaFor(room: RoomRow): number {
     return room.quota_bytes ?? this.config.roomQuotaBytes
+  }
+
+  /** What comment-only links may store in `room` (docs/spec/comments.md §4.4). */
+  commentQuotaFor(room: RoomRow): number {
+    return Math.min(this.config.commentQuotaBytes, this.quotaFor(room))
   }
 
   /**
@@ -617,6 +632,7 @@ export class Relay {
       this.blobLimiter,
       this.blobBytesLimiter,
       this.commentLimiter,
+      this.commentIpLimiter,
     ])
       limiter.prune(now)
   }

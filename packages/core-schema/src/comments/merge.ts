@@ -12,6 +12,11 @@ type Obj = Record<string, unknown>
 const ABSENT: unique symbol = Symbol("absent")
 type Maybe = unknown | typeof ABSENT
 
+/** Own data property, so a `__proto__` key from parsed JSON stays an entry, not a prototype. */
+function put(o: Obj, k: string, v: unknown): void {
+  Object.defineProperty(o, k, { value: v, enumerable: true, writable: true, configurable: true })
+}
+
 const get = (o: unknown, k: string): Maybe => (isObject(o) && Object.hasOwn(o, k) ? o[k] : ABSENT)
 
 /** JSON with object keys sorted by code unit. */
@@ -62,7 +67,7 @@ function mergeRecord(
     if (ov === ABSENT) v = bv === ABSENT ? tv : ABSENT
     else if (tv === ABSENT) v = bv === ABSENT ? ov : ABSENT
     else v = entry(bv, ov, tv)
-    if (v !== ABSENT) out[k] = v
+    if (v !== ABSENT) put(out, k, v)
   }
   return out
 }
@@ -86,7 +91,7 @@ function mergeReactions(b: Maybe, o: Maybe, t: Maybe): Maybe {
       const removed = (base.has(id) && !os.has(id)) || (base.has(id) && !ts.has(id))
       if (!removed) result.add(id)
     }
-    if (result.size > 0) out[e] = [...result].sort()
+    if (result.size > 0) put(out, e, [...result].sort())
   }
   return Object.keys(out).length > 0 ? out : ABSENT
 }
@@ -108,7 +113,7 @@ function mergeMessage(b: Maybe, o: unknown, t: unknown): Maybe {
       k === "reactions"
         ? mergeReactions(get(b, k), get(o, k), get(t, k))
         : pick(get(b, k), get(o, k), get(t, k))
-    if (v !== ABSENT) out[k] = v
+    if (v !== ABSENT) put(out, k, v)
   }
   if (isObject(text)) {
     if (text.text !== undefined) out.text = text.text
@@ -131,7 +136,7 @@ function mergeThread(b: Maybe, o: unknown, t: unknown): Maybe {
         return ax === ay ? higher(x, y) : ax > ay ? x : y
       })
     else v = pick(get(b, k), get(o, k), get(t, k))
-    if (v !== ABSENT) out[k] = v
+    if (v !== ABSENT) put(out, k, v)
   }
   // A thread whose opening message is gone is deleted (deleting the first message deletes it).
   const messages = isObject(out.messages) ? out.messages : {}

@@ -76,7 +76,8 @@ design log, so the relay can let `comment` tokens write comments and nothing els
    wrote the message, or by the room root key (the owner). So a modified client with a comment
    token can add, react, resolve and move pins, all reversible, but cannot rewrite or delete
    anyone else's message. Deletions leave signed markers that survive compaction, so replaying an
-   old change never brings a message back. Fields anyone may set (resolved, anchor) take the
+   old change never brings a message back; a marker for an id the deleting key never held
+   applies to that key's own changes only, so a guest cannot freeze other people's threads. Fields anyone may set (resolved, anchor) take the
    relay's log order, which a client cannot forge. Only edit tokens upload comment snapshots.
    A message can be edited from the device that wrote it; `dev:` author ids are the device's
    public key and are checked, while `acct:` ids and display names are claims. Local files are

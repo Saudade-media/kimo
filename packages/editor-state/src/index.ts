@@ -56,6 +56,7 @@ export {
   type CommentRecordBody,
   devKeyOf,
   LOCAL_KEY,
+  parseCommentOp,
   parseCommentRecordBody,
 } from "./comment-records"
 export {

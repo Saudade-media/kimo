@@ -533,15 +533,15 @@ describe("comment channel (docs/spec/comments.md §4.4)", () => {
     editor.close()
   })
 
-  test("comment appends are capped per token per hour", async () => {
+  test("comment appends are capped per token and client address per hour", async () => {
     const owner = await registered(h)
     const text = await token(owner, "comment", { iat: nowSec() })
     const { client } = await Client.join(h, owner.room.id, text)
     const env = await commentEnv(owner, "spam")
     // The per-socket append bucket (burst 200) must not hide the hourly cap.
-    for (let i = 1; i <= 600; i++) {
+    for (let i = 1; i <= 200; i++) {
       client.send({ type: "append-comment", cid: i, env })
-      if (i % 150 === 0) {
+      if (i % 100 === 0) {
         await until(
           () => client.messages.some((m) => m.type === "comment-ack" && m.cid === i),
           5000,
@@ -549,11 +549,41 @@ describe("comment channel (docs/spec/comments.md §4.4)", () => {
         h.clock.now += 2_000
       }
     }
-    // The clock moved 8 s, which refills about one more append.
-    for (let i = 601; i <= 605; i++) client.send({ type: "append-comment", cid: i, env })
+    // One reviewer on a shared link spends their own share, not the link's 600.
+    for (let i = 201; i <= 205; i++) client.send({ type: "append-comment", cid: i, env })
     const denied = await client.next("denied", 5000)
     expect(denied.code).toBe("RATE_LIMITED")
-    expect(denied.cid).toBeLessThanOrEqual(603)
+    expect(denied.cid).toBeLessThanOrEqual(202)
     client.close()
+  })
+
+  test("a comment-only link fills its own storage budget, and editors still write", async () => {
+    const small = startRelay({ commentQuotaBytes: 4096 })
+    try {
+      const owner = await registered(small)
+      const text = await token(owner, "comment", { iat: Math.floor(small.clock.now / 1000) })
+      const { client } = await Client.join(small, owner.room.id, text)
+      const env = await commentEnv(owner, "x".repeat(1000))
+      for (let i = 1; i <= 8; i++) client.send({ type: "append-comment", cid: i, env })
+      const denied = await client.next("denied", 3000)
+      expect([denied.code, denied.cid]).toEqual(["QUOTA_EXCEEDED", 4])
+      const blob = await sealBlob(owner.keys, new Uint8Array(2000))
+      const blobPut = await fetch(`${small.base}/blob/${owner.room.id}/${blob.id}`, {
+        method: "PUT",
+        headers: bearer(text),
+        body: blob.envelope as Uint8Array<ArrayBuffer>,
+      })
+      expect(blobPut.status).not.toBe(201)
+      const { client: editor } = await joinAs(small, owner, "edit")
+      editor.send({ type: "append", cid: 1, env: await update(owner, "design") })
+      expect((await editor.next("ack")).cid).toBe(1)
+      editor.send({ type: "comments-subscribe", since: 0 })
+      editor.send({ type: "append-comment", cid: 2, env })
+      expect((await editor.next("comment-ack")).cid).toBe(2)
+      client.close()
+      editor.close()
+    } finally {
+      await small.stop()
+    }
   })
 })

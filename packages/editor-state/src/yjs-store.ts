@@ -411,6 +411,31 @@ function nodeIdOf(pointer: string): string | undefined {
   return m ? (m[1] as string).replace(/~1/g, "/").replace(/~0/g, "~") : undefined
 }
 
+/**
+ * `comments` without threads or messages whose id a node holds. In a room a forged change can
+ * take a node's id; the save must stay valid (COMMENT_ID_COLLISION), and every peer drops the
+ * same ids because it reads its own nodes at projection, never in the fold.
+ */
+function withoutNodeIds(comments: Comments | undefined, nodes: unknown): Comments | undefined {
+  if (!comments || typeof nodes !== "object" || nodes === null) return comments
+  const isNode = (id: string) => Object.hasOwn(nodes, id)
+  let out: Comments | undefined
+  for (const [id, t] of Object.entries(comments)) {
+    const bad = Object.keys(t.messages).filter(isNode)
+    if (!isNode(id) && bad.length === 0) continue
+    out ??= { ...comments }
+    if (isNode(id) || bad.includes(t.first)) {
+      delete out[id]
+      continue
+    }
+    const messages = { ...t.messages }
+    for (const m of bad) delete messages[m]
+    out[id] = { ...t, messages }
+  }
+  if (!out) return comments
+  return Object.keys(out).length > 0 ? out : undefined
+}
+
 /** {@link DocStore} implementation on a Yjs document. */
 export class YjsDocStore implements DocStore {
   readonly comments: CommentStore
@@ -1190,8 +1215,8 @@ export class YjsDocStore implements DocStore {
 
   /** `doc` with the comment store's threads as root `comments`, header to match (spec §1). */
   private withComments<T extends object>(doc: T): T {
-    const comments = this.comments.toJSON()
     const d = doc as unknown as Record<string, unknown>
+    const comments = withoutNodeIds(this.comments.toJSON(), d.nodes)
     if (comments) d.comments = comments
     else delete d.comments
     return withCommentsHeader(doc)

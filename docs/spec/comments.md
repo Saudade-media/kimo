@@ -187,8 +187,15 @@ one, without stopping the fold.
 - A change whose `base` is not below its own position is invalid.
 - `thread` and `reply` create a message whose id is new (never held, never deleted, not a node
   id). `reply` needs a live thread.
-- `delete` leaves a **tombstone** for the thread or message id. Later changes for it are
-  skipped. A delete of an id not held is a tombstone too, so a compacted snapshot keeps it.
+- `delete` leaves a **tombstone** for each id it names. An id that is held must be deleted
+  through its own thread by the key that wrote it, or by the root key; otherwise the delete is
+  invalid. A delete of an id not held (after compaction its creating change is gone) is a
+  tombstone for the deleting key only: it drops later creations of that id signed by that key.
+  Root key and local file deletes drop every later change for the id. Deleting a thread
+  tombstones the ids the change names, not its other messages, so a fold from a compacted
+  snapshot agrees with a full fold.
+- Reaction emoji are keys of a plain map in the file, so any string the parser accepts (even
+  `constructor` or `__proto__`) is an ordinary key; readers MUST use own-property lookups.
 - **Last writer, by log order.** `edit`, `resolve`, `anchor` and each reaction (message, emoji,
   key) hold one value set by one change S. A change C replaces it when `C.base >= position(S)`
   (C's writer had seen S), or when C and S have the same key and `C.n > S.n`. Otherwise C is
@@ -219,8 +226,15 @@ Additions to [multiplayer.md](multiplayer.md):
   so the two logs' sequences never mix. Existing types keep their layout.
 - **§14.** The relay stores a second log and snapshot per room with its own `seq`. Room size and
   the owner sweep count both. The relay cannot tell a message from a reaction inside an envelope,
-  so it limits comment appends to 600 an hour per token `jti` (`RATE_LIMITED`); clients limit
-  new messages and replies to 100 an hour per author.
+  so it limits comment appends to 600 an hour per token `jti`, and to 200 an hour per `jti` and
+  client address, so one reviewer on a shared link cannot spend everyone's budget
+  (`RATE_LIMITED`). Clients limit new messages and replies to 100 an hour per author.
+- **Comment storage.** Writes by a comment token (comment log appends and blob uploads) count
+  against a separate budget, `KIMO_COMMENT_QUOTA_MB` (default 50, at most the room quota): the
+  comment log, the comment snapshot and blobs comment tokens uploaded. A comment token also may
+  not take the comment log past half of `KIMO_LOG_MAX_MB`. Past either it gets
+  `QUOTA_EXCEEDED`, so editors can always write and compact. Comment tokens' uploads have their
+  own byte rate bucket per room.
 - **§12 HTTP.** `GET /room/<room>/comments/snapshot` (any role) and `PUT
   /room/<room>/comments/snapshot?upTo=<n>` (edit only) work like the design snapshot routes,
   with the comment log's `seq`. A comment token MUST NOT upload a snapshot, because a snapshot

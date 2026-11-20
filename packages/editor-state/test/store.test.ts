@@ -598,6 +598,107 @@ describe("comments (docs/spec/comments.md)", () => {
     expect(b.toJSON()).toBeUndefined()
   })
 
+  test("a delete naming ids its key does not hold freezes nothing (spec comments §4.3)", () => {
+    const r = relay()
+    const a = r.join("KA")
+    const b = r.join("KB")
+    const anaA = { ...ana, id: "dev:KA" }
+    const { threadId, messageId } = a.createThread(
+      { anchor: { x: 0, y: 0 }, message: { author: anaA, text: "Mine" } },
+      "user",
+    )
+    const reply = a.reply(threadId, { author: anaA, text: "Also mine" }, "user")
+    r.flush(a)
+    // B names A's ids under a thread that does not hold them, or as a message of no thread.
+    r.append([
+      forged("KB", { op: "delete", thread: "Nothing001", message: threadId }),
+      forged("KB", { op: "delete", thread: "Nothing002", message: messageId }),
+      forged("KB", { op: "delete", thread: threadId, message: "Nothing003" }),
+      forged("KB", { op: "delete", thread: "Nothing004", message: reply }),
+    ])
+    const more = a.reply(threadId, { author: anaA, text: "Still here" }, "user")
+    a.setResolved(threadId, anaA, "user")
+    r.flush(a)
+    for (const c of [a, b]) {
+      expect(Object.keys(c.thread(threadId)?.messages ?? {}).sort()).toEqual(
+        [messageId, reply, more].sort(),
+      )
+      expect(c.thread(threadId)?.resolved?.by.id).toBe("dev:KA")
+    }
+    // A's own delete still holds for a joiner from the compacted log, whoever replays it.
+    const created = r.log.find((c) => c.body.op === "thread") as CommentRecord
+    a.deleteThread(threadId, anaA.id, "user")
+    r.flush(a)
+    const c = new CommentStore()
+    c.enterRoom({ key: "KC", root: "ROOT", moderator: false }, a.kept())
+    const top = Math.max(...a.kept().map((k) => k.pos as number))
+    c.receive([{ ...created, pos: top + COMMENT_ENTRY_SLOTS }])
+    expect(c.toJSON()).toBeUndefined()
+    expect(a.toJSON()).toBeUndefined()
+  })
+
+  test("a reaction named after an Object property folds like any other", () => {
+    const r = relay()
+    const a = r.join("KA")
+    const { threadId, messageId } = a.createThread(
+      { anchor: { x: 0, y: 0 }, message: { author: { ...ana, id: "dev:KA" }, text: "Hi" } },
+      "user",
+    )
+    r.flush(a)
+    r.append(
+      ["constructor", "toString", "__proto__"].map((emoji) =>
+        forged("KB", {
+          op: "react",
+          thread: threadId,
+          message: messageId,
+          emoji,
+          author: "dev:KB",
+          on: true,
+        }),
+      ),
+    )
+    const reactions = a.toJSON()?.[threadId]?.messages[messageId]?.reactions ?? {}
+    expect(Object.keys(reactions).sort()).toEqual(["__proto__", "constructor", "toString"])
+    expect(a.reply(threadId, { author: { ...ana, id: "dev:KA" }, text: "Ok" }, "user")).toBeString()
+  })
+
+  test("a room thread or message that takes a node id never reaches the saved file", () => {
+    const s = base()
+    s.comments.enterRoom({ key: "KA", root: "ROOT", moderator: false }, [])
+    const author = { id: "dev:KB", name: "Bo", kind: "person" } as const
+    const at = (i: number) => (i + 1) * COMMENT_ENTRY_SLOTS
+    s.comments.receive(
+      [
+        forged("KB", {
+          op: "thread",
+          thread: "Frame00001",
+          message: "Msg0000001",
+          anchor: { x: 0, y: 0 },
+          author,
+          text: "x",
+        }),
+        forged("KB", {
+          op: "thread",
+          thread: "Thread0002",
+          message: "Msg0000002",
+          anchor: { x: 0, y: 0 },
+          author,
+          text: "ok",
+        }),
+        forged("KB", {
+          op: "reply",
+          thread: "Thread0002",
+          message: "Frame00001",
+          author,
+          text: "y",
+        }),
+      ].map((x, i) => ({ ...x, pos: at(i) })),
+    )
+    const doc = s.toDocument() as unknown as Record<string, unknown>
+    expect(validate(doc).errors).toEqual([])
+    expect(Object.keys(doc.comments as object)).toEqual(["Thread0002"])
+  })
+
   test("replayed changes never bring back a deleted message or an old value", () => {
     const r = relay()
     const a = r.join("KA")

@@ -249,9 +249,11 @@ export function useComments(o: UseCommentsOptions): UseComments {
       const params = new URLSearchParams(q)
       params.delete("page")
       params.set("comment", thread)
-      // A join route holds the room key: the link names the room only (§7).
-      if (/^#\/join\//.test(route) && o.room) url.hash = `#/cloud/${o.room}?${params.toString()}`
-      else url.hash = `${route}?${params.toString()}`
+      // A join route holds the room key: the link names the room only, or there is none (§7).
+      if (/^#\/join\//.test(route)) {
+        if (!o.room) return null
+        url.hash = `#/cloud/${o.room}?${params.toString()}`
+      } else url.hash = `${route}?${params.toString()}`
       return url.toString()
     },
     [o.deepLink, o.room],

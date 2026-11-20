@@ -31,6 +31,11 @@ export interface RelayConfig {
   maxRooms: number
   maxPeers: number
   roomQuotaBytes: number
+  /**
+   * Bytes comment-only links may fill in a room: the comment log, its snapshot and their uploads
+   * (docs/spec/comments.md §4.4). Editors keep the rest of the room quota.
+   */
+  commentQuotaBytes: number
   blobMaxBytes: number
   entryMaxBytes: number
   snapshotMaxBytes: number
@@ -146,6 +151,7 @@ export function loadConfig(env: Env): RelayConfig {
     maxRooms: integer(env, "KIMO_MAX_ROOMS", 0, 0),
     maxPeers: integer(env, "KIMO_MAX_PEERS", 32, 1),
     roomQuotaBytes: integer(env, "KIMO_ROOM_QUOTA_MB", 500, 1, 1 << 20) * MiB,
+    commentQuotaBytes: integer(env, "KIMO_COMMENT_QUOTA_MB", 50, 1, 1 << 20) * MiB,
     blobMaxBytes: integer(env, "KIMO_BLOB_MAX_MB", 20, 1, 1024) * MiB,
     entryMaxBytes: integer(env, "KIMO_ENTRY_MAX_MB", 4, 1, 256) * MiB,
     snapshotMaxBytes: integer(env, "KIMO_SNAPSHOT_MAX_MB", 64, 1, 1024) * MiB,

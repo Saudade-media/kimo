@@ -16,7 +16,7 @@ import {
 } from "@kimo/sync/mp"
 import type { WebSocketHandler } from "bun"
 import { recheckToken, verifyToken } from "./auth"
-import { roomBytes } from "./db"
+import { commentBytes, roomBytes } from "./db"
 import { TokenBucket } from "./rate-limit"
 import type { Relay, Sock, SocketData } from "./rooms"
 
@@ -161,11 +161,21 @@ export function websocketHandlers(relay: Relay): WebSocketHandler<SocketData> {
       return deny(ws, "TOO_LARGE", cid, "entry too large")
     if (envelopeKind(env) !== EnvelopeKind.commentsUpdate)
       return deny(ws, "BAD_MESSAGE", cid, "not a comments-update envelope")
+    if (relay.commentIpLimiter.take(`${data.room}:${data.jti}:${data.ip}`, relay.now()) > 0)
+      return deny(ws, "RATE_LIMITED", cid, "too many comments in the last hour")
     if (relay.commentLimiter.take(`${data.room}:${data.jti}`, relay.now()) > 0)
       return deny(ws, "RATE_LIMITED", cid, "too many comments in the last hour")
     const row = relay.db.getRoom(room.id)
     if (!row || row.closed_at !== null) return relay.closeSocket(ws, "ROOM_CLOSED")
     if (row.c_log_bytes > relay.config.logMaxBytes) return relay.closeSocket(ws, "LOG_FULL")
+    // Comment-only links fill their own budget and half the comment log at most, so editors
+    // can always write and compact (docs/spec/comments.md §4.4).
+    if (
+      data.tokenRole === "comment" &&
+      (commentBytes(row) + env.length > relay.commentQuotaFor(row) ||
+        row.c_log_bytes + env.length > relay.config.logMaxBytes / 2)
+    )
+      return deny(ws, "QUOTA_EXCEEDED", cid, "comment storage quota exceeded")
     const after = roomBytes(row) + env.length
     if (after > relay.quotaFor(row))
       return deny(ws, "QUOTA_EXCEEDED", cid, "room storage quota exceeded")

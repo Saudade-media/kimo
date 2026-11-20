@@ -424,7 +424,7 @@ export class CommentChannel {
       const ready = creates
         ? true
         : b.op === "delete"
-          ? has(b.thread, b.message)
+          ? h.record.key === this.store.room?.root || has(b.thread, b.message)
           : b.op === "reply"
             ? coming.has(b.thread) || has(b.thread)
             : has(b.thread, b.op === "edit" || b.op === "react" ? b.message : undefined)

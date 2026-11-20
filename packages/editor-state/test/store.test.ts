@@ -730,6 +730,36 @@ describe("comments (docs/spec/comments.md)", () => {
     expect(b.thread(threadId)?.messages[messageId]?.text).toBe("Keep")
   })
 
+  test("a guest's own delete survives compaction and a later refold", () => {
+    const r = relay()
+    const a = r.join("KA")
+    const author = { id: "dev:KB", name: "Bo", kind: "person" } as const
+    const created = forged("KB", {
+      op: "thread",
+      thread: "Thread0001",
+      message: "Msg0000001",
+      anchor: { x: 0, y: 0 },
+      author,
+      text: "mine",
+    })
+    r.append([created])
+    r.append([forged("KB", { op: "delete", thread: "Thread0001" })])
+    a.compact()
+    // An entry arriving out of order makes the store fold its changes again.
+    const other = forged("KC", {
+      op: "thread",
+      thread: "Thread0002",
+      message: "Msg0000002",
+      anchor: { x: 0, y: 0 },
+      author: { ...author, id: "dev:KC" },
+      text: "x",
+    })
+    a.receive([{ ...other, pos: 1 }])
+    r.append([{ ...created, pos: null }])
+    expect(a.thread("Thread0001")).toBeUndefined()
+    expect(a.kept().some((k) => k.body.op === "delete")).toBe(true)
+  })
+
   test("a refused change replayed later is judged alike by online peers and joiners", () => {
     const r = relay()
     const a = r.join("KA")

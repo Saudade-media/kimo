@@ -235,8 +235,16 @@ export class Client {
     })
   }
 
-  static async connect(h: Harness, room: string): Promise<Client> {
-    const ws = new WebSocket(`${h.wsBase}/sync/${room}`, [SUBPROTOCOL])
+  static async connect(
+    h: Harness,
+    room: string,
+    headers?: Record<string, string>,
+  ): Promise<Client> {
+    const url = `${h.wsBase}/sync/${room}`
+    // Bun's WebSocket takes headers (a proxy's x-forwarded-for in tests).
+    const ws = headers
+      ? new WebSocket(url, { protocols: [SUBPROTOCOL], headers } as unknown as string[])
+      : new WebSocket(url, [SUBPROTOCOL])
     await new Promise<void>((resolve, reject) => {
       ws.onopen = () => resolve()
       ws.onerror = () => reject(new Error("websocket failed to open"))
@@ -250,8 +258,9 @@ export class Client {
     room: string,
     tokenText: string,
     since = 0,
+    headers?: Record<string, string>,
   ): Promise<{ client: Client; welcome: Extract<RelayMessage, { type: "welcome" }> }> {
-    const client = await Client.connect(h, room)
+    const client = await Client.connect(h, room, headers)
     client.send({ type: "hello", proto: 1, token: tokenText, since, client: "test/1" })
     const welcome = await client.next("welcome")
     return { client, welcome }

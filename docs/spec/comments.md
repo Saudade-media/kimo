@@ -258,7 +258,7 @@ Additions to [multiplayer.md](multiplayer.md):
 - **Re-append.** After catch-up a client appends again the changes it holds that created a
   live message, hold a current value or delete something, and that the room lacks (a relay that
   lost data, or an edit peer's bad snapshot). Creations go unchanged at once, a reply once its
-  thread is back, and a delete once what it names is held again. A value the device set itself
+  thread is back, and a delete once what it names is held again (a root key delete at once). A value the device set itself
   (`edit`, `resolve`, `anchor`, `react`) is written again as a new change, since the old
   `base` lies past the new log. They are verified like any change, and duplicates are skipped.
 - **§12 blobs.** `PUT /blob` accepts comment tokens too, so a reviewer can upload an attachment.

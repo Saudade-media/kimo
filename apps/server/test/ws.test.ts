@@ -569,6 +569,44 @@ describe("comment channel (docs/spec/comments.md §4.4)", () => {
     client.close()
   })
 
+  test("one IPv6 /48 cannot spend a shared link's comment budget", async () => {
+    const proxied = startRelay({ trustProxy: true, trustProxyHops: 1 })
+    try {
+      const owner = await registered(proxied)
+      const text = await token(owner, "comment", { iat: Math.floor(proxied.clock.now / 1000) })
+      const env = await commentEnv(owner, "spam")
+      const from = async (ip: string) =>
+        (await Client.join(proxied, owner.room.id, text, 0, { "x-forwarded-for": ip })).client
+      // Four /64s of one /48 at their own limit of 300 each fill the /48.
+      for (let n = 0; n < 4; n++) {
+        const client = await from(`2001:db8:bb:${n}::1`)
+        for (let i = 1; i <= 300; i++) {
+          client.send({ type: "append-comment", cid: i, env })
+          if (i % 100 === 0) {
+            await until(
+              () => client.messages.some((m) => m.type === "comment-ack" && m.cid === i),
+              5000,
+            )
+            proxied.clock.now += 2_000
+          }
+        }
+        client.close()
+      }
+      const next = await from("2001:db8:bb:4::1")
+      for (let i = 1; i <= 20; i++) next.send({ type: "append-comment", cid: i, env })
+      const denied = await next.next("denied", 5000)
+      expect(denied.code).toBe("RATE_LIMITED")
+      expect(denied.cid).toBeLessThanOrEqual(12)
+      next.close()
+      const other = await from("2001:db8:cc:0::1")
+      other.send({ type: "append-comment", cid: 1, env })
+      expect((await other.next("comment-ack", 5000)).cid).toBe(1)
+      other.close()
+    } finally {
+      await proxied.stop()
+    }
+  })
+
   test("a comment-only link fills its own storage budget, and editors still write", async () => {
     const small = startRelay({ commentQuotaBytes: 4096 })
     try {

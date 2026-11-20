@@ -520,7 +520,8 @@ export class CommentFold {
         // A message delete names its thread for routing only: the thread stays alive.
         if (!t || mid === undefined || mid === t.first) this.tombs.add(b.thread)
         if (mid !== undefined) this.tombs.add(mid)
-        this.deletes.set(b.id, rec)
+        // Applied here, so final when folded again (after compact(), or from a snapshot).
+        this.deletes.set(b.id, { ...rec, compacted: true })
         return b.thread
       }
       case "resolve": {

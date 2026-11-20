@@ -75,9 +75,10 @@ describe("built-in agent scope", () => {
     )
     holder.docId = docId
     await c.refresh()
+    c.setSelection([]) // baseline sync
     c.setSelection(card)
     c.setAutoApprove(false) // "Ask before changes" on
-    const sending = c.send("Rename things")
+    const sending = c.send(`${c.state.composer.text} Rename things`)
     await until(() => c.state.approval !== null)
     expect(c.state.approval?.choices).toEqual(["deny", "once"])
     await c.answerApproval(c.state.approval?.request.id as string, "deny")
@@ -120,8 +121,9 @@ describe("built-in agent auto-approve", () => {
     holder.docId = docId
     await c.refresh()
     c.setAutoApprove(true)
+    c.setSelection([]) // baseline sync
     c.setSelection(card)
-    await c.send("Rename the navbar")
+    await c.send(`${c.state.composer.text} Rename the navbar`)
     expect(c.state.approvals).toHaveLength(0)
     expect(nameOf(store, "Navbar0001")).toBe("Nav 0")
     const a = c.state.messages.find((m) => m.kind === "agent")
@@ -136,8 +138,9 @@ describe("built-in agent auto-approve", () => {
     holder.docId = docId
     await c.refresh()
     c.setAutoApprove(false)
+    c.setSelection([]) // baseline sync
     c.setSelection(card)
-    const sending = c.send("Rename the navbar")
+    const sending = c.send(`${c.state.composer.text} Rename the navbar`)
     await until(() => c.state.approvals.length === 1)
     expect(nameOf(store, "Navbar0001")).toBe("Navbar")
     c.setAutoApprove(true)

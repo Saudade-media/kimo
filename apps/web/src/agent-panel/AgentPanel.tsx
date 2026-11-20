@@ -80,6 +80,7 @@ import {
   tokensTitle,
 } from "./format"
 import { useAgentPanelState } from "./hooks"
+import { composerSegments } from "./layer-refs"
 import { ModelMenu, ModeMenu, MoreMenu, SkillsMenu, visibleSkills } from "./Menus"
 import { PlanCard, ReviewCard } from "./Modes"
 import { SessionList } from "./Sessions"
@@ -165,7 +166,7 @@ export function AgentPanel({
 }: AgentPanelProps) {
   const state = useAgentPanelState(controller)
   const thread = useRef<HTMLDivElement>(null)
-  const textarea = useRef<HTMLTextAreaElement>(null)
+  const textarea = useRef<HTMLDivElement>(null)
   /** Board 40 "…": Escape in its menu hands focus back here. */
   const moreButton = useRef<HTMLButtonElement | null>(null)
   const fileInput = useRef<HTMLInputElement>(null)
@@ -206,7 +207,7 @@ export function AgentPanel({
     }
   }
 
-  const onKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
+  const onKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
     if (e.key === "Escape") {
       if (state.menu) controller.openMenu(null)
       else if (state.busy) controller.stop()
@@ -451,7 +452,14 @@ export function AgentPanel({
             className={state.composerDisabled ? "agent-panel__composer--off" : undefined}
             disabled={state.composerDisabled}
             value={state.composer.text}
-            onChange={(t) => controller.setText(t)}
+            parts={composerSegments(state.composer.text).map((x) =>
+              x.kind === "text"
+                ? { kind: "text" as const, text: x.text }
+                : { kind: "chip" as const, token: x.token, label: x.name },
+            )}
+            {...(state.composer.caret != null ? { caret: state.composer.caret } : {})}
+            onChange={(t, at) => controller.setText(t, at ?? undefined)}
+            onCursorChange={(at) => controller.setCursor(at)}
             placeholder={
               state.composerDisabled
                 ? t("ui.agent.panel.agentpanel.connectModel")
@@ -463,7 +471,7 @@ export function AgentPanel({
             }
             textareaRef={textarea}
             onTextareaKeyDown={onKeyDown}
-            onTextareaPaste={(e: ClipboardEvent<HTMLTextAreaElement>) => {
+            onTextareaPaste={(e: ClipboardEvent<HTMLDivElement>) => {
               const files = [...e.clipboardData.files]
               if (files.length) {
                 e.preventDefault()

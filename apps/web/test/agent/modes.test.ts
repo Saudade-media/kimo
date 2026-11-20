@@ -36,8 +36,9 @@ describe("side by side", () => {
     holder.docId = docId
     await c.refresh()
     c.setMode({ ...c.state.composer.mode, mode: "side-by-side", agents: 2 })
+    c.setSelection([]) // baseline sync
     c.setSelection([{ id: "Pricing0001", name: "Pricing", type: "frame" }])
-    await c.send("Pricing section, 3 tiers")
+    await c.send(`${c.state.composer.text} Pricing section, 3 tiers`)
     const run = c.state.modeRun
     const [v1, v2] = (run?.agents ?? []).map((a) => a.scopeId as string)
     const built = store.getNode(v1 as string) as
@@ -90,8 +91,9 @@ describe("side by side", () => {
     holder.docId = docId
     await c.refresh()
     c.setMode({ ...c.state.composer.mode, mode: "side-by-side", agents: 2 })
+    c.setSelection([]) // baseline sync
     c.setSelection([{ id: "Pricing0001", name: "Pricing", type: "frame" }])
-    await c.send("Pricing section, 3 tiers")
+    await c.send(`${c.state.composer.text} Pricing section, 3 tiers`)
     const row = c.state.modeRun?.agents[1]
     refuse = true
     await c.discardVariant(row?.origin as string)
@@ -223,8 +225,9 @@ describe("iterate", () => {
     holder.docId = p.docId
     await p.c.refresh()
     p.c.setMode({ ...p.c.state.composer.mode, mode: "iterate", passes })
+    p.c.setSelection([]) // baseline sync
     p.c.setSelection([{ id: "Card000001", name: "Card" }])
-    await p.c.send("Make it premium")
+    await p.c.send(`${p.c.state.composer.text} Make it premium`)
     return p
   }
 

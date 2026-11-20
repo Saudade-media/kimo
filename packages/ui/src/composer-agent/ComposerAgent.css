@@ -50,8 +50,10 @@
   box-sizing: border-box;
   display: block;
   width: 100%;
-  height: 16px;
   min-height: 16px;
+  max-height: 128px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
   margin: 0;
   padding: 0;
   border: 0;
@@ -66,9 +68,23 @@
   line-height: 16px; /* Pencil text box: round(13 × 1.21) for Inter */
 }
 
-.kimo-composer-agent__input::placeholder {
+.kimo-composer-agent__input[data-empty]::before {
+  content: attr(data-placeholder);
   color: var(--kimo-text-tertiary);
-  opacity: 1;
+  pointer-events: none;
+}
+
+.kimo-composer-agent__chip {
+  display: inline-block;
+  max-width: 160px;
+  padding: 0 6px;
+  border-radius: var(--kimo-radius-sm, 4px);
+  background: var(--kimo-bg-hover, rgba(127, 127, 127, 0.16));
+  vertical-align: bottom;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  user-select: none;
 }
 
 .kimo-composer-agent__bar {

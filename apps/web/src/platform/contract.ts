@@ -1311,6 +1311,8 @@ export interface AgentComposerView {
   efforts: AgentEffortLevel[]
   mode: AgentModeConfig
   attachments: AttachmentChipView[]
+  /** Set when a layer chip was just inserted: the caret offset the composer moves to. */
+  caret?: number
   /** "/" menu open with the filter text. */
   slash: { open: boolean; filter: string } | null
 }

@@ -7,6 +7,7 @@ import {
   type KeyboardEvent,
   type ReactNode,
   type Ref,
+  useEffect,
   useLayoutEffect,
   useRef,
 } from "react"
@@ -41,11 +42,85 @@ const MORE_LABEL: Record<"warning" | "secondary" | "none", string> = {
   none: "More options",
 }
 
+/** One run of the composer text: plain text, or an atomic chip that stands for `token`. */
+export type ComposerPart =
+  | { kind: "text"; text: string }
+  | { kind: "chip"; token: string; label: string }
+
+const CHIP_ATTR = "data-chip-token"
+
+/** The string a DOM subtree stands for: its text, with each chip as its token. */
+function serialize(node: Node): string {
+  if (node.nodeType === 3) return node.textContent ?? ""
+  if (node instanceof HTMLElement) {
+    const tok = node.getAttribute(CHIP_ATTR)
+    if (tok != null) return tok
+    if (node.tagName === "BR") return "\n"
+  }
+  let out = ""
+  for (const c of Array.from(node.childNodes)) out += serialize(c)
+  return out
+}
+
+function caretOffset(root: HTMLElement): number | null {
+  const sel = window.getSelection()
+  if (!sel || sel.rangeCount === 0 || !root.contains(sel.focusNode)) return null
+  const r = document.createRange()
+  r.selectNodeContents(root)
+  r.setEnd(sel.focusNode as Node, sel.focusOffset)
+  return serialize(r.cloneContents()).length
+}
+
+function placeCaret(root: HTMLElement, offset: number) {
+  const r = document.createRange()
+  let acc = 0
+  let set = false
+  const kids = Array.from(root.childNodes)
+  for (let i = 0; i < kids.length && !set; i++) {
+    const n = kids[i] as Node
+    const len = serialize(n).length
+    if (n.nodeType === 3 && offset <= acc + len) {
+      r.setStart(n, offset - acc)
+      set = true
+    } else if (n.nodeType !== 3 && offset <= acc + len) {
+      r.setStart(root, offset <= acc ? i : i + 1)
+      set = true
+    }
+    acc += len
+  }
+  if (!set) r.setStart(root, kids.length)
+  r.collapse(true)
+  const sel = window.getSelection()
+  sel?.removeAllRanges()
+  sel?.addRange(r)
+}
+
+function build(root: HTMLElement, parts: readonly ComposerPart[]) {
+  root.replaceChildren(
+    ...parts.map((p) => {
+      if (p.kind === "text") return document.createTextNode(p.text)
+      const chip = document.createElement("span")
+      chip.className = "kimo-composer-agent__chip"
+      chip.contentEditable = "false"
+      chip.setAttribute(CHIP_ATTR, p.token)
+      chip.textContent = p.label
+      return chip
+    }),
+  )
+}
+
 /** Props for {@link ComposerAgent}. Remaining `<div>` props go to the frame. */
 export interface ComposerAgentProps
   extends Omit<ComponentPropsWithRef<"div">, "children" | "onChange" | "onSubmit"> {
   value: string
-  onChange?: (value: string) => void
+  /** `value` split into text and chips (default: all text). */
+  parts?: readonly ComposerPart[]
+  /** Text changed by typing; `cursor` is the caret offset in `value`. */
+  onChange?: (value: string, cursor: number | null) => void
+  /** The caret moved (offset in `value`). */
+  onCursorChange?: (cursor: number) => void
+  /** Move the caret here (and focus) when `value` changes from outside, e.g. after a chip insert. */
+  caret?: number
   /** "Ask Kimo to design or edit…" / "Queue a follow-up for when this turn ends". */
   placeholder?: string
   /** Attachment chips / thumbs (row FLTbw). Omitted or empty: the row is not rendered. */
@@ -78,9 +153,9 @@ export interface ComposerAgentProps
   sendDisabled?: boolean
   onSend?: () => void
   onStop?: () => void
-  textareaRef?: Ref<HTMLTextAreaElement>
-  onTextareaKeyDown?: (e: KeyboardEvent<HTMLTextAreaElement>) => void
-  onTextareaPaste?: ClipboardEventHandler<HTMLTextAreaElement>
+  textareaRef?: Ref<HTMLDivElement>
+  onTextareaKeyDown?: (e: KeyboardEvent<HTMLDivElement>) => void
+  onTextareaPaste?: ClipboardEventHandler<HTMLDivElement>
   /** Model and "…" buttons' elements (menus treat them as their anchors). */
   modelRef?: Ref<HTMLButtonElement>
   moreRef?: Ref<HTMLButtonElement>
@@ -99,7 +174,10 @@ export interface ComposerAgentProps
  */
 export function ComposerAgent({
   value,
+  parts,
   onChange,
+  onCursorChange,
+  caret,
   placeholder = t("ui.pkg.composer.agent.composeragent.ask-kimo-to-design-or-edit"),
   attachments,
   onAttach,
@@ -120,15 +198,31 @@ export function ComposerAgent({
   className,
   ...rest
 }: ComposerAgentProps) {
-  const area = useRef<HTMLTextAreaElement>(null)
-  // Auto-grow up to 8 lines.
-  // biome-ignore lint/correctness/useExhaustiveDependencies: re-measure when the text changes.
+  const area = useRef<HTMLDivElement>(null)
+  const synced = useRef<string | null>(null)
+  const onCursor = useRef(onCursorChange)
+  onCursor.current = onCursorChange
+  // Render the text and chips; a value that didn't come from typing rebuilds the field.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: `parts` is derived from `value`.
   useLayoutEffect(() => {
     const el = area.current
-    if (!el) return
-    el.style.height = "0px"
-    el.style.height = `${Math.min(el.scrollHeight, 8 * 16)}px`
-  }, [value])
+    if (!el || synced.current === value) return
+    synced.current = value
+    build(el, parts ?? [{ kind: "text", text: value }])
+    if (caret != null) {
+      el.focus()
+      placeCaret(el, caret)
+    }
+  }, [value, caret])
+  useEffect(() => {
+    const on = () => {
+      const el = area.current
+      const at = el ? caretOffset(el) : null
+      if (at != null) onCursor.current?.(at)
+    }
+    document.addEventListener("selectionchange", on)
+    return () => document.removeEventListener("selectionchange", on)
+  }, [])
   const hasAttachments =
     attachments != null && !(Array.isArray(attachments) && attachments.length === 0)
   const persona = model?.persona ?? "teal"
@@ -138,15 +232,25 @@ export function ComposerAgent({
       className={cx("kimo-composer-agent", disabled && "kimo-composer-agent--disabled", className)}
     >
       {hasAttachments && <div className="kimo-composer-agent__attachments">{attachments}</div>}
-      <textarea
+      {/* biome-ignore lint/a11y/useSemanticElements: a text box with inline chips needs contenteditable. */}
+      <div
         ref={mergeRefs(area, textareaRef)}
         className="kimo-composer-agent__input"
-        rows={1}
-        value={value}
-        placeholder={placeholder}
+        role="textbox"
+        aria-multiline="true"
+        tabIndex={disabled ? -1 : 0}
+        contentEditable={disabled ? false : "plaintext-only"}
+        suppressContentEditableWarning
+        data-placeholder={placeholder}
+        data-empty={value === "" ? "true" : undefined}
         aria-label={t("ui.pkg.composer.agent.composeragent.message-the-agent")}
-        disabled={disabled}
-        onChange={(e) => onChange?.(e.target.value)}
+        aria-disabled={disabled || undefined}
+        spellCheck
+        onInput={(e) => {
+          const next = serialize(e.currentTarget)
+          synced.current = next
+          onChange?.(next, caretOffset(e.currentTarget))
+        }}
         onKeyDown={onTextareaKeyDown}
         onPaste={onTextareaPaste}
         onFocus={() => onFocusChange?.(true)}

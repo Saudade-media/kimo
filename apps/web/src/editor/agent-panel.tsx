@@ -296,7 +296,7 @@ export function useEditorAgentPanel({
   // Board 32: the macOS Dock tile animates while this window's agent turns run.
   useDockAgentActivity(platform, controller)
 
-  // Canvas selection → removable attachment chips (the scope of Single mode).
+  // Canvas selection → layer chips inserted inline at the composer cursor.
   useEffect(() => {
     if (!controller) return
     const push = (ids: readonly string[]) =>

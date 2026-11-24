@@ -17,10 +17,10 @@
     "test": "../../scripts/safe-test.sh test"
   },
   "dependencies": {
-    "typebox": "^1.4.2"
+    "typebox": "^1.4.7"
   },
   "devDependencies": {
-    "fast-check": "^4.10.2"
+    "fast-check": "^4.10.3"
   },
   "files": [
     "src",

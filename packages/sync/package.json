@@ -17,7 +17,7 @@
   },
   "dependencies": {
     "@kimo/editor-state": "workspace:*",
-    "lib0": "^0.2.119",
+    "lib0": "^0.2.120",
     "yjs": "^13.6.33"
   },
   "devDependencies": {
